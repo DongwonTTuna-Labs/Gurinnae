@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "계약 identity",
+      title: "계약 식별 정보",
       component: "StatusAndRevisionHeader",
       purpose: "source ID·기관·업체·상태.",
       test_id: "pub_012__section__identity",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "changes",
-      title: "변경 계약",
+      title: "계약 변경",
       component: "StructuredContentSection",
       purpose: "금액·기간 변경.",
       test_id: "pub_012__section__changes",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "provenance",
-      title: "필드 provenance",
+      title: "필드 출처 이력",
       component: "StructuredContentSection",
       purpose: "raw locator·parser version.",
       test_id: "pub_012__section__provenance",

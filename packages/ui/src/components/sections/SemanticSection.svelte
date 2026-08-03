@@ -22,7 +22,7 @@ const typedSection = $derived(
   {:else if runtime.state === "stale" || runtime.state === "superseded"}<p role="status">표시된 자료가 최신이 아닙니다. 기준 시각을 확인하고 읽기 전용으로 갱신하세요.</p>
   {:else if runtime.state === "maintenance"}<p role="status">서비스 점검 중입니다. 안전한 읽기 작업만 유지됩니다.</p>
   {:else if projection && projection.fields.length > 0}<dl class="structured-fields">{#each projection.fields as field}<div><dt>{field.label}</dt><dd>{field.value ?? "확인 필요"}</dd></div>{/each}</dl>
-  {:else}<p role="status">이 영역에 표시할 권위 projection이 없습니다.</p>{/if}
+  {:else}<p role="status">이 영역에 표시할 권위 투영값이 없습니다.</p>{/if}
 </div>
 
 <style>

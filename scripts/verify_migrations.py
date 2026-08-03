@@ -3,11 +3,13 @@
 
 from __future__ import annotations
 
+import argparse
+import sys
 from pathlib import Path
+from typing import Sequence
 
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_RUNTIME_MIGRATIONS = 30
 EXPECTED_BASE_MIGRATIONS = 24
 EXPECTED_ADDITIVE_MIGRATIONS = (
     "0025_evidence_snapshots_and_search.sql",
@@ -16,6 +18,10 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0028_governance_operations.sql",
     "0029_product_economics.sql",
     "0030_v13_submission_session_hardening.sql",
+    "0031_public_source_registry_view.sql",
+)
+EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
+    EXPECTED_ADDITIVE_MIGRATIONS
 )
 
 
@@ -56,12 +62,23 @@ def verify_migrations(root: Path = ROOT) -> tuple[str, ...]:
     return runtime_names
 
 
-def main() -> int:
+def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--print-runtime-count", action="store_true")
+    return parser.parse_args(argv)
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = parse_args(argv)
     try:
         runtime_names = verify_migrations()
     except MigrationVerificationError as error:
-        print(f"VERIFY_MIGRATIONS: FAIL: {error}")
+        stream = sys.stderr if args.print_runtime_count else sys.stdout
+        print(f"VERIFY_MIGRATIONS: FAIL: {error}", file=stream)
         return 1
+    if args.print_runtime_count:
+        print(len(runtime_names))
+        return 0
     print(
         "VERIFY_MIGRATIONS: PASS "
         f"runtime={len(runtime_names)} "

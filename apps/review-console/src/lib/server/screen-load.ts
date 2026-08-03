@@ -1,5 +1,6 @@
 import { bindPath } from "@gurine/config";
 import {
+  buildRowSelectionNavigationOptions,
   canonicalizeScreenViewModel,
   emptyScreenProjection,
   projectFetchedData,
@@ -20,12 +21,12 @@ import {
   csrf,
   definedParams,
   formsFor,
-  localActionIds,
   operationQuery,
   problemTitle,
   recordValue,
   sessionToken,
   stringArray,
+  unauthenticatedActionIds,
 } from "./screen-helpers";
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
@@ -44,7 +45,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         projection: emptyScreenProjection(screen),
         errors: [],
         forms: {},
-        allowedActionIds: localActionIds(screen),
+        allowedActionIds: unauthenticatedActionIds(screen),
         destinations: serverActionDestinations(screen, event.url.pathname),
         notice: "내부 화면을 사용하려면 로그인해야 합니다.",
         ...(csrfToken ? { csrfToken } : {}),
@@ -80,7 +81,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
           problemTitle(resolvedSession.value, resolvedSession.response.status),
         ],
         forms: {},
-        allowedActionIds: localActionIds(screen),
+        allowedActionIds: unauthenticatedActionIds(screen),
         destinations: serverActionDestinations(screen, event.url.pathname),
       } satisfies ScreenRuntime,
     };
@@ -339,6 +340,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         }
       : undefined;
   if (selectedTarget) data.selectedTarget = selectedTarget;
+  const navigationOptions = buildRowSelectionNavigationOptions(screen.id, data);
   const runtime: ScreenRuntime = {
     csrfToken,
     state:
@@ -361,6 +363,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     forms: formsFor(screen, event, data, new Set(allowedActionIds)),
     idempotencyKeys: actionIdempotencyKeys(screen, new Set(allowedActionIds)),
     allowedActionIds,
+    ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
     ...(approvalQueue.length > 0 ? { approvalQueue } : {}),
     ...(selectedTarget ? { selectedTarget } : {}),
     ...(typeof actor.displayName === "string"

@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "scope",
-      title: "계약 coverage",
+      title: "계약 관측 범위",
       component: "CoverageStatement",
       purpose: "사건 여부와 무관한 관측 범위.",
       test_id: "pub_011__section__scope",

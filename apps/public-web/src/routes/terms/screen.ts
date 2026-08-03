@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "data",
-      title: "데이터/API",
+      title: "데이터·공개 인터페이스",
       component: "StructuredContentSection",
       purpose: "license·rate.",
       test_id: "pub_032__section__data",

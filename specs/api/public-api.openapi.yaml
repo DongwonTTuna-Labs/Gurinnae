@@ -5865,6 +5865,11 @@ components:
           type: string
         accessType:
           type: string
+        officialUrl:
+          type:
+          - string
+          - 'null'
+          format: uri
         status:
           type: string
         coverage:
@@ -5880,6 +5885,7 @@ components:
       - displayName
       - owner
       - accessType
+      - officialUrl
       - status
       - coverage
       - freshness

@@ -38,9 +38,9 @@ const loading = $derived(
     <p role="status">{section.title}의 확인된 값을 불러오는 중입니다.</p>
   {:else if projection}
     <OperationData {runtime} {projection} mode="cards" emptyLabel="현재 계약에서 확인 가능한 항목이 없습니다." />
-    <p class="projection-provenance"><strong>근거</strong><span>화면별 allowlist projection · 출처 지문 서버 관리</span></p>
+    <p class="projection-provenance"><strong>근거</strong><span>화면별 허용 목록 투영값 · 서버 관리 출처 지문</span></p>
   {:else}
-    <p class="inline-state conflict" role="status">{section.title}의 권위 projection을 확인할 수 없습니다. 지원 담당자에게 화면 ID와 기준 시각을 전달하세요.</p>
+    <p class="inline-state conflict" role="status">{section.title}의 권위 투영값을 확인할 수 없습니다. 지원 담당자에게 화면 식별자와 기준 시각을 전달하세요.</p>
   {/if}
 </div>
 {#if screen.id === "INT-002" && section.id === "handoff"}

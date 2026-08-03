@@ -154,6 +154,28 @@ describe("closed screen projection", () => {
     ).toBe(1);
     expect(projection.state).toBe("PARTIAL");
   });
+  it("rejects a non-Korean response question label", () => {
+    const current = screen("RSP-003");
+    const data = {
+      getResponseDraft: {
+        requestId: "req-123",
+        version: 4,
+        answers: [
+          { questionId: "q-1", questionLabel: "why Material", text: "답변" },
+        ],
+      },
+    };
+    expect(() =>
+      projectScreen(current, {
+        state: "success",
+        data: {},
+        projection: projectFetchedData(current, data),
+        errors: [],
+        forms: {},
+        pathname: "/respond/answer",
+      }),
+    ).toThrowError("한국어 문맥 라벨 계약 위반: why Material");
+  });
   it("maps the nested FundingContentResponse sections into a closed PUB-023 projection", () => {
     const current = screen("PUB-023");
     const data = {
@@ -201,6 +223,29 @@ describe("closed screen projection", () => {
     ).toBe(true);
     expect(projection.sections.reports?.state).toBe("READY");
     expect(projection.state).toBe("READY");
+  });
+  it("rejects a non-Korean funding-content heading", () => {
+    const current = screen("PUB-023");
+    const data = {
+      getFundingContent: {
+        status: "PUBLISHED",
+        data: {
+          sections: [
+            { id: "principles", heading: "why Material", body: "본문" },
+          ],
+        },
+      },
+    };
+    expect(() =>
+      projectScreen(current, {
+        state: "success",
+        data: {},
+        projection: projectFetchedData(current, data),
+        errors: [],
+        forms: {},
+        pathname: "/about/funding",
+      }),
+    ).toThrowError("한국어 문맥 라벨 계약 위반: why Material");
   });
   it("materializes generated authority operation bindings", () => {
     const current = screen("RSP-003");

@@ -11,6 +11,8 @@ import { assertActionGuards } from "./screen-action-contract-assertions";
 import {
   assertDataRequirements,
   assertFinalDelivery,
+  catalogScreens,
+  type Screen,
 } from "./screen-contract-assertions";
 import {
   assertAnalyticsMapping,
@@ -38,57 +40,145 @@ async function captureViolation(
   }
 }
 
+const PROJECTION_STATES = new Set([
+  "LOADING",
+  "READY",
+  "EMPTY",
+  "PARTIAL",
+  "STALE",
+  "ERROR",
+  "BLOCKED",
+  "UNKNOWN",
+]);
+
+async function compactStructureSnapshot(page: Page) {
+  return page.evaluate(() => ({
+    mains: [...document.querySelectorAll("main")].map((element) => ({
+      id: element.id,
+      testId: element.getAttribute("data-testid"),
+      screenId: element.getAttribute("data-screen-id"),
+      archetype: element.getAttribute("data-archetype"),
+      focusTarget: element.getAttribute("data-focus-target"),
+    })),
+    sections: [
+      ...document.querySelectorAll(
+        "main section[data-component]:not(#page-actions)",
+      ),
+    ].map((element) => {
+      const labelledBy = element.getAttribute("aria-labelledby");
+      const label = labelledBy ? document.getElementById(labelledBy) : null;
+      return {
+        id: element.id,
+        testId: element.getAttribute("data-testid"),
+        component: element.getAttribute("data-component"),
+        projectionState: element.getAttribute("data-projection-state"),
+        focusTarget: element.getAttribute("data-focus-target"),
+        labelledBy,
+        labelTargetCount: labelledBy
+          ? document.querySelectorAll(`#${CSS.escape(labelledBy)}`).length
+          : 0,
+        labelTargetInsideSection: Boolean(label && element.contains(label)),
+        labelTargetTag: label?.tagName.toLowerCase() ?? null,
+      };
+    }),
+    headings: [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].map(
+      (element) => ({
+        level: Number(element.tagName.slice(1)),
+        id: element.id,
+        text: element.textContent?.trim() ?? "",
+      }),
+    ),
+    overflow:
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  }));
+}
+
 async function auditCompactStructure(
   page: Page,
   contract: RouteContract,
+  screen: Screen,
   violations: string[],
 ): Promise<void> {
-  await captureViolation(
-    violations,
-    contract.screenId,
-    "screen marker",
-    async () => {
-      const mains = page.locator("main");
-      const count = await mains.count();
-      const marker =
-        count > 0 ? await mains.first().getAttribute("data-screen-id") : null;
-      if (count !== 1 || marker !== contract.screenId)
-        throw new Error(
-          `expected one main[data-screen-id=${contract.screenId}], got count=${count} marker=${marker}`,
-        );
+  let snapshot: Awaited<ReturnType<typeof compactStructureSnapshot>>;
+  try {
+    snapshot = await compactStructureSnapshot(page);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    violations.push(`${contract.screenId} [structure snapshot]: ${detail}`);
+    return;
+  }
+  const problems: string[] = [];
+  const mainFocusTarget = `${contract.screenId.toLowerCase()}__main`;
+  const expectedMains = [
+    {
+      id: "main-content",
+      testId: mainFocusTarget,
+      screenId: contract.screenId,
+      archetype: screen.archetype,
+      focusTarget: mainFocusTarget,
     },
+  ];
+  if (JSON.stringify(snapshot.mains) !== JSON.stringify(expectedMains))
+    problems.push(
+      `[main structure]: expected=${JSON.stringify(expectedMains)} actual=${JSON.stringify(snapshot.mains)}`,
+    );
+  const expectedSections = contract.sections.map(({ id, component }) => {
+    const testId = `${screen.testPrefix}__section__${id}`;
+    return {
+      id,
+      testId,
+      component,
+      focusTarget: testId,
+      labelledBy: `section-${id}-heading`,
+    };
+  });
+  const actualSections = snapshot.sections.map(
+    ({ id, testId, component, focusTarget, labelledBy }) => ({
+      id,
+      testId,
+      component,
+      focusTarget,
+      labelledBy,
+    }),
   );
-  await captureViolation(
-    violations,
-    contract.screenId,
-    "section order",
-    async () => {
-      const sections = await page
-        .locator("main section[data-component]:not(#page-actions)")
-        .evaluateAll((elements) =>
-          elements.map((element) => ({
-            id: element.id,
-            component: element.getAttribute("data-component") ?? "",
-          })),
-        );
-      if (JSON.stringify(sections) !== JSON.stringify(contract.sections))
-        throw new Error(
-          `expected=${JSON.stringify(contract.sections)} actual=${JSON.stringify(sections)}`,
-        );
-    },
-  );
-  await captureViolation(
-    violations,
-    contract.screenId,
-    "horizontal overflow",
-    async () => {
-      const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth -
-          document.documentElement.clientWidth,
+  if (JSON.stringify(actualSections) !== JSON.stringify(expectedSections))
+    problems.push(
+      `[section hooks/order]: expected=${JSON.stringify(expectedSections)} actual=${JSON.stringify(actualSections)}`,
+    );
+  for (const section of snapshot.sections) {
+    if (!PROJECTION_STATES.has(section.projectionState ?? ""))
+      problems.push(
+        `[section projection]: ${section.id} invalid data-projection-state=${section.projectionState}`,
       );
-      if (overflow > 1) throw new Error(`expected <= 1px, got ${overflow}px`);
-    },
+    if (
+      section.labelTargetCount !== 1 ||
+      !section.labelTargetInsideSection ||
+      section.labelTargetTag !== "h2"
+    )
+      problems.push(
+        `[section label]: ${section.id} aria-labelledby=${section.labelledBy} must resolve exactly once to an h2 inside the section (count=${section.labelTargetCount})`,
+      );
+  }
+  const h1Count = snapshot.headings.filter(({ level }) => level === 1).length;
+  const jumps = snapshot.headings.flatMap((heading, index) => {
+    const previous = snapshot.headings[index - 1];
+    return previous && heading.level - previous.level > 1
+      ? [
+          `${previous.level}:${previous.id || previous.text} -> ${heading.level}:${heading.id || heading.text}`,
+        ]
+      : [];
+  });
+  if (h1Count !== 1 || jumps.length > 0)
+    problems.push(
+      `[heading hierarchy]: expected one h1 and no skipped descending level, got h1=${h1Count} jumps=${JSON.stringify(jumps)} headings=${JSON.stringify(snapshot.headings)}`,
+    );
+  if (snapshot.overflow > 1)
+    problems.push(
+      `[horizontal overflow]: expected <= 1px, got ${snapshot.overflow}px`,
+    );
+  violations.push(
+    ...problems.map((problem) => `${contract.screenId} ${problem}`),
   );
 }
 
@@ -266,10 +356,19 @@ test("[AC-SCREEN_CONTRACTS-010] Compact layout preserves semantic order", async 
   test.setTimeout(300_000);
   const routes = routeCatalog();
   expect(routes, "compact route inventory").toHaveLength(94);
+  const screens = catalogScreens();
+  const screenById = new Map(screens.map((screen) => [screen.id, screen]));
+  expect(screenById.size, "compact screen-contract ids unique").toBe(94);
+  expect(
+    [...screenById.keys()].sort(),
+    "compact route ↔ screen-contract closure",
+  ).toEqual(routes.map((contract) => contract.screenId).sort());
   await page.setViewportSize({ width: 320, height: 568 });
   await request.post("http://127.0.0.1:29100/_test/reset");
   const sessions = await compactSessionPages(browser);
   const violations: string[] = [];
+  const primaryActions = catalogPrimaryActions();
+  const primaryViolations: string[] = [];
   try {
     for (const contract of routes) {
       await test.step(`${contract.screenId} ${contract.route}`, async () => {
@@ -283,35 +382,14 @@ test("[AC-SCREEN_CONTRACTS-010] Compact layout preserves semantic order", async 
           },
         );
         if (!navigated) return;
-        await auditCompactStructure(contractPage, contract, violations);
-      });
-    }
-  } finally {
-    await Promise.all(sessions.contexts.map((context) => context.close()));
-  }
-  expect(
-    violations,
-    `AC-SCREEN_CONTRACTS-010 compact violations (${violations.length})`,
-  ).toEqual([]);
-
-  const primaryActions = catalogPrimaryActions();
-  await page.setViewportSize({ width: 320, height: 568 });
-  await request.post("http://127.0.0.1:29100/_test/reset");
-  const primarySessions = await compactSessionPages(browser);
-  const primaryViolations: string[] = [];
-  try {
-    for (const contract of routes) {
-      await test.step(`${contract.screenId} ${contract.route}`, async () => {
-        const contractPage = pageForContract(page, primarySessions, contract);
-        const navigated = await captureViolation(
-          primaryViolations,
-          contract.screenId,
-          "navigation",
-          async () => {
-            await contractPage.goto(contract.url, { waitUntil: "networkidle" });
-          },
-        );
-        if (!navigated) return;
+        const screen = screenById.get(contract.screenId);
+        if (!screen) {
+          violations.push(
+            `${contract.screenId} [structure contract]: missing screen catalog entry`,
+          );
+          return;
+        }
+        await auditCompactStructure(contractPage, contract, screen, violations);
         await auditPrimaryAction(
           contractPage,
           contract.screenId,
@@ -321,14 +399,12 @@ test("[AC-SCREEN_CONTRACTS-010] Compact layout preserves semantic order", async 
       });
     }
   } finally {
-    await Promise.all(
-      primarySessions.contexts.map((context) => context.close()),
-    );
+    await Promise.all(sessions.contexts.map((context) => context.close()));
   }
-  test.fail(
-    true,
-    "R4 owns the 47 catalog primary-action DOM gaps; retain the full 94-screen audit",
-  );
+  expect(
+    violations,
+    `AC-SCREEN_CONTRACTS-010 compact violations (${violations.length})`,
+  ).toEqual([]);
   expect(
     primaryViolations,
     `AC-SCREEN_CONTRACTS-010 primary-action violations (${primaryViolations.length})`,

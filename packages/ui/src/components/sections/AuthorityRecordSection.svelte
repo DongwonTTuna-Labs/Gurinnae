@@ -42,7 +42,7 @@ const stateMessage = $derived(
   {:else if projection && projection.state !== "EMPTY"}
     <p class="inline-state conflict" role="status">현재 범위의 권위 데이터가 비어 있습니다. 담당자가 근거를 보완한 뒤 다시 확인해야 합니다.</p>
   {:else if !projection}
-    <p class="inline-state conflict" role="status">서버 권위 projection이 없어 이 영역을 표시할 수 없습니다.</p>
+    <p class="inline-state conflict" role="status">서버 권위 투영값이 없어 이 영역을 표시할 수 없습니다.</p>
   {/if}
   {#if projection?.state === "LOADING" || runtime.state === "loading"}<p role="status">확인된 내용을 불러오는 중입니다.</p>
   {:else if runtime.state === "error"}<p role="status">이 영역을 확인하지 못했습니다. 잠시 후 다시 시도하세요.</p>

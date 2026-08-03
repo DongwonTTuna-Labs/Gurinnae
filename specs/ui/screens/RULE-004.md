@@ -53,7 +53,7 @@ Test prefix: `rule_004`
 |---|---|---|---|---|---|
 | `activate` | 규칙 활성화 | `DESTRUCTIVE_CONFIRMATION` | `STEP_UP` | `rules.activate` | `activateRuleVersion` |
 | `schedule` | 활성화 예약 | `DESTRUCTIVE_CONFIRMATION` | `STEP_UP` | `rules.activate` | `scheduleRuleActivation` |
-| `rollback` | 이전 version으로 rollback | `DESTRUCTIVE_CONFIRMATION` | `STEP_UP` | `rules.activate` | `rollbackRuleVersion` |
+| `rollback` | 이전 버전으로 되돌리기 | `DESTRUCTIVE_CONFIRMATION` | `STEP_UP` | `rules.activate` | `rollbackRuleVersion` |
 
 Primary action: `activate`
 

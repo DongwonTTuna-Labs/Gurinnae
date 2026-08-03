@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-001",
-  title: "Source Registry",
+  title: "출처 등록부",
   route: "/internal/sources",
   archetype: "OPERATIONS",
   sections: [
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "registry",
-      title: "source 목록",
+      title: "출처 목록",
       component: "DataCollection",
       purpose: "sync·schema·lag·quarantine.",
       test_id: "src_001__section__registry",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "ownership",
-      title: "owner/runbook",
+      title: "담당자·대응 절차",
       component: "StructuredContentSection",
       purpose: "연락·SLA.",
       test_id: "src_001__section__ownership",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "open-source",
-      label: "source 운영 보기",
+      label: "출처 운영 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "ack-incident",
-      label: "incident 확인",
+      label: "인시던트 확인",
       capability: "sources.operate",
       operation_id: "acknowledgeSourceIncident",
       interaction_kind: "COMMAND",
@@ -70,7 +70,7 @@ export const screen = {
     },
     {
       id: "pause-source",
-      label: "source 일시 중지",
+      label: "출처 일시 중지",
       capability: "sources.operate",
       operation_id: "pauseSource",
       guard: "reason + impact",

@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "identity",
+      title: "신원 정보",
       component: "StatusAndRevisionHeader",
       purpose: "IdP·status.",
       test_id: "adm_002__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "roles",
-      title: "role·scope",
+      title: "역할·권한 범위",
       component: "AccessManagementPanel",
       purpose: "grant/expiry.",
       test_id: "adm_002__section__roles",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "conflicts",
-      title: "SoD",
+      title: "직무 분리",
       component: "AccessManagementPanel",
       purpose: "conflicting roles.",
       test_id: "adm_002__section__conflicts",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "sessions",
-      title: "session",
+      title: "세션",
       component: "StructuredContentSection",
       purpose: "active/revoke.",
       test_id: "adm_002__section__sessions",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "requests",
-      title: "pending",
+      title: "대기 요청",
       component: "StructuredContentSection",
       purpose: "reason/approver.",
       test_id: "adm_002__section__requests",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "activity",
-      title: "고위험 audit",
+      title: "고위험 감사",
       component: "CoverageStatement",
       purpose: "최소 범위.",
       test_id: "adm_002__section__activity",
@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "offboarding",
-      title: "offboarding",
+      title: "접근 해제 계획",
       component: "StructuredContentSection",
       purpose: "revoke plan.",
       test_id: "adm_002__section__offboarding",

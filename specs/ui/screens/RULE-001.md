@@ -1,4 +1,4 @@
-# RULE-001 — 탐지 규칙 Registry
+# RULE-001 — 탐지 규칙 등록부
 
 상태: **FINAL / REQUIRED COMPLETE**  
 Route: `/internal/rules`  
@@ -49,7 +49,7 @@ Test prefix: `rule_001`
 | Action ID | Label | Interaction | Assurance | Capability | Operation |
 |---|---|---|---|---|---|
 | `open-rule` | 규칙 보기 | `NAVIGATION` | `NONE` | `none` | `local-only` |
-| `propose-version` | 새 version 제안 | `NAVIGATION` | `NONE` | `rules.propose` | `local-only` |
+| `propose-version` | 새 버전 제안 | `NAVIGATION` | `NONE` | `rules.propose` | `local-only` |
 
 Primary action: `open-rule`
 

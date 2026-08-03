@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-005",
-  title: "Schema Drift",
+  title: "스키마 드리프트",
   route: "/internal/sources/{sourceId}/schema-drift",
   archetype: "DECISION_REVIEW",
   sections: [
     {
       order: 1,
       id: "alert",
-      title: "drift identity",
+      title: "변경 감지 정보",
       component: "StructuredContentSection",
       purpose: "detected version/time.",
       test_id: "src_005__section__alert",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "diff",
-      title: "schema diff",
+      title: "스키마 차이",
       component: "StructuredContentSection",
       purpose: "add/remove/type.",
       test_id: "src_005__section__diff",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "samples",
-      title: "redacted samples",
+      title: "가림 처리 표본",
       component: "StructuredContentSection",
       purpose: "frequency.",
       test_id: "src_005__section__samples",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "impact",
-      title: "dependency impact",
+      title: "의존 관계 영향",
       component: "StructuredContentSection",
       purpose: "parser/field/rule/public.",
       test_id: "src_005__section__impact",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "mapping",
-      title: "proposed mapping",
+      title: "제안 매핑",
       component: "StructuredContentSection",
       purpose: "code/task.",
       test_id: "src_005__section__mapping",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "shadow",
-      title: "shadow result",
+      title: "병행 검증 결과",
       component: "DataCollection",
       purpose: "fixture/records.",
       test_id: "src_005__section__shadow",
@@ -66,7 +66,7 @@ export const screen = {
   actions: [
     {
       id: "approve-mapping",
-      label: "mapping 승인",
+      label: "매핑 승인",
       capability: "sources.operate",
       operation_id: "approveSchemaMapping",
       guard: "shadow pass + reviewer",
@@ -87,7 +87,7 @@ export const screen = {
     },
     {
       id: "pause-source",
-      label: "source pause",
+      label: "출처 일시 중지",
       capability: "sources.operate",
       operation_id: "pauseSource",
       interaction_kind: "DESTRUCTIVE_CONFIRMATION",

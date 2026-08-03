@@ -4412,7 +4412,7 @@ screens:
 - screen_id: AUD-001
   surface: internal
   route: /internal/audit
-  title: 감사 로그 Explorer
+  title: 감사 로그 탐색기
   typed_view_model: Aud001ScreenVmV1
   view_model_schema:
     name: Aud001ScreenVmV1
@@ -4459,7 +4459,7 @@ screens:
         operation_field_path: $projection.query_object
         view_model_field: query_object
       copy:
-        heading: 감사 로그 Explorer
+        heading: 감사 로그 탐색기
         explanation: actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
         sources:
         - screen-catalog.title
@@ -5255,7 +5255,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: AUD-001 (감사 로그 Explorer) uses its explicit internal-data profile for the task ‘actor·action·object·policy·기간으로
+    screen_specific_reason: AUD-001 (감사 로그 탐색기) uses its explicit internal-data profile for the task ‘actor·action·object·policy·기간으로
       immutable audit event를 검색·검증·export한다.’; layout archetype SEARCH_INDEX does not replace it.
     archetype_default_resolution:
       archetype: SEARCH_INDEX
@@ -8061,7 +8061,7 @@ screens:
 - screen_id: CAS-001
   surface: internal
   route: /internal/cases
-  title: 사건 Queue
+  title: 사건 대기열
   typed_view_model: Cas001ScreenVmV1
   view_model_schema:
     name: Cas001ScreenVmV1
@@ -8106,7 +8106,7 @@ screens:
         operation_field_path: $projection.views_object
         view_model_field: views_object
       copy:
-        heading: 사건 Queue
+        heading: 사건 대기열
         explanation: 사건을 state·owner·blocker·response·review 기한으로 찾고 작업으로 이동한다.
         sources:
         - screen-catalog.title
@@ -8781,7 +8781,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-001 (사건 Queue) uses its explicit internal-data profile for the task ‘사건을 state·owner·blocker·response·review
+    screen_specific_reason: CAS-001 (사건 대기열) uses its explicit internal-data profile for the task ‘사건을 state·owner·blocker·response·review
       기한으로 찾고 작업으로 이동한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
@@ -9002,7 +9002,7 @@ screens:
 - screen_id: CAS-002
   surface: internal
   route: /internal/cases/{caseId}/overview
-  title: 사건 Overview
+  title: 사건 개요
   typed_view_model: Cas002ScreenVmV1
   view_model_schema:
     name: Cas002ScreenVmV1
@@ -9053,7 +9053,7 @@ screens:
         operation_field_path: title
         view_model_field: case_title
       copy:
-        heading: 사건 Overview
+        heading: 사건 개요
         explanation: 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
         sources:
         - screen-catalog.title
@@ -9436,7 +9436,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-002 (사건 Overview) uses its explicit internal-data profile for the task ‘사건의 조사 질문·known/unknown/response·blocker·다음
+    screen_specific_reason: CAS-002 (사건 개요) uses its explicit internal-data profile for the task ‘사건의 조사 질문·known/unknown/response·blocker·다음
       작업을 한눈에 파악한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -9880,7 +9880,7 @@ screens:
 - screen_id: CAS-003
   surface: internal
   route: /internal/cases/{caseId}/signals
-  title: 연결된 Signal
+  title: 연결된 신호
   typed_view_model: Cas003ScreenVmV1
   view_model_schema:
     name: Cas003ScreenVmV1
@@ -9923,7 +9923,7 @@ screens:
         operation_field_path: $projection.summary_object
         view_model_field: summary_object
       copy:
-        heading: 연결된 Signal
+        heading: 연결된 신호
         explanation: 사건에 연결된 signal과 연결 이유·중복·계산 차이를 검토한다.
         sources:
         - screen-catalog.title
@@ -10030,7 +10030,7 @@ screens:
         view_model_field: signals_next_action
       copy:
         heading: signal 목록
-        action_label: signal 연결
+        action_label: 신호 연결
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -10573,8 +10573,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-003 (연결된 Signal) uses its explicit internal-data profile for the task ‘사건에 연결된 signal과 연결
-      이유·중복·계산 차이를 검토한다.’; layout archetype WORKSPACE does not replace it.
+    screen_specific_reason: CAS-003 (연결된 신호) uses its explicit internal-data profile for the task ‘사건에 연결된 signal과 연결 이유·중복·계산
+      차이를 검토한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
       default_profile: workspace
@@ -10649,7 +10649,7 @@ screens:
   - signal-in-other-case
   primary_action:
     action_id: link-signal
-    label: signal 연결
+    label: 신호 연결
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -12822,7 +12822,7 @@ screens:
 - screen_id: CAS-006
   surface: internal
   route: /internal/cases/{caseId}/claims
-  title: 공개 Claim 작성
+  title: 공개 주장 작성
   typed_view_model: Cas006ScreenVmV1
   view_model_schema:
     name: Cas006ScreenVmV1
@@ -12869,7 +12869,7 @@ screens:
         operation_field_path: $projection.summary_object
         view_model_field: summary_object
       copy:
-        heading: 공개 Claim 작성
+        heading: 공개 주장 작성
         explanation: 공개하려는 정확한 문장을 type·evidence·반대 근거·한계와 함께 작성한다.
         sources:
         - screen-catalog.title
@@ -12977,7 +12977,7 @@ screens:
         view_model_field: editor_next_action
       copy:
         heading: 작성
-        action_label: Claim 추가
+        action_label: 주장 추가
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -13570,7 +13570,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-006 (공개 Claim 작성) uses its explicit internal-data profile for the task ‘공개하려는 정확한 문장을 type·evidence·반대
+    screen_specific_reason: CAS-006 (공개 주장 작성) uses its explicit internal-data profile for the task ‘공개하려는 정확한 문장을 type·evidence·반대
       근거·한계와 함께 작성한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -13647,7 +13647,7 @@ screens:
   - version-conflict
   primary_action:
     action_id: add-claim
-    label: Claim 추가
+    label: 주장 추가
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -15406,7 +15406,7 @@ screens:
         view_model_field: public_copy_next_action
       copy:
         heading: 공개 excerpt
-        action_label: 공개 excerpt 승인
+        action_label: 공개 발췌문 승인
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -16077,7 +16077,7 @@ screens:
   - submission-quarantined
   primary_action:
     action_id: approve-excerpt
-    label: 공개 excerpt 승인
+    label: 공개 발췌문 승인
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -17486,7 +17486,7 @@ screens:
 - screen_id: CAS-010
   surface: internal
   route: /internal/cases/{caseId}/agent-runs
-  title: Agent 실행
+  title: 에이전트 실행
   typed_view_model: Cas010ScreenVmV1
   view_model_schema:
     name: Cas010ScreenVmV1
@@ -17531,7 +17531,7 @@ screens:
         operation_field_path: $projection.runs_object
         view_model_field: runs_object
       copy:
-        heading: Agent 실행
+        heading: 에이전트 실행
         explanation: 사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택 결과를 추적한다.
         sources:
         - screen-catalog.title
@@ -18224,7 +18224,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-010 (Agent 실행) uses its explicit internal-data profile for the task ‘사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택
+    screen_specific_reason: CAS-010 (에이전트 실행) uses its explicit internal-data profile for the task ‘사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택
       결과를 추적한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -18564,7 +18564,7 @@ screens:
 - screen_id: CAS-011
   surface: internal
   route: /internal/cases/{caseId}/agent-runs/{runId}
-  title: Agent 실행 상세
+  title: 에이전트 실행 상세
   typed_view_model: Cas011ScreenVmV1
   view_model_schema:
     name: Cas011ScreenVmV1
@@ -18621,7 +18621,7 @@ screens:
         operation_field_path: version
         view_model_field: run_version
       copy:
-        heading: Agent 실행 상세
+        heading: 에이전트 실행 상세
         explanation: AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을 검토한다.
         sources:
         - screen-catalog.title
@@ -19756,7 +19756,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-011 (Agent 실행 상세) uses its explicit internal-data profile for the task ‘AI 실행의 입력 provenance,
+    screen_specific_reason: CAS-011 (에이전트 실행 상세) uses its explicit internal-data profile for the task ‘AI 실행의 입력 provenance,
       policy/model, structured output, citation, 비용과 사람의 채택을 검토한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -20561,7 +20561,7 @@ screens:
 - screen_id: CAS-012
   surface: internal
   route: /internal/cases/{caseId}/timeline
-  title: 사건 Timeline
+  title: 사건 타임라인
   typed_view_model: Cas012ScreenVmV1
   view_model_schema:
     name: Cas012ScreenVmV1
@@ -20606,7 +20606,7 @@ screens:
         operation_field_path: $projection.filters_object
         view_model_field: filters_object
       copy:
-        heading: 사건 Timeline
+        heading: 사건 타임라인
         explanation: 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
         sources:
         - screen-catalog.title
@@ -21281,7 +21281,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-012 (사건 Timeline) uses its explicit internal-data profile for the task ‘사건의 상태·evidence·소명·review·publication·correction
+    screen_specific_reason: CAS-012 (사건 타임라인) uses its explicit internal-data profile for the task ‘사건의 상태·evidence·소명·review·publication·correction
       이벤트를 시간순으로 추적한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -21610,7 +21610,7 @@ screens:
         view_model_field: blocker_actions
       copy:
         heading: 해결 작업
-        action_label: blocker 해결
+        action_label: 블로커 해결
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -22041,7 +22041,7 @@ screens:
   - version-conflict
   primary_action:
     action_id: open-blocker
-    label: blocker 해결
+    label: 블로커 해결
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
@@ -22163,7 +22163,7 @@ screens:
 - screen_id: CAS-014
   surface: internal
   route: /internal/cases/{caseId}/preview
-  title: 공개 Preview
+  title: 공개 미리보기
   typed_view_model: Cas014ScreenVmV1
   view_model_schema:
     name: Cas014ScreenVmV1
@@ -22214,7 +22214,7 @@ screens:
         operation_field_path: previewHash
         view_model_field: preview_hash
       copy:
-        heading: 공개 Preview
+        heading: 공개 미리보기
         explanation: 실제 Public Web renderer로 대상 snapshot이 어떻게 공개되는지 private note 없이 검토한다.
         sources:
         - screen-catalog.title
@@ -22334,7 +22334,7 @@ screens:
         view_model_field: refresh_and_review_actions
       copy:
         heading: 자동 검사
-        action_label: Preview 재생성
+        action_label: 미리보기 재생성
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -22711,7 +22711,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-014 (공개 Preview) uses its explicit internal-data profile for the task ‘실제 Public Web renderer로
+    screen_specific_reason: CAS-014 (공개 미리보기) uses its explicit internal-data profile for the task ‘실제 Public Web renderer로
       대상 snapshot이 어떻게 공개되는지 private note 없이 검토한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -22788,7 +22788,7 @@ screens:
   - render-error
   primary_action:
     action_id: refresh-preview
-    label: Preview 재생성
+    label: 미리보기 재생성
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -24148,7 +24148,7 @@ screens:
 - screen_id: CAS-016
   surface: internal
   route: /internal/cases/{caseId}/audit
-  title: 사건 Audit
+  title: 사건 감사
   typed_view_model: Cas016ScreenVmV1
   view_model_schema:
     name: Cas016ScreenVmV1
@@ -24193,7 +24193,7 @@ screens:
         operation_field_path: $projection.scope_object
         view_model_field: scope_object
       copy:
-        heading: 사건 Audit
+        heading: 사건 감사
         explanation: 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
         sources:
         - screen-catalog.title
@@ -24887,7 +24887,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: CAS-016 (사건 Audit) uses its explicit internal-data profile for the task ‘사건 관련 read/write·approval·download·break-glass
+    screen_specific_reason: CAS-016 (사건 감사) uses its explicit internal-data profile for the task ‘사건 관련 read/write·approval·download·break-glass
       event를 변경 불가능한 기록으로 조사한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
@@ -25199,7 +25199,7 @@ screens:
 - screen_id: COR-001
   surface: internal
   route: /internal/corrections
-  title: 정정 Queue
+  title: 정정 대기열
   typed_view_model: Cor001ScreenVmV1
   view_model_schema:
     name: Cor001ScreenVmV1
@@ -25244,7 +25244,7 @@ screens:
         operation_field_path: $projection.urgent_object
         view_model_field: urgent_object
       copy:
-        heading: 정정 Queue
+        heading: 정정 대기열
         explanation: 외부·내부 정정 요청을 긴급도·SLA·영향·owner로 triage한다.
         sources:
         - screen-catalog.title
@@ -26011,7 +26011,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: COR-001 (정정 Queue) uses its explicit internal-data profile for the task ‘외부·내부 정정 요청을 긴급도·SLA·영향·owner로
+    screen_specific_reason: COR-001 (정정 대기열) uses its explicit internal-data profile for the task ‘외부·내부 정정 요청을 긴급도·SLA·영향·owner로
       triage한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
@@ -26610,7 +26610,7 @@ screens:
 - screen_id: COR-002
   surface: internal
   route: /internal/corrections/{correctionId}
-  title: 정정 Workspace
+  title: 정정 작업공간
   typed_view_model: Cor002ScreenVmV1
   view_model_schema:
     name: Cor002ScreenVmV1
@@ -26665,7 +26665,7 @@ screens:
         operation_field_path: version
         view_model_field: correction_version
       copy:
-        heading: 정정 Workspace
+        heading: 정정 작업공간
         explanation: 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
         sources:
         - screen-catalog.title
@@ -27260,8 +27260,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: COR-002 (정정 Workspace) uses its explicit internal-data profile for the task ‘대상 claim/revision,
-      요청 근거, 영향, proposed correction, review와 알림을 완결한다.’; layout archetype WORKSPACE does not replace it.
+    screen_specific_reason: COR-002 (정정 작업공간) uses its explicit internal-data profile for the task ‘대상 claim/revision, 요청
+      근거, 영향, proposed correction, review와 알림을 완결한다.’; layout archetype WORKSPACE does not replace it.
     archetype_default_resolution:
       archetype: WORKSPACE
       default_profile: workspace
@@ -31927,7 +31927,7 @@ screens:
 - screen_id: OPS-001
   surface: internal
   route: /internal/operations
-  title: 운영 Overview
+  title: 운영 개요
   typed_view_model: Ops001ScreenVmV1
   view_model_schema:
     name: Ops001ScreenVmV1
@@ -31978,7 +31978,7 @@ screens:
         operation_field_path: systemStatus
         view_model_field: system_status
       copy:
-        heading: 운영 Overview
+        heading: 운영 개요
         explanation: 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
         sources:
         - screen-catalog.title
@@ -32102,7 +32102,7 @@ screens:
         view_model_field: incident_actions
       copy:
         heading: active incident
-        action_label: incident 열기
+        action_label: 인시던트 열기
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -32663,7 +32663,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: OPS-001 (운영 Overview) uses its explicit internal-data profile for the task ‘서비스·source·job·projection·비용·보안
+    screen_specific_reason: OPS-001 (운영 개요) uses its explicit internal-data profile for the task ‘서비스·source·job·projection·비용·보안
       상태를 영향과 SLO 중심으로 파악한다.’; layout archetype OPERATIONS does not replace it.
     archetype_default_resolution:
       archetype: OPERATIONS
@@ -32740,7 +32740,7 @@ screens:
   - telemetry-gap
   primary_action:
     action_id: open-incident
-    label: incident 열기
+    label: 인시던트 열기
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
@@ -33214,7 +33214,7 @@ screens:
 - screen_id: OPS-002
   surface: internal
   route: /internal/operations/jobs
-  title: 작업 Queue·DLQ
+  title: 작업 대기열·DLQ
   typed_view_model: Ops002ScreenVmV1
   view_model_schema:
     name: Ops002ScreenVmV1
@@ -33261,7 +33261,7 @@ screens:
         operation_field_path: $projection.summary_object
         view_model_field: summary_object
       copy:
-        heading: 작업 Queue·DLQ
+        heading: 작업 대기열·DLQ
         explanation: durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
         sources:
         - screen-catalog.title
@@ -34053,7 +34053,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: OPS-002 (작업 Queue·DLQ) uses its explicit internal-data profile for the task ‘durable job을 type·state·age·failure
+    screen_specific_reason: OPS-002 (작업 대기열·DLQ) uses its explicit internal-data profile for the task ‘durable job을 type·state·age·failure
       fingerprint로 탐색하고 안전하게 재시도·격리한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
@@ -37600,7 +37600,7 @@ screens:
 - screen_id: OPS-006
   surface: internal
   route: /internal/operations/kill-switches
-  title: Kill Switch
+  title: 킬 스위치
   typed_view_model: Ops006ScreenVmV1
   view_model_schema:
     name: Ops006ScreenVmV1
@@ -37649,7 +37649,7 @@ screens:
         operation_field_path: $projection.active_object
         view_model_field: active_object
       copy:
-        heading: Kill Switch
+        heading: 킬 스위치
         explanation: 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
         sources:
         - screen-catalog.title
@@ -37757,7 +37757,7 @@ screens:
         view_model_field: approval_next_action
       copy:
         heading: 승인
-        action_label: Kill switch 활성화
+        action_label: 킬 스위치 활성화
         consequence: 선택한 기능 범위·사용자 영향·안전 대체 경로·만료·복구 기준을 고정하고 필요한 직무분리 승인 뒤 중지한다.
         consequence_status: AUTHORED
         sources:
@@ -38471,8 +38471,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: OPS-006 (Kill Switch) uses its explicit internal-data profile for the task ‘수집·AI·게시·알림·외부 제출
-      기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.’; layout archetype DECISION_REVIEW does not replace it.
+    screen_specific_reason: OPS-006 (킬 스위치) uses its explicit internal-data profile for the task ‘수집·AI·게시·알림·외부 제출 기능을 영향
+      범위와 만료를 두고 안전하게 중지·재개한다.’; layout archetype DECISION_REVIEW does not replace it.
     archetype_default_resolution:
       archetype: DECISION_REVIEW
       default_profile: decision
@@ -38548,7 +38548,7 @@ screens:
   - reauth-required
   primary_action:
     action_id: activate
-    label: Kill switch 활성화
+    label: 킬 스위치 활성화
     consequence: 선택한 기능 범위·사용자 영향·안전 대체 경로·만료·복구 기준을 고정하고 필요한 직무분리 승인 뒤 중지한다.
     consequence_status: AUTHORED
     server_ack_required: true
@@ -43134,7 +43134,7 @@ screens:
 - screen_id: PUB-005
   surface: public
   route: /cases/{caseSlug}/revisions/{revision}
-  title: 사건 공개 revision
+  title: 사건 공개 개정본
   typed_view_model: Pub005ScreenVmV1
   view_model_schema:
     name: Pub005ScreenVmV1
@@ -43183,7 +43183,7 @@ screens:
         operation_field_path: revision
         view_model_field: revision
       copy:
-        heading: 사건 공개 revision
+        heading: 사건 공개 개정본
         explanation: 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
         sources:
         - screen-catalog.title
@@ -43303,7 +43303,7 @@ screens:
         view_model_field: available_revisions
       copy:
         heading: revision 안내
-        action_label: 최신 revision 보기
+        action_label: 최신 개정본 보기
         consequence: 현재 공개 버전과 이 고정 버전의 차이를 유지한 채 최신 사건 화면으로 이동한다.
         consequence_status: AUTHORED
         sources:
@@ -43570,7 +43570,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id032
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: PUB-005 (사건 공개 revision) uses its explicit public-data profile for the task ‘과거 또는 특정 공개 revision을
+    screen_specific_reason: PUB-005 (사건 공개 개정본) uses its explicit public-data profile for the task ‘과거 또는 특정 공개 revision을
       고정된 상태로 검증·인용한다.’; layout archetype EVIDENCE_LANDING does not replace it.
     archetype_default_resolution:
       archetype: EVIDENCE_LANDING
@@ -43628,7 +43628,7 @@ screens:
   - retracted
   primary_action:
     action_id: view-latest
-    label: 최신 revision 보기
+    label: 최신 개정본 보기
     consequence: 현재 공개 버전과 이 고정 버전의 차이를 유지한 채 최신 사건 화면으로 이동한다.
     consequence_status: AUTHORED
     server_ack_required: false
@@ -51534,7 +51534,7 @@ screens:
         view_model_field: source_status_actions
       copy:
         heading: source별 범위
-        action_label: source 상세
+        action_label: 출처 상세
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -51949,7 +51949,7 @@ screens:
   - coverage-change
   primary_action:
     action_id: open-source
-    label: source 상세
+    label: 출처 상세
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
@@ -52192,7 +52192,7 @@ screens:
         view_model_field: list_next_action
       copy:
         heading: source 목록
-        action_label: source 상세
+        action_label: 출처 상세
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -52817,7 +52817,7 @@ screens:
   - partial-stale
   primary_action:
     action_id: open-source
-    label: source 상세
+    label: 출처 상세
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
@@ -53058,7 +53058,7 @@ screens:
         view_model_field: operational_links
       copy:
         heading: 영향
-        action_label: 공식 source 열기
+        action_label: 공식 출처 열기
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -53523,7 +53523,7 @@ screens:
   - retired-source
   primary_action:
     action_id: view-official
-    label: 공식 source 열기
+    label: 공식 출처 열기
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
@@ -66249,7 +66249,7 @@ screens:
 - screen_id: REV-001
   surface: internal
   route: /internal/review
-  title: 검토 Queue
+  title: 검토 대기열
   typed_view_model: Rev001ScreenVmV1
   view_model_schema:
     name: Rev001ScreenVmV1
@@ -66294,7 +66294,7 @@ screens:
         operation_field_path: $projection.views_object
         view_model_field: views_object
       copy:
-        heading: 검토 Queue
+        heading: 검토 대기열
         explanation: 역할별 review snapshot을 위험·기한·독립성·변경 상태로 선택한다.
         sources:
         - screen-catalog.title
@@ -66988,8 +66988,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: REV-001 (검토 Queue) uses its explicit internal-data profile for the task ‘역할별 review snapshot을
-      위험·기한·독립성·변경 상태로 선택한다.’; layout archetype QUEUE does not replace it.
+    screen_specific_reason: REV-001 (검토 대기열) uses its explicit internal-data profile for the task ‘역할별 review snapshot을 위험·기한·독립성·변경
+      상태로 선택한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
       default_profile: internal-data
@@ -67209,7 +67209,7 @@ screens:
 - screen_id: REV-002
   surface: internal
   route: /internal/review/{snapshotId}
-  title: 독립 Snapshot 검토
+  title: 독립 스냅샷 검토
   typed_view_model: Rev002ScreenVmV1
   view_model_schema:
     name: Rev002ScreenVmV1
@@ -67262,7 +67262,7 @@ screens:
         operation_field_path: snapshotHash
         view_model_field: snapshot_hash
       copy:
-        heading: 독립 Snapshot 검토
+        heading: 독립 스냅샷 검토
         explanation: 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
         sources:
         - screen-catalog.title
@@ -67878,8 +67878,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: REV-002 (독립 Snapshot 검토) uses its explicit internal-data profile for the task ‘불변 snapshot의 공개
-      preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.’; layout archetype DECISION_REVIEW does not replace it.
+    screen_specific_reason: REV-002 (독립 스냅샷 검토) uses its explicit internal-data profile for the task ‘불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를
+      검토해 구조화된 결정을 내린다.’; layout archetype DECISION_REVIEW does not replace it.
     archetype_default_resolution:
       archetype: DECISION_REVIEW
       default_profile: decision
@@ -68647,7 +68647,7 @@ screens:
         view_model_field: public_smoke_receipt
       copy:
         heading: 재인증
-        action_label: 최신 snapshot 게시
+        action_label: 최신 스냅샷 게시
         consequence: 최신 검증 조건을 서버에서 다시 계산한 뒤 정확한 검토본만 새 공개 버전으로 게시하고 공개 화면 반영·알림·공개 확인 영수증을 남긴다.
         consequence_status: AUTHORED
         sources:
@@ -69154,7 +69154,7 @@ screens:
   - duplicate-command
   primary_action:
     action_id: publish
-    label: 최신 snapshot 게시
+    label: 최신 스냅샷 게시
     consequence: 최신 검증 조건을 서버에서 다시 계산한 뒤 정확한 검토본만 새 공개 버전으로 게시하고 공개 화면 반영·알림·공개 확인 영수증을 남긴다.
     consequence_status: AUTHORED
     server_ack_required: true
@@ -75016,7 +75016,7 @@ screens:
 - screen_id: RULE-001
   surface: internal
   route: /internal/rules
-  title: 탐지 규칙 Registry
+  title: 탐지 규칙 등록부
   typed_view_model: Rule001ScreenVmV1
   view_model_schema:
     name: Rule001ScreenVmV1
@@ -75061,7 +75061,7 @@ screens:
         operation_field_path: $projection.status_object
         view_model_field: status_object
       copy:
-        heading: 탐지 규칙 Registry
+        heading: 탐지 규칙 등록부
         explanation: 규칙의 active/shadow/retired version, owner, 평가, 적용 source를 탐색한다.
         sources:
         - screen-catalog.title
@@ -75753,7 +75753,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: RULE-001 (탐지 규칙 Registry) uses its explicit internal-data profile for the task ‘규칙의 active/shadow/retired
+    screen_specific_reason: RULE-001 (탐지 규칙 등록부) uses its explicit internal-data profile for the task ‘규칙의 active/shadow/retired
       version, owner, 평가, 적용 source를 탐색한다.’; layout archetype SEARCH_INDEX does not replace it.
     archetype_default_resolution:
       archetype: SEARCH_INDEX
@@ -75903,7 +75903,7 @@ screens:
 - screen_id: RULE-002
   surface: internal
   route: /internal/rules/{ruleId}/versions/{version}
-  title: 규칙 Version 상세
+  title: 규칙 버전 상세
   typed_view_model: Rule002ScreenVmV1
   view_model_schema:
     name: Rule002ScreenVmV1
@@ -75958,7 +75958,7 @@ screens:
         operation_field_path: version
         view_model_field: rule_version
       copy:
-        heading: 규칙 Version 상세
+        heading: 규칙 버전 상세
         explanation: 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
         sources:
         - screen-catalog.title
@@ -76074,7 +76074,7 @@ screens:
         view_model_field: draft_and_approval_actions
       copy:
         heading: 승인 이력
-        action_label: 다음 version 초안
+        action_label: 다음 버전 초안
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -76557,8 +76557,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: RULE-002 (규칙 Version 상세) uses its explicit internal-data profile for the task ‘불변 rule version의
-      목적·입력·formula·cohort·blocker·change·owner를 검토한다.’; layout archetype ENTITY_DETAIL does not replace it.
+    screen_specific_reason: RULE-002 (규칙 버전 상세) uses its explicit internal-data profile for the task ‘불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를
+      검토한다.’; layout archetype ENTITY_DETAIL does not replace it.
     archetype_default_resolution:
       archetype: ENTITY_DETAIL
       default_profile: public-data
@@ -76634,7 +76634,7 @@ screens:
   - source-field-missing
   primary_action:
     action_id: create-draft
-    label: 다음 version 초안
+    label: 다음 버전 초안
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -76761,7 +76761,7 @@ screens:
 - screen_id: RULE-003
   surface: internal
   route: /internal/rules/{ruleId}/versions/{version}/evaluation
-  title: 규칙 평가·Shadow
+  title: 규칙 평가·섀도 실행
   typed_view_model: Rule003ScreenVmV1
   view_model_schema:
     name: Rule003ScreenVmV1
@@ -76816,7 +76816,7 @@ screens:
         operation_field_path: version
         view_model_field: evaluation_version
       copy:
-        heading: 규칙 평가·Shadow
+        heading: 규칙 평가·섀도 실행
         explanation: gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
         sources:
         - screen-catalog.title
@@ -77417,7 +77417,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: RULE-003 (규칙 평가·Shadow) uses its explicit internal-data profile for the task ‘gold·false-positive·historical·shadow
+    screen_specific_reason: RULE-003 (규칙 평가·섀도 실행) uses its explicit internal-data profile for the task ‘gold·false-positive·historical·shadow
       결과와 threshold 민감도를 평가한다.’; layout archetype OPERATIONS does not replace it.
     archetype_default_resolution:
       archetype: OPERATIONS
@@ -78793,7 +78793,7 @@ screens:
 - screen_id: SIG-001
   surface: internal
   route: /internal/signals
-  title: Signal Queue
+  title: 신호 대기열
   typed_view_model: Sig001ScreenVmV1
   view_model_schema:
     name: Sig001ScreenVmV1
@@ -78838,7 +78838,7 @@ screens:
         operation_field_path: $projection.scope_object
         view_model_field: scope_object
       copy:
-        heading: Signal Queue
+        heading: 신호 대기열
         explanation: 새 이상 신호를 rule·source·quality·blocker로 정렬해 검토 대상을 선택한다.
         sources:
         - screen-catalog.title
@@ -79606,7 +79606,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SIG-001 (Signal Queue) uses its explicit internal-data profile for the task ‘새 이상 신호를 rule·source·quality·blocker로
+    screen_specific_reason: SIG-001 (신호 대기열) uses its explicit internal-data profile for the task ‘새 이상 신호를 rule·source·quality·blocker로
       정렬해 검토 대상을 선택한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
@@ -79824,7 +79824,7 @@ screens:
 - screen_id: SIG-002
   surface: internal
   route: /internal/signals/{signalId}
-  title: Signal 검토
+  title: 신호 검토
   typed_view_model: Sig002ScreenVmV1
   view_model_schema:
     name: Sig002ScreenVmV1
@@ -79877,7 +79877,7 @@ screens:
         operation_field_path: signal
         view_model_field: signal_identity
       copy:
-        heading: Signal 검토
+        heading: 신호 검토
         explanation: 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
         sources:
         - screen-catalog.title
@@ -80624,7 +80624,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SIG-002 (Signal 검토) uses its explicit internal-data profile for the task ‘결정적 계산·blocker·provenance·관련
+    screen_specific_reason: SIG-002 (신호 검토) uses its explicit internal-data profile for the task ‘결정적 계산·blocker·provenance·관련
       기록을 검토해 구조화된 triage 결정을 내린다.’; layout archetype DECISION_REVIEW does not replace it.
     archetype_default_resolution:
       archetype: DECISION_REVIEW
@@ -80822,7 +80822,7 @@ screens:
 - screen_id: SRC-001
   surface: internal
   route: /internal/sources
-  title: Source Registry
+  title: 출처 등록부
   typed_view_model: Src001ScreenVmV1
   view_model_schema:
     name: Src001ScreenVmV1
@@ -80869,7 +80869,7 @@ screens:
         operation_field_path: $projection.ownership_object
         view_model_field: ownership_object
       copy:
-        heading: Source Registry
+        heading: 출처 등록부
         explanation: 모든 데이터 source의 상태·owner·sync·schema·quarantine·영향 규칙을 관리한다.
         sources:
         - screen-catalog.title
@@ -80977,7 +80977,7 @@ screens:
         view_model_field: registry_next_action
       copy:
         heading: source 목록
-        action_label: incident 확인
+        action_label: 인시던트 확인
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
@@ -81587,8 +81587,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-001 (Source Registry) uses its explicit internal-data profile for the task ‘모든 데이터 source의
-      상태·owner·sync·schema·quarantine·영향 규칙을 관리한다.’; layout archetype OPERATIONS does not replace it.
+    screen_specific_reason: SRC-001 (출처 등록부) uses its explicit internal-data profile for the task ‘모든 데이터 source의 상태·owner·sync·schema·quarantine·영향
+      규칙을 관리한다.’; layout archetype OPERATIONS does not replace it.
     archetype_default_resolution:
       archetype: OPERATIONS
       default_profile: operations
@@ -81664,7 +81664,7 @@ screens:
   - permission-read-only
   primary_action:
     action_id: ack-incident
-    label: incident 확인
+    label: 인시던트 확인
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: true
@@ -81850,7 +81850,7 @@ screens:
 - screen_id: SRC-002
   surface: internal
   route: /internal/sources/{sourceId}
-  title: Source 상세
+  title: 출처 상세
   typed_view_model: Src002ScreenVmV1
   view_model_schema:
     name: Src002ScreenVmV1
@@ -81905,7 +81905,7 @@ screens:
         operation_field_path: version
         view_model_field: source_version
       copy:
-        heading: Source 상세
+        heading: 출처 상세
         explanation: source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
         sources:
         - screen-catalog.title
@@ -82432,7 +82432,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-002 (Source 상세) uses its explicit internal-data profile for the task ‘source configuration·checkpoint·quality·SLA·downstream
+    screen_specific_reason: SRC-002 (출처 상세) uses its explicit internal-data profile for the task ‘source configuration·checkpoint·quality·SLA·downstream
       영향을 진단한다.’; layout archetype OPERATIONS does not replace it.
     archetype_default_resolution:
       archetype: OPERATIONS
@@ -82624,7 +82624,7 @@ screens:
 - screen_id: SRC-003
   surface: internal
   route: /internal/sources/{sourceId}/runs
-  title: Source 실행 기록
+  title: 출처 실행 기록
   typed_view_model: Src003ScreenVmV1
   view_model_schema:
     name: Src003ScreenVmV1
@@ -82669,7 +82669,7 @@ screens:
         operation_field_path: $projection.summary_object
         view_model_field: summary_object
       copy:
-        heading: Source 실행 기록
+        heading: 출처 실행 기록
         explanation: source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
         sources:
         - screen-catalog.title
@@ -83361,7 +83361,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-003 (Source 실행 기록) uses its explicit internal-data profile for the task ‘source 실행을 상태·기간·checkpoint·record
+    screen_specific_reason: SRC-003 (출처 실행 기록) uses its explicit internal-data profile for the task ‘source 실행을 상태·기간·checkpoint·record
       count·오류로 탐색한다.’; layout archetype QUEUE does not replace it.
     archetype_default_resolution:
       archetype: QUEUE
@@ -83570,7 +83570,7 @@ screens:
 - screen_id: SRC-004
   surface: internal
   route: /internal/sources/{sourceId}/runs/{runId}
-  title: Source 실행 상세
+  title: 출처 실행 상세
   typed_view_model: Src004ScreenVmV1
   view_model_schema:
     name: Src004ScreenVmV1
@@ -83625,7 +83625,7 @@ screens:
         operation_field_path: version
         view_model_field: run_version
       copy:
-        heading: Source 실행 상세
+        heading: 출처 실행 상세
         explanation: 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
         sources:
         - screen-catalog.title
@@ -84154,7 +84154,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-004 (Source 실행 상세) uses its explicit internal-data profile for the task ‘단일 수집 실행의 input scope·checkpoint·record
+    screen_specific_reason: SRC-004 (출처 실행 상세) uses its explicit internal-data profile for the task ‘단일 수집 실행의 input scope·checkpoint·record
       flow·quarantine·오류를 재현한다.’; layout archetype OPERATIONS does not replace it.
     archetype_default_resolution:
       archetype: OPERATIONS
@@ -84372,7 +84372,7 @@ screens:
 - screen_id: SRC-005
   surface: internal
   route: /internal/sources/{sourceId}/schema-drift
-  title: Schema Drift
+  title: 스키마 드리프트
   typed_view_model: Src005ScreenVmV1
   view_model_schema:
     name: Src005ScreenVmV1
@@ -84427,7 +84427,7 @@ screens:
         operation_field_path: version
         view_model_field: drift_version
       copy:
-        heading: Schema Drift
+        heading: 스키마 드리프트
         explanation: old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.
         sources:
         - screen-catalog.title
@@ -85026,7 +85026,7 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-005 (Schema Drift) uses its explicit internal-data profile for the task ‘old/new schema와 sample을
+    screen_specific_reason: SRC-005 (스키마 드리프트) uses its explicit internal-data profile for the task ‘old/new schema와 sample을
       비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.’; layout archetype DECISION_REVIEW does not replace it.
     archetype_default_resolution:
       archetype: DECISION_REVIEW
@@ -85346,7 +85346,7 @@ screens:
 - screen_id: SRC-006
   surface: internal
   route: /internal/sources/{sourceId}/backfill
-  title: Backfill·Replay
+  title: 백필·재실행
   typed_view_model: Src006ScreenVmV1
   view_model_schema:
     name: Src006ScreenVmV1
@@ -85401,7 +85401,7 @@ screens:
         operation_field_path: version
         view_model_field: plan_version
       copy:
-        heading: Backfill·Replay
+        heading: 백필·재실행
         explanation: 기간·예상 건수·비용·중복 전략·영향·rollback을 검토해 bounded backfill/replay를 실행한다.
         sources:
         - screen-catalog.title
@@ -85926,8 +85926,8 @@ screens:
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
     canonical_states: *id001
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: SRC-006 (Backfill·Replay) uses its explicit internal-data profile for the task ‘기간·예상 건수·비용·중복
-      전략·영향·rollback을 검토해 bounded backfill/replay를 실행한다.’; layout archetype DECISION_REVIEW does not replace it.
+    screen_specific_reason: SRC-006 (백필·재실행) uses its explicit internal-data profile for the task ‘기간·예상 건수·비용·중복 전략·영향·rollback을
+      검토해 bounded backfill/replay를 실행한다.’; layout archetype DECISION_REVIEW does not replace it.
     archetype_default_resolution:
       archetype: DECISION_REVIEW
       default_profile: decision

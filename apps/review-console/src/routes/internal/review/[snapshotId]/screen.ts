@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "REV-002",
-  title: "독립 Snapshot 검토",
+  title: "독립 스냅샷 검토",
   route: "/internal/review/{snapshotId}",
   archetype: "DECISION_REVIEW",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "snapshot",
+      title: "스냅샷 정보",
       component: "StructuredContentSection",
       purpose: "hash·version·author·stale.",
       test_id: "rev_002__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "preview",
-      title: "공개 preview",
+      title: "공개 미리보기",
       component: "DecisionReviewPanel",
       purpose: "exact content.",
       test_id: "rev_002__section__preview",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "matrix",
-      title: "claim/evidence/response",
+      title: "주장·증거·답변",
       component: "KnownUnknownResponse",
       purpose: "coverage.",
       test_id: "rev_002__section__matrix",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "risks",
-      title: "risk·blocker",
+      title: "위험·차단 요인",
       component: "StructuredContentSection",
       purpose: "legal/privacy/source.",
       test_id: "rev_002__section__risks",
@@ -119,7 +119,7 @@ export const screen = {
     },
     {
       id: "legal-hold",
-      label: "법률 hold 설정",
+      label: "법적 보류 설정",
       capability: "review.legal",
       operation_id: "placeLegalHold",
       guard:

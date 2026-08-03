@@ -1797,7 +1797,7 @@ screens:
   - RESEARCHER
   - ANONYMOUS
   job: 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
-  canonical_object: 사건 공개 revision (caseSlug, revision)
+  canonical_object: 사건 공개 개정본 (caseSlug, revision)
   route_parameter_bindings:
   - route_parameter: caseSlug
     source: params.caseSlug
@@ -1821,14 +1821,14 @@ screens:
   ten_second_contract:
     location:
       section: revision-banner
-      answer_pattern: 사건 공개 revision — 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
+      answer_pattern: 사건 공개 개정본 — 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: revision-banner
-      answer_pattern: 사건 공개 revision의 revision 안내에서 과거본 여부와 최신본 링크. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 공개 개정본의 revision 안내에서 과거본 여부와 최신본 링크. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseRevisionsPage.asOf
       - CaseRevisionsPage.items[].state
@@ -1893,7 +1893,7 @@ screens:
       - PublicCaseRevisionResponse.content.claims[].id
     next_action:
       section: revision-banner
-      answer_pattern: '최신 revision 보기: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.'
+      answer_pattern: '최신 개정본 보기: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.'
       sources:
       - CaseRevisionsPage.nextCursor
       - PublicCaseRevisionResponse.content.criticalUnknowns[].nextAction
@@ -2050,7 +2050,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-005: 39cd842fed4e5aa4bef5a608a1ea086ae0d0683577c7b841ba1a927a65aec5f9
+    specs/ui/screen-catalog.yaml#screens/PUB-005: 30640dba195516633b7d6e16b5b4dde889cb5c0d8e60b6e416af4522b14fb96d
   implementation_source_digest: 5d832f7fc6c5e14aede5976dfa39ddf1b0aa8d8e1132b3736ace7fc055dcec72
   authored_section_ids:
   - revision-banner
@@ -2098,7 +2098,7 @@ screens:
     - retracted
   primary_action:
     id: view-latest
-    label: 최신 revision 보기
+    label: 최신 개정본 보기
     operation_id: null
     interaction_kind: NAVIGATION
     capability: none
@@ -2106,7 +2106,7 @@ screens:
     consequence: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.
   action_contracts:
   - action_id: view-latest
-    label: 최신 revision 보기
+    label: 최신 개정본 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -2123,10 +2123,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 사건 공개 revision로 이동해 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
+    consequence: 사건 공개 개정본로 이동해 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
     test_id: pub_005__action__compare
   - action_id: copy-citation
-    label: 이 revision 인용
+    label: 이 개정본 인용
     interaction_kind: COMMAND
     operation_id: null
     capability: none
@@ -2137,7 +2137,7 @@ screens:
     test_id: pub_005__action__copy_citation
   navigation_actions:
   - action_id: view-latest
-    label: 최신 revision 보기
+    label: 최신 개정본 보기
     contract:
       status: resolved
       target:
@@ -2276,6 +2276,7 @@ screens:
       section: summary
       answer_pattern: 먼저 답할 질문은 ‘어떤 규칙과 버전을 사용했는가?’이며, 재현 요약에서 rule/version/result.
       sources:
+      - BinaryDownload.rowCount
       - CaseReproducibilityResponse.excludedCohort[].exclusionReason
       - CaseReproducibilityResponse.excludedCohort[].record.bundleSummary
       - CaseReproducibilityResponse.excludedCohort[].record.includeReason
@@ -2321,12 +2322,7 @@ screens:
       section: summary
       answer_pattern: 'JSON 다운로드: 현재 revision에 고정된 파일을 생성해 파일명, 형식, 크기와 checksum을 확인한 뒤 다운로드한다.'
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - CaseReproducibilityResponse.caseSlug
-      - CaseReproducibilityResponse.excludedCohort[].exclusionCode
-      - CaseReproducibilityResponse.excludedCohort[].exclusionReason
+      - BinaryDownload.receiptSha256
   section_mapping:
   - order: 1
     id: summary
@@ -2366,19 +2362,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_006.inputs
     source_fields:
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - CaseReproducibilityResponse.caseSlug
-    - CaseReproducibilityResponse.excludedCohort[].exclusionCode
-    - CaseReproducibilityResponse.excludedCohort[].exclusionReason
-    - CaseReproducibilityResponse.excludedCohort[].record.agencyName
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
     implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 8f67447bd2d8ea98ae19071ab5179da0f20469ecf5935df89690c4161fd1ac95
+    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -2458,16 +2454,25 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_006.download
     source_fields:
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
     - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
+    - BinaryDownload.mediaType
+    - BinaryDownload.receiptSha256
+    - BinaryDownload.rowCount
     implementation_source_digest: c0e3f97f7d6b9916ce918646e00e7d4ca3b8b501e9d528a8f9851ae0d95f1e4a
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.server.ts
     - apps/public-web/src/routes/cases/[caseSlug]/reproduce/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 509b4ffad89ed92c2e5ad11475577516f59af15a6add2c7c0fe4ee1f375f7bec
+    source_fields_digest: 4e4a38c322ff73347490579ae16853876e40f5203725c405f80d7bdc748d5427
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4482,31 +4487,33 @@ screens:
       section: scope
       answer_pattern: 먼저 답할 질문은 ‘특정 계약이 수집됐는가?’이며, 계약 coverage에서 사건 여부와 무관한 관측 범위.
       sources:
+      - BinaryDownload.rowCount
       - ContractsPage.items[].title
     evidence:
       section: results
       answer_pattern: 계약 결과의 금액·기간·source·related case.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - ContractsPage.appliedFilters.agencyId
-      - ContractsPage.appliedFilters.amountMax
-      - ContractsPage.appliedFilters.amountMin
+      - BinaryDownload.binary
+      - BinaryDownload.byteLength
+      - BinaryDownload.contentBase64
+      - BinaryDownload.contentSha256
+      - BinaryDownload.filename
+      - BinaryDownload.format
     unknown_or_disputed:
       section: scope
       answer_pattern: 계약 coverage에서 사건 여부와 무관한 관측 범위. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - ContractsPage.appliedFilters.agencyId
-      - ContractsPage.appliedFilters.amountMax
-      - ContractsPage.appliedFilters.amountMin
+      - BinaryDownload.binary
+      - BinaryDownload.byteLength
+      - BinaryDownload.contentBase64
+      - BinaryDownload.contentSha256
+      - BinaryDownload.filename
+      - BinaryDownload.format
     next_action:
       section: scope
       answer_pattern: '계약 보기: 계약 상세로 이동해 공개 계약의 원문·정규화 필드·변경·관련 사건을 확인한다.'
       sources:
+      - BinaryDownload.receiptSha256
       - ContractsPage.nextCursor
   section_mapping:
   - order: 1
@@ -4520,19 +4527,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.scope
     source_fields:
-    - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - ContractsPage.appliedFilters.agencyId
-    - ContractsPage.appliedFilters.amountMax
-    - ContractsPage.appliedFilters.amountMin
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 351a7d02939d8cd1a08cada60fb9753ee2e734334ee79adba75a0f5a329e68ab
+    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4550,6 +4557,7 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.filters
     source_fields:
+    - BinaryDownload.rowCount
     - ContractsPage.appliedFilters.agencyId
     - ContractsPage.appliedFilters.amountMax
     - ContractsPage.appliedFilters.amountMin
@@ -4561,14 +4569,13 @@ screens:
     - ContractsPage.appliedFilters.supplierId
     - ContractsPage.items[].agency
     - ContractsPage.items[].amount
-    - ContractsPage.items[].contractNumber
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 335e75cfad82b0c4fb3ce0225cc89fc5fed9d7591d9211b75e93b51c69030ea3
+    source_fields_digest: c0b3d8a33915ab6c087a5dad8ee626791ef56697124269346a45dc1aa1eab404
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4587,6 +4594,7 @@ screens:
     typed_slice: pub_011.results
     source_fields:
     - BinaryDownload.id
+    - BinaryDownload.rowCount
     - BinaryDownload.status
     - ContractsPage.appliedFilters.agencyId
     - ContractsPage.appliedFilters.contractStatus
@@ -4597,14 +4605,13 @@ screens:
     - ContractsPage.items[].href
     - ContractsPage.items[].id
     - ContractsPage.items[].signedAt
-    - ContractsPage.items[].status
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: eb57c9bfdaf5192602c25476adbf7c0ac3a31209f759b243f211fe7a680d6cc6
+    source_fields_digest: fdcaa4ff9fdd17ecc0c6c8706493ff716d964cb49a46ccf015e07428c8f685da
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -4622,19 +4629,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_011.limitations
     source_fields:
-    - ContractsPage.appliedFilters.agencyId
-    - ContractsPage.appliedFilters.amountMax
-    - ContractsPage.appliedFilters.amountMin
-    - ContractsPage.appliedFilters.contractStatus
-    - ContractsPage.appliedFilters.procurementMethod
-    - ContractsPage.appliedFilters.q
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
     implementation_source_digest: 262bc25cfbe3cfbcd0d6f5f32385f1a4a0130c639402d1b0a4489a580537ce10
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/contracts/+page.server.ts
     - apps/public-web/src/routes/contracts/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: daa4535a56ae334a9877e72bc56bb1c4fa6c8bcc3bbce5c699bf9f18aeb700c8
+    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -6310,7 +6317,7 @@ screens:
       - CoverageResponse.methodologyVersion
     next_action:
       section: summary
-      answer_pattern: 'source 상세: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.'
+      answer_pattern: '출처 상세: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.'
       sources:
       - SourceStatusPage.nextCursor
   section_mapping:
@@ -6490,7 +6497,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-015.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-015
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-015: 7e78fbf0134ede75426f9aec30f4b7d4559b5e180b6affc3f0c264406ec17231
+    specs/ui/screen-catalog.yaml#screens/PUB-015: 3f70f29c1db418cfb542f1e397c8f6ac7b6f109b3c269fce1d5c78f0e3414ad8
   implementation_source_digest: 63f5ba90498bc6ae24592bc387644bb3fdf927facdcc8c9f1c993ee7bfac7328
   authored_section_ids:
   - summary
@@ -6539,7 +6546,7 @@ screens:
     - coverage-change
   primary_action:
     id: open-source
-    label: source 상세
+    label: 출처 상세
     operation_id: null
     interaction_kind: NAVIGATION
     capability: none
@@ -6547,7 +6554,7 @@ screens:
     consequence: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.
   action_contracts:
   - action_id: open-source
-    label: source 상세
+    label: 출처 상세
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -6557,7 +6564,7 @@ screens:
     consequence: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.
     test_id: pub_015__action__open_source
   - action_id: download-coverage
-    label: coverage JSON 다운로드
+    label: 범위 JSON 다운로드
     interaction_kind: DOWNLOAD
     operation_id: null
     capability: none
@@ -6568,7 +6575,7 @@ screens:
     test_id: pub_015__action__download_coverage
   navigation_actions:
   - action_id: open-source
-    label: source 상세
+    label: 출처 상세
     contract:
       status: resolved
       target:
@@ -6707,7 +6714,7 @@ screens:
       - SourceStatusPage.items[].publicMessage
     next_action:
       section: status
-      answer_pattern: 'source 상세: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.'
+      answer_pattern: '출처 상세: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.'
       sources:
       - SourceStatusPage.nextCursor
   section_mapping:
@@ -6843,7 +6850,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-016.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-016
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-016: 032b4f22c549433cfebf360738f334d69b47badfb04f71ac1b3ac8b935fe0a37
+    specs/ui/screen-catalog.yaml#screens/PUB-016: df33135b0adbd41b94fcb44fb7109e606273e3a62d56488452b90cb77664652c
   implementation_source_digest: 043bfde8fd8d08aab5cad09efe9ba24223ac78c5aa6084efc6a95767fcf21a34
   authored_section_ids:
   - status
@@ -6888,7 +6895,7 @@ screens:
     - partial-stale
   primary_action:
     id: open-source
-    label: source 상세
+    label: 출처 상세
     operation_id: null
     interaction_kind: NAVIGATION
     capability: none
@@ -6896,7 +6903,7 @@ screens:
     consequence: 데이터 출처 상세로 이동해 source의 운영 기관·갱신·schema·coverage·품질·이용조건을 확인한다.
   action_contracts:
   - action_id: open-source
-    label: source 상세
+    label: 출처 상세
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -6907,7 +6914,7 @@ screens:
     test_id: pub_016__action__open_source
   navigation_actions:
   - action_id: open-source
-    label: source 상세
+    label: 출처 상세
     contract:
       status: resolved
       target:
@@ -7051,7 +7058,7 @@ screens:
       - SourceResponse.data.freshness.lastSuccessfulFetchAt
     next_action:
       section: identity
-      answer_pattern: '공식 source 열기: 허용된 공식 출처를 새 창에서 열고 현재 화면과 출처 경고를 유지한다.'
+      answer_pattern: '공식 출처 열기: 허용된 공식 출처를 새 창에서 열고 현재 화면과 출처 경고를 유지한다.'
       sources:
       - SourceResponse.createdAt
       - SourceResponse.data.accessType
@@ -7280,7 +7287,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-017.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-017
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-017: 670ef76c5f4a60d7663f226094b91d7bbae68dbca36c719a58eadeaef18bc2b3
+    specs/ui/screen-catalog.yaml#screens/PUB-017: 0ce9f0e8aeb323ea30e12a5ac84f18f82facbeed05e5f5f7af947a9310772a38
   implementation_source_digest: 096942e76ea4fadc8c9e7d79c57b03d9f8c2acd72d0a3982288150e03ba07bf0
   authored_section_ids:
   - identity
@@ -7333,7 +7340,7 @@ screens:
     - retired-source
   primary_action:
     id: view-official
-    label: 공식 source 열기
+    label: 공식 출처 열기
     operation_id: null
     interaction_kind: EXTERNAL_LINK
     capability: none
@@ -7341,7 +7348,7 @@ screens:
     consequence: 허용된 공식 출처를 새 창에서 열고 현재 화면과 출처 경고를 유지한다.
   action_contracts:
   - action_id: view-official
-    label: 공식 source 열기
+    label: 공식 출처 열기
     interaction_kind: EXTERNAL_LINK
     operation_id: null
     capability: none
@@ -8042,7 +8049,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-019.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-019
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-019: e361a5eab0731b312ece2007f730f2862a3b416d54ff46616ccf23bb7f01b795
+    specs/ui/screen-catalog.yaml#screens/PUB-019: 41e180f5f13bcdd3ee7d63d6bf0e3280eb0e41cffa7809fe99930fa4032abdb8
   implementation_source_digest: a997599a0134f45fe5c6d70820545324317e7f8b4c428a6bd9c736c341a60bdf
   authored_section_ids:
   - status
@@ -8111,14 +8118,14 @@ screens:
     consequence: 사건 상세로 이동해 사건의 현재 상태·확인 사실·중요한 미확인·당사자 소명·근거를 책임 있게 이해한다.
     test_id: pub_019__action__open_case
   - action_id: view-old-revision
-    label: 이전 revision 보기
+    label: 이전 개정본 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 사건 공개 revision로 이동해 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
+    consequence: 사건 공개 개정본로 이동해 과거 또는 특정 공개 revision을 고정된 상태로 검증·인용한다.
     test_id: pub_019__action__view_old_revision
   - action_id: copy-citation
     label: 정정 인용
@@ -8152,7 +8159,7 @@ screens:
       arrival_focus: destination main heading, selected record heading, or named fragment heading
       oracle: UX-NAV-PUB-019-OPEN-CASE
   - action_id: view-old-revision
-    label: 이전 revision 보기
+    label: 이전 개정본 보기
     contract:
       status: resolved
       target:
@@ -8467,7 +8474,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-020.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-020
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-020: 155df548bf0ad6dd3d089431b6e15b54632cead7f2a119f38121674d1477a8ab
+    specs/ui/screen-catalog.yaml#screens/PUB-020: 41fcd72fde35fe5e45d2d1997bd726bec6f73412620ac1b0f36b2befb64eca4f
   implementation_source_digest: ec137f194ebc78db9fac756e67ee2817611e06d12a8320273a9221506b887b31
   authored_section_ids:
   - datasets
@@ -8537,7 +8544,7 @@ screens:
     consequence: 현재 revision에 고정된 파일을 생성해 파일명, 형식, 크기와 checksum을 확인한 뒤 다운로드한다.
     test_id: pub_020__action__download_dataset
   - action_id: view-schema
-    label: schema 보기
+    label: 스키마 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -8558,7 +8565,7 @@ screens:
     test_id: pub_020__action__open_api_docs
   navigation_actions:
   - action_id: view-schema
-    label: schema 보기
+    label: 스키마 보기
     contract:
       status: resolved
       target:
@@ -8683,6 +8690,7 @@ screens:
       section: getting-started
       answer_pattern: 먼저 답할 질문은 ‘어떻게 API를 호출하는가?’이며, 시작에서 base URL·auth/rate.
       sources:
+      - BinaryDownload.rowCount
       - PublicApiDocumentationResponse.data.title
       - PublicApiDocumentationResponse.id.title
       - PublicApiDocumentationResponse.summary
@@ -8715,12 +8723,7 @@ screens:
       section: getting-started
       answer_pattern: 'OpenAPI JSON 다운로드: 현재 revision에 고정된 파일을 생성해 파일명, 형식, 크기와 checksum을 확인한 뒤 다운로드한다.'
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - PublicApiDocumentationResponse.createdAt
-      - PublicApiDocumentationResponse.data.sections[].body
-      - PublicApiDocumentationResponse.data.sections[].heading
+      - BinaryDownload.receiptSha256
   section_mapping:
   - order: 1
     id: getting-started
@@ -8733,19 +8736,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.getting_started
     source_fields:
-    - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - PublicApiDocumentationResponse.createdAt
-    - PublicApiDocumentationResponse.data.sections[].body
-    - PublicApiDocumentationResponse.data.sections[].heading
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e19ee89256123dc6eaffa330e4ad9b91db37b8c6cce45573ef10c6c1a378eebc
+    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8763,19 +8766,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.resources
     source_fields:
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - PublicApiDocumentationResponse.createdAt
-    - PublicApiDocumentationResponse.data.sections[].body
-    - PublicApiDocumentationResponse.data.sections[].heading
-    - PublicApiDocumentationResponse.data.sections[].id
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: d888e7befc3520acdeea6370335df6e4acb1fb7a4f2fecc1077c9e90d28366e2
+    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8793,19 +8796,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.pagination
     source_fields:
-    - BinaryDownload.version
-    - PublicApiDocumentationResponse.createdAt
-    - PublicApiDocumentationResponse.data.sections[].body
-    - PublicApiDocumentationResponse.data.sections[].heading
-    - PublicApiDocumentationResponse.data.sections[].id
-    - PublicApiDocumentationResponse.data.sections[].links[]
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 96660bfc11949049deff2f401d244e562d738c4f75ffcbba19d4b1bd87120242
+    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8824,19 +8827,19 @@ screens:
       reason: API 오류 계약은 내부 AI 제안이 아니라 versioned Problem Details 설명이다.
     typed_slice: pub_021.errors
     source_fields:
-    - PublicApiDocumentationResponse.createdAt
-    - PublicApiDocumentationResponse.data.sections[].body
-    - PublicApiDocumentationResponse.data.sections[].heading
-    - PublicApiDocumentationResponse.data.sections[].id
-    - PublicApiDocumentationResponse.data.sections[].links[]
-    - PublicApiDocumentationResponse.data.sections[].updatedAt
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: be75de5f5f9d7f989aac06cbc87c3cc43ddd378f1f69d96f385c8eadbe817777
+    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8854,19 +8857,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.versioning
     source_fields:
-    - PublicApiDocumentationResponse.data.sections[].body
-    - PublicApiDocumentationResponse.data.sections[].heading
-    - PublicApiDocumentationResponse.data.sections[].id
-    - PublicApiDocumentationResponse.data.sections[].links[]
-    - PublicApiDocumentationResponse.data.sections[].updatedAt
-    - PublicApiDocumentationResponse.data.sourceLinks[].href
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0c9757115ef93b4d7b77853ab210149ba4a78bca1f316a8350e75d5d447ec1eb
+    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -8884,16 +8887,25 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: pub_021.download
     source_fields:
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
     - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
+    - BinaryDownload.mediaType
+    - BinaryDownload.receiptSha256
+    - BinaryDownload.rowCount
     implementation_source_digest: 960955258e16fd067ffefa27e731c46eb362a1a9968ca29f4b7c60c88c1e1090
     source_paths:
     - apps/public-web/src/routes/+error.svelte
     - apps/public-web/src/routes/api/+page.server.ts
     - apps/public-web/src/routes/api/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 509b4ffad89ed92c2e5ad11475577516f59af15a6add2c7c0fe4ee1f375f7bec
+    source_fields_digest: 4e4a38c322ff73347490579ae16853876e40f5203725c405f80d7bdc748d5427
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -9699,7 +9711,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/pub-023.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/PUB-023
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/PUB-023: bd3665bb4b4c101e29d4f771a990e72a06645fba770eb4c983e3fb5d83e5df25
+    specs/ui/screen-catalog.yaml#screens/PUB-023: ca62caac38bbe40067c8a8ac5f7c6b327481d9eadb181c993f2e6487eda9954c
   implementation_source_digest: 70b39a9cc5ba4c6fd736198acb3876b40705fa7e49a67334fcab1c8bb3be59dc
   authored_section_ids:
   - principles
@@ -9765,7 +9777,7 @@ screens:
     consequence: 현재 revision에 고정된 파일을 생성해 파일명, 형식, 크기와 checksum을 확인한 뒤 다운로드한다.
     test_id: pub_023__action__download_report
   - action_id: view-governance
-    label: governance 보기
+    label: 거버넌스 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -9776,7 +9788,7 @@ screens:
     test_id: pub_023__action__view_governance
   navigation_actions:
   - action_id: view-governance
-    label: governance 보기
+    label: 거버넌스 보기
     contract:
       status: resolved
       target:
@@ -14927,18 +14939,19 @@ screens:
       section: questions
       answer_pattern: 먼저 답할 질문은 ‘정확히 어떤 질문에 답해야 하는가?’이며, 질문에서 중립적 구조화 질문.
       sources:
+      - BinaryDownload.rowCount
       - ResponseRequestResponse.attachmentsPolicy.maxCount
       - ResponseRequestResponse.casePublicTitle
     evidence:
       section: references
       answer_pattern: 관련 자료의 공개 claim/evidence만.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - ResponseRequestResponse.attachmentsPolicy.allowedMediaTypes
-      - ResponseRequestResponse.attachmentsPolicy.maxBytes
-      - ResponseRequestResponse.attachmentsPolicy.maxCount
+      - BinaryDownload.binary
+      - BinaryDownload.byteLength
+      - BinaryDownload.contentBase64
+      - BinaryDownload.contentSha256
+      - BinaryDownload.filename
+      - BinaryDownload.format
     unknown_or_disputed:
       section: public-use
       answer_pattern: 공개 범위에서 동의 선택 설명. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -14959,6 +14972,7 @@ screens:
       section: questions
       answer_pattern: '답변 작성: 답변 작성로 이동해 질문별 답변·참고·공개 동의를 임시 저장하며 작성한다.'
       sources:
+      - BinaryDownload.receiptSha256
       - ResponseRequestResponse.dueAt
       - ResponseRequestResponse.publicationScope.redactionAcknowledged
   section_mapping:
@@ -15004,19 +15018,19 @@ screens:
       reason: response party에는 허용된 공개 claim/evidence 링크만 읽기 전용으로 제공한다.
     typed_slice: rsp_002.references
     source_fields:
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - ResponseRequestResponse.attachmentsPolicy.allowedMediaTypes
-    - ResponseRequestResponse.attachmentsPolicy.maxBytes
-    - ResponseRequestResponse.attachmentsPolicy.maxCount
-    - ResponseRequestResponse.attachmentsPolicy.retentionDays
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 47d7a19adee4b818cd353040e6f18e76ccbbeed9fa4c4a2520d75ac9b6f93ff8
+    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -15034,19 +15048,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: rsp_002.deadline
     source_fields:
-    - BinaryDownload.version
-    - ResponseRequestResponse.attachmentsPolicy.allowedMediaTypes
-    - ResponseRequestResponse.attachmentsPolicy.maxBytes
-    - ResponseRequestResponse.attachmentsPolicy.maxCount
-    - ResponseRequestResponse.attachmentsPolicy.retentionDays
-    - ResponseRequestResponse.attachmentsPolicy.scanRequired
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 0218002f3656eddfa709b12cee3e2f94d94997ae617fa4962ad93d323227efb9
+    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -15096,19 +15110,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: rsp_002.support
     source_fields:
-    - ResponseRequestResponse.attachmentsPolicy.maxBytes
-    - ResponseRequestResponse.attachmentsPolicy.maxCount
-    - ResponseRequestResponse.attachmentsPolicy.retentionDays
-    - ResponseRequestResponse.attachmentsPolicy.scanRequired
-    - ResponseRequestResponse.casePublicTitle
-    - ResponseRequestResponse.contact.email
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
     implementation_source_digest: d4b0034aaaca3b2aaabb0a5768691afc128dbc84021b2c7ed016e5a01bf2091c
     source_paths:
     - apps/response-portal/src/routes/+error.svelte
     - apps/response-portal/src/routes/respond/overview/+page.server.ts
     - apps/response-portal/src/routes/respond/overview/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 99a632f412bad5af94775ce933efb9c8b23057af84f025bf76b96cfa6f867769
+    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18758,6 +18772,7 @@ screens:
       section: incidents
       answer_pattern: 운영 대시보드의 source/ops incident에서 영향. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
+      - InternalDashboardResponse.budget.asOf
       - InternalDashboardResponse.budget.status
       - InternalDashboardResponse.incidents[].status
       - InternalDashboardResponse.incidents[].updatedAt
@@ -18769,12 +18784,13 @@ screens:
       - InternalDashboardResponse.overdueTasks[].href
       - InternalDashboardResponse.overdueTasks[].id
       - InternalDashboardResponse.overdueTasks[].objectId
-      - InternalDashboardResponse.overdueTasks[].objectType
     matters_now:
       section: critical
       answer_pattern: 먼저 답할 질문은 ‘지금 무엇을 먼저 처리해야 하는가?’이며, 긴급 blocker에서 publication/correction/security.
       sources:
       - InternalDashboardResponse.budget.lastChangeReason
+      - InternalDashboardResponse.budget.reservationSummary
+      - InternalDashboardResponse.budget.unknownReason
       - InternalDashboardResponse.incidents[].summary
       - InternalDashboardResponse.jobHealth.queues[].deadLetterCount
       - InternalDashboardResponse.jobHealth.queues[].leasedCount
@@ -18799,17 +18815,17 @@ screens:
       answer_pattern: 긴급 blocker에서 publication/correction/security. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
       sources:
       - InternalDashboardResponse.budget.alertThreshold
+      - InternalDashboardResponse.budget.asOf
       - InternalDashboardResponse.budget.currency
       - InternalDashboardResponse.budget.dailyLimit
       - InternalDashboardResponse.budget.dailyUsed
       - InternalDashboardResponse.budget.fallbackAction
       - InternalDashboardResponse.budget.forecastAssumption
+      - InternalDashboardResponse.budget.forecastConfidence
       - InternalDashboardResponse.budget.hardLimit
       - InternalDashboardResponse.budget.lastChangeReason
       - InternalDashboardResponse.budget.lastChangedBy
       - InternalDashboardResponse.budget.monthlyLimit
-      - InternalDashboardResponse.budget.monthlyUsed
-      - InternalDashboardResponse.budget.softLimit
     next_action:
       section: critical
       answer_pattern: '작업 열기: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.'
@@ -18839,18 +18855,18 @@ screens:
     typed_slice: int_001.critical
     source_fields:
     - InternalDashboardResponse.budget.alertThreshold
+    - InternalDashboardResponse.budget.asOf
     - InternalDashboardResponse.budget.currency
     - InternalDashboardResponse.budget.dailyLimit
     - InternalDashboardResponse.budget.dailyUsed
     - InternalDashboardResponse.budget.fallbackAction
-    - InternalDashboardResponse.budget.forecastAssumption
     implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/dashboard/+page.server.ts
     - apps/review-console/src/routes/internal/dashboard/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: b8c14315f84b774c9ef2b3d60b4d7489bf03540d8813a0a1a157058110807fb6
+    source_fields_digest: 31f23d1f3e024ce6316abae5096bd1127e7e7781042c173e71b4b91ba90c8ad5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18868,19 +18884,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: int_001.my_work
     source_fields:
+    - InternalDashboardResponse.budget.asOf
     - InternalDashboardResponse.budget.currency
     - InternalDashboardResponse.budget.dailyLimit
     - InternalDashboardResponse.budget.dailyUsed
     - InternalDashboardResponse.budget.fallbackAction
     - InternalDashboardResponse.budget.forecastAssumption
-    - InternalDashboardResponse.budget.hardLimit
     implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/dashboard/+page.server.ts
     - apps/review-console/src/routes/internal/dashboard/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: c2d3737060dcc8b59db4bd87ee9372d51ebda64651391e0aceedb477b9ce19f3
+    source_fields_digest: 0ca9ca00dcbb6fe13096e3db48cf1f1417632c8d8c498af6d2f676f1b9d5a148
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18935,24 +18951,24 @@ screens:
     typed_slice: int_001.queues
     source_fields:
     - InternalDashboardResponse.budget.alertThreshold
+    - InternalDashboardResponse.budget.asOf
     - InternalDashboardResponse.budget.currency
     - InternalDashboardResponse.budget.dailyLimit
     - InternalDashboardResponse.budget.dailyUsed
     - InternalDashboardResponse.budget.fallbackAction
     - InternalDashboardResponse.budget.forecastAssumption
+    - InternalDashboardResponse.budget.forecastConfidence
     - InternalDashboardResponse.budget.hardLimit
     - InternalDashboardResponse.budget.lastChangeReason
     - InternalDashboardResponse.budget.lastChangedBy
     - InternalDashboardResponse.budget.monthlyLimit
-    - InternalDashboardResponse.budget.monthlyUsed
-    - InternalDashboardResponse.budget.softLimit
     implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/dashboard/+page.server.ts
     - apps/review-console/src/routes/internal/dashboard/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: c12917b233a36030510d57acc279d1481fab226d1e7aba08d03f1472b1ac4a26
+    source_fields_digest: 95e86075f683ef5474edaaecd7a0b2f29e4d722327302234c6e9a473b5c6fe31
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18970,19 +18986,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: int_001.cost
     source_fields:
+    - InternalDashboardResponse.budget.dailyUsed
     - InternalDashboardResponse.budget.fallbackAction
     - InternalDashboardResponse.budget.forecastAssumption
+    - InternalDashboardResponse.budget.forecastConfidence
     - InternalDashboardResponse.budget.hardLimit
     - InternalDashboardResponse.budget.lastChangeReason
-    - InternalDashboardResponse.budget.lastChangedBy
-    - InternalDashboardResponse.budget.monthlyLimit
     implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/dashboard/+page.server.ts
     - apps/review-console/src/routes/internal/dashboard/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 6c246c9d525583dfd51900bad87c942682078a3e4cf90f7786c473fc0b17af59
+    source_fields_digest: a563f28fded2a3ae02652df0d996cf932531c30842af08cbd61f930900dd014b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -18997,7 +19013,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/int-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/INT-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/INT-001: ef2ff3cc07d24987b143ab5e46c9159cc802fc12399dcdf7a2da251d13dfe153
+    specs/ui/screen-catalog.yaml#screens/INT-001: 96a6a04c8a9cfc9ace800dbc0b1934727d441bc286e224c569df88b31faa0ebb
   implementation_source_digest: 611fc3a28c3f0925027ccedd422e7b50c33372f63385a62ad6d13ba0fb3fe808
   authored_section_ids:
   - critical
@@ -19067,14 +19083,14 @@ screens:
     consequence: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.
     test_id: int_001__action__open_task
   - action_id: open-incident
-    label: incident 보기
+    label: 인시던트 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 운영 Overview로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
+    consequence: 운영 개요로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
     test_id: int_001__action__open_incident
   navigation_actions:
   - action_id: open-task
@@ -19099,7 +19115,7 @@ screens:
       arrival_focus: destination main heading, selected record heading, or named fragment heading
       oracle: UX-NAV-INT-001-OPEN-TASK
   - action_id: open-incident
-    label: incident 보기
+    label: 인시던트 보기
     contract:
       status: resolved
       target:
@@ -20605,19 +20621,19 @@ screens:
   - TRIAGER
   - INVESTIGATOR
   job: 새 이상 신호를 rule·source·quality·blocker로 정렬해 검토 대상을 선택한다.
-  canonical_object: Signal Queue
+  canonical_object: 신호 대기열
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: scope
-      answer_pattern: Signal Queue — 새 이상 신호를 rule·source·quality·blocker로 정렬해 검토 대상을 선택한다.
+      answer_pattern: 신호 대기열 — 새 이상 신호를 rule·source·quality·blocker로 정렬해 검토 대상을 선택한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: scope
-      answer_pattern: Signal Queue의 queue 상태에서 SLA·count. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 신호 대기열의 queue 상태에서 SLA·count. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SignalsPage.appliedFilters.signalStatus
       - SignalsPage.asOf
@@ -20803,7 +20819,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/sig-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SIG-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SIG-001: 1161c3cef7dc5ace0973c8929258b5b4db3bbda152a9e694e757f8f35ee9c1b3
+    specs/ui/screen-catalog.yaml#screens/SIG-001: aea790e1ff791e13489fa4acb645c54a249eddf45c6981e0affbbc250c0fb05a
   implementation_source_digest: 19e10de7908a52146ec175132562c67ad1ea8e45235cbac71f50e69cb0f63452
   authored_section_ids:
   - scope
@@ -20870,7 +20886,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Signal 검토로 이동해 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
+    consequence: 신호 검토로 이동해 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
     test_id: sig_001__action__open_signal
   - action_id: assign
     label: 담당자 지정
@@ -20977,7 +20993,7 @@ screens:
   - TRIAGER
   - INVESTIGATOR
   job: 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
-  canonical_object: Signal 검토 (signalId)
+  canonical_object: 신호 검토 (signalId)
   route_parameter_bindings:
   - route_parameter: signalId
     source: params.signalId
@@ -20993,14 +21009,14 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: Signal 검토 — 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
+      answer_pattern: 신호 검토 — 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: identity
-      answer_pattern: Signal 검토의 source·rule·freshness에서 입력 version. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 신호 검토의 source·rule·freshness에서 입력 version. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SignalTriageViewResponse.blockers[].ownerUserId
       - SignalTriageViewResponse.dataQuality.blockers[].ownerUserId
@@ -21337,7 +21353,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/sig-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SIG-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SIG-002: f6501c47c30b0dca6e1ae2d6b5dc65828b6be539b09b1796041ac56090606413
+    specs/ui/screen-catalog.yaml#screens/SIG-002: 48ae068e1cf0cdf011ddbb631db15d78ab42b3594322a36703ad0b6df9bfda27
   implementation_source_digest: c93345ec38795fa1e94ad8b302473a1edf8b4feff62b9fa3f7db8c1b9480e8df
   authored_section_ids:
   - identity
@@ -21517,19 +21533,19 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 사건을 state·owner·blocker·response·review 기한으로 찾고 작업으로 이동한다.
-  canonical_object: 사건 Queue
+  canonical_object: 사건 대기열
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: views
-      answer_pattern: 사건 Queue — 사건을 state·owner·blocker·response·review 기한으로 찾고 작업으로 이동한다.
+      answer_pattern: 사건 대기열 — 사건을 state·owner·blocker·response·review 기한으로 찾고 작업으로 이동한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: filters
-      answer_pattern: 사건 Queue의 필터에서 state/owner/blocker/risk. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 대기열의 필터에서 state/owner/blocker/risk. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalCasesPage.appliedFilters.investigationState
       - InternalCasesPage.appliedFilters.publicationState
@@ -21723,7 +21739,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-001: ec266f59e6908a739ade4e8a6fba9133a60476f8e3166c130de06725f7a5106b
+    specs/ui/screen-catalog.yaml#screens/CAS-001: 4316ebb2fe380ad222983124ca2ced91afd2f30a69056b09a2b692c8d6e3003c
   implementation_source_digest: 4562af4c07364e3739f983e33bf149dafc196f37ed0b6acc67bf443e31d6ae75
   authored_section_ids:
   - views
@@ -21790,7 +21806,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 사건 Overview로 이동해 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
+    consequence: 사건 개요로 이동해 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
     test_id: cas_001__action__open_case
   - action_id: assign
     label: 담당자 지정
@@ -21900,7 +21916,7 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
-  canonical_object: 사건 Overview (caseId)
+  canonical_object: 사건 개요 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -21922,14 +21938,14 @@ screens:
   ten_second_contract:
     location:
       section: header
-      answer_pattern: 사건 Overview — 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
+      answer_pattern: 사건 개요 — 사건의 조사 질문·known/unknown/response·blocker·다음 작업을 한눈에 파악한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: header
-      answer_pattern: 사건 Overview의 identity·state·version에서 assignment·due. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 개요의 identity·state·version에서 assignment·due. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseWorkspaceOverviewResponse.assignments[].dueAt
       - CaseWorkspaceOverviewResponse.blockers[].ownerUserId
@@ -22171,7 +22187,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-002: 1be83d11f32bc3e96615057a54644ecc0af7d785761cbde600abfb9a8f64bbbf
+    specs/ui/screen-catalog.yaml#screens/CAS-002: 2d17477c2a2b7e860b4749298e29f09c1dccd5bb7cb107d95f125b320ce557be
   implementation_source_digest: 3e2d7272894a99d766a599483e004fba82ed3e42b1ccd76e30d9c82b8cfd00c5
   authored_section_ids:
   - header
@@ -22456,7 +22472,7 @@ screens:
   - INVESTIGATOR
   - TRIAGER
   job: 사건에 연결된 signal과 연결 이유·중복·계산 차이를 검토한다.
-  canonical_object: 연결된 Signal (caseId)
+  canonical_object: 연결된 신호 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -22475,14 +22491,14 @@ screens:
   ten_second_contract:
     location:
       section: summary
-      answer_pattern: 연결된 Signal — 사건에 연결된 signal과 연결 이유·중복·계산 차이를 검토한다.
+      answer_pattern: 연결된 신호 — 사건에 연결된 signal과 연결 이유·중복·계산 차이를 검토한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: signals
-      answer_pattern: 연결된 Signal의 signal 목록에서 metric·state·link reason. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 연결된 신호의 signal 목록에서 metric·state·link reason. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseSignalsPage.appliedFilters.signalStatus
       - CaseSignalsPage.asOf
@@ -22523,7 +22539,7 @@ screens:
       - CaseSignalsPage.items[].assignedUserId
     next_action:
       section: summary
-      answer_pattern: 'signal 연결: signal 연결 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '신호 연결: signal 연결 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - CaseSignalsPage.nextCursor
       - linkSignalToCaseReceipt.acceptedAt
@@ -22642,7 +22658,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-003: 92b16ced166629dcabf2782aa2f0685753004c59c360241408350b0f99423185
+    specs/ui/screen-catalog.yaml#screens/CAS-003: 1dda0b32aa8d9cb1fc80df8a9b58450a122093c5be864336977bde2bb8bf307a
   implementation_source_digest: 014f764d1d8f58d82bee3d6da79f84464e59727c6eade7321b25123b2fd4c5f1
   authored_section_ids:
   - summary
@@ -22691,7 +22707,7 @@ screens:
     - signal-in-other-case
   primary_action:
     id: link-signal
-    label: signal 연결
+    label: 신호 연결
     operation_id: linkSignalToCase
     interaction_kind: COMMAND
     capability: cases.investigate
@@ -22699,17 +22715,17 @@ screens:
     consequence: signal 연결 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: open-signal
-    label: signal 보기
+    label: 신호 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Signal 검토로 이동해 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
+    consequence: 신호 검토로 이동해 결정적 계산·blocker·provenance·관련 기록을 검토해 구조화된 triage 결정을 내린다.
     test_id: cas_003__action__open_signal
   - action_id: link-signal
-    label: signal 연결
+    label: 신호 연결
     interaction_kind: COMMAND
     operation_id: linkSignalToCase
     capability: cases.investigate
@@ -22730,7 +22746,7 @@ screens:
     test_id: cas_003__action__unlink_signal
   navigation_actions:
   - action_id: open-signal
-    label: signal 보기
+    label: 신호 보기
     contract:
       status: resolved
       target:
@@ -23000,7 +23016,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-004: 0945419b1ebe4663915a5ee611111e31705f63c97ecc540a43920eb8e3521f9b
+    specs/ui/screen-catalog.yaml#screens/CAS-004: 5cea3bba4ab5e63fe1effe24bbdf74ae70a53e840f2cd144b46d612f21e07b6c
   implementation_source_digest: 5074b37ddf3052ae6385115f6c68f3c77e5fda5989ed88574e759240e81ee7d7
   authored_section_ids:
   - matrix
@@ -23080,7 +23096,7 @@ screens:
     consequence: 근거 검증로 이동해 근거의 원본·locator·hash·access·claim 관계와 검증 상태를 편집한다.
     test_id: cas_004__action__open_evidence
   - action_id: link
-    label: claim/가설 연결
+    label: 주장/가설 연결
     interaction_kind: COMMAND
     operation_id: linkEvidence
     capability: evidence.create
@@ -23496,7 +23512,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-005: b5cdf41393aba2c48f86d93d942285943bbf4ed8b92339f8385318212d2a570b
+    specs/ui/screen-catalog.yaml#screens/CAS-005: 7478b2d86966be3af7ee6a13e6a6b6b37ba88ff9cc8539bf8ea173e84d23db47
   implementation_source_digest: a09492876acd52e9a6b6be14a668c1336cb05cf14d2626436710b67c62c5955d
   authored_section_ids:
   - source
@@ -23580,7 +23596,7 @@ screens:
     consequence: metadata 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: cas_005__action__edit_metadata
   - action_id: create-redaction
-    label: 공개용 redaction 생성
+    label: 공개용 가림 처리 생성
     interaction_kind: COMMAND
     operation_id: createEvidenceRedaction
     capability: evidence.verify
@@ -23673,7 +23689,7 @@ screens:
   - INVESTIGATOR
   - LEGAL_REVIEWER
   job: 공개하려는 정확한 문장을 type·evidence·반대 근거·한계와 함께 작성한다.
-  canonical_object: 공개 Claim 작성 (caseId)
+  canonical_object: 공개 주장 작성 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -23689,14 +23705,14 @@ screens:
   ten_second_contract:
     location:
       section: summary
-      answer_pattern: 공개 Claim 작성 — 공개하려는 정확한 문장을 type·evidence·반대 근거·한계와 함께 작성한다.
+      answer_pattern: 공개 주장 작성 — 공개하려는 정확한 문장을 type·evidence·반대 근거·한계와 함께 작성한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: summary
-      answer_pattern: 공개 Claim 작성의 claim readiness에서 invalid/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 공개 주장 작성의 claim readiness에서 invalid/blocking. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseClaimsPage.appliedFilters.validationStatus
       - CaseClaimsPage.asOf
@@ -23739,7 +23755,7 @@ screens:
       - CaseClaimsPage.items[].responseCount
     next_action:
       section: summary
-      answer_pattern: 'Claim 추가: claim 생성 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '주장 추가: claim 생성 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - CaseClaimsPage.nextCursor
       - addClaimReceipt.acceptedAt
@@ -23919,7 +23935,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-006: 17abeed580ff931cb65bf84d4b1fba4489b6ceb09676dd574d3383c946d262c3
+    specs/ui/screen-catalog.yaml#screens/CAS-006: bae078803c4b61be0fea3b89faa4e5e6f81080d5531c08b06a7b9b7c8578e7c6
   implementation_source_digest: 22cceed10ef278f6f6071fb41384279bd66719d97419695f05cda90b322d60db
   authored_section_ids:
   - summary
@@ -23973,7 +23989,7 @@ screens:
     - version-conflict
   primary_action:
     id: add-claim
-    label: Claim 추가
+    label: 주장 추가
     operation_id: addClaim
     interaction_kind: COMMAND
     capability: claims.author
@@ -23981,7 +23997,7 @@ screens:
     consequence: claim 생성 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: add-claim
-    label: Claim 추가
+    label: 주장 추가
     interaction_kind: COMMAND
     operation_id: addClaim
     capability: claims.author
@@ -23991,7 +24007,7 @@ screens:
     consequence: claim 생성 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: cas_006__action__add_claim
   - action_id: save-claim
-    label: Claim 저장
+    label: 주장 저장
     interaction_kind: COMMAND
     operation_id: updateClaim
     capability: claims.author
@@ -24684,7 +24700,7 @@ screens:
       - CaseResponsesPage.totalApproximate
     next_action:
       section: requests
-      answer_pattern: '공개 excerpt 승인: 공개 excerpt 승인 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '공개 발췌문 승인: 공개 excerpt 승인 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - CaseResponsesPage.nextCursor
       - approveResponseExcerptReceipt.acceptedAt
@@ -24880,7 +24896,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-008.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-008
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-008: 0bc2e894d21a816ade882c04e796bdc9e1dbdce859376ba31526351b6d303742
+    specs/ui/screen-catalog.yaml#screens/CAS-008: f8d0005293c508872e666e73d9cfb8d71b8a33b022c77c3c5e8913a35ce863fc
   implementation_source_digest: 8f63c1c9cc7130189c3b3ec4357e3ddaff4cfe065dd0450359437a14c3780ca9
   authored_section_ids:
   - requests
@@ -24935,7 +24951,7 @@ screens:
     - submission-quarantined
   primary_action:
     id: approve-excerpt
-    label: 공개 excerpt 승인
+    label: 공개 발췌문 승인
     operation_id: approveResponseExcerpt
     interaction_kind: COMMAND
     capability: responses.review
@@ -24963,7 +24979,7 @@ screens:
     consequence: 소명 관리로 이동해 소명 요청·delivery·기한·제출·검증·공개 excerpt를 사건과 연결한다.
     test_id: cas_008__action__open_submission
   - action_id: approve-excerpt
-    label: 공개 excerpt 승인
+    label: 공개 발췌문 승인
     interaction_kind: COMMAND
     operation_id: approveResponseExcerpt
     capability: responses.review
@@ -25712,7 +25728,7 @@ screens:
   - EDITOR
   - OPERATIONS
   job: 사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택 결과를 추적한다.
-  canonical_object: Agent 실행 (caseId)
+  canonical_object: 에이전트 실행 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -25728,14 +25744,14 @@ screens:
   ten_second_contract:
     location:
       section: runs
-      answer_pattern: Agent 실행 — 사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택 결과를 추적한다.
+      answer_pattern: 에이전트 실행 — 사건에 수행된 AI/도구 실행의 목적·입력·비용·상태·채택 결과를 추적한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: runs
-      answer_pattern: Agent 실행의 실행 목록에서 purpose·model·status·cost. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 에이전트 실행의 실행 목록에서 purpose·model·status·cost. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseAgentRunsPage.appliedFilters.status
       - CaseAgentRunsPage.asOf
@@ -25930,7 +25946,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-010.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-010
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-010: 83ef25d68bfa0313707a6f2a7c6fb5453e9b0993485ab109b68ca54058b11aa8
+    specs/ui/screen-catalog.yaml#screens/CAS-010: c178d64019bfa296e21248f16a43af1ddcdc4ebad91056b113628abd296127d1
   implementation_source_digest: 65e8fa86304659040306eedb702a3e838fb100fc658d37b5baa9c59c7b060676
   authored_section_ids:
   - runs
@@ -25997,7 +26013,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Agent 실행 상세로 이동해 AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을 검토한다.
+    consequence: 에이전트 실행 상세로 이동해 AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을 검토한다.
     test_id: cas_010__action__open_run
   - action_id: start-run
     label: 새 조사 실행
@@ -26121,7 +26137,7 @@ screens:
   - AUDITOR
   - OPERATIONS
   job: AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을 검토한다.
-  canonical_object: Agent 실행 상세 (caseId, runId)
+  canonical_object: 에이전트 실행 상세 (caseId, runId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -26148,7 +26164,7 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: Agent 실행 상세 — AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을
+      answer_pattern: 에이전트 실행 상세 — AI 실행의 입력 provenance, policy/model, structured output, citation, 비용과 사람의 채택을
         검토한다.
       sources:
       - route.params
@@ -26156,7 +26172,7 @@ screens:
       - authorized object identity
     state:
       section: identity
-      answer_pattern: Agent 실행 상세의 실행 identity에서 purpose·version·timestamps. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 에이전트 실행 상세의 실행 identity에서 purpose·version·timestamps. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AgentRunResponse.data.status
       - AgentRunResponse.status
@@ -26457,7 +26473,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-011.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-011
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-011: 98705601e0c1b7e0caf170e2c4654ba872c9f0aadbaa6dbdb8947252c79041d5
+    specs/ui/screen-catalog.yaml#screens/CAS-011: ed0f2776c23dde017088c1e136f3bc5a9bec4f519a6087520caefc78aeaac945
   implementation_source_digest: 4a35981fcfa399368338e72613fb318f3bc1aa5a2d02f8d1f20b8029ba8bdad5
   authored_section_ids:
   - identity
@@ -26789,7 +26805,7 @@ screens:
   - LEGAL_REVIEWER
   - AUDITOR
   job: 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
-  canonical_object: 사건 Timeline (caseId)
+  canonical_object: 사건 타임라인 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -26802,14 +26818,14 @@ screens:
   ten_second_contract:
     location:
       section: filters
-      answer_pattern: 사건 Timeline — 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
+      answer_pattern: 사건 타임라인 — 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: filters
-      answer_pattern: 사건 Timeline의 이벤트 필터에서 domain/type/actor. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 타임라인의 이벤트 필터에서 domain/type/actor. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CaseTimelinePage.asOf
     matters_now:
@@ -26990,7 +27006,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-012.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-012
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-012: dffeedb27fdd0a6726a1ba99db9df01b33a2acdf25d5884772228ed3ffe84b32
+    specs/ui/screen-catalog.yaml#screens/CAS-012: bdfc2eef7a7eea26dfd729aa6ce0614c156f6dd00457615462e5cc593ceb7032
   implementation_source_digest: e6a84eabe01948f14d5769ac5a5f61dbdda3013530af6e82739b4ffb6f21e79a
   authored_section_ids:
   - filters
@@ -27066,10 +27082,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 사건 Timeline로 이동해 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
+    consequence: 사건 타임라인로 이동해 사건의 상태·evidence·소명·review·publication·correction 이벤트를 시간순으로 추적한다.
     test_id: cas_012__action__open_event
   - action_id: export
-    label: timeline export
+    label: 타임라인 내보내기
     interaction_kind: DOWNLOAD
     operation_id: null
     capability: audit.read
@@ -27227,7 +27243,7 @@ screens:
       - ReviewReadinessResponse.data.gateResults[].details
     next_action:
       section: summary
-      answer_pattern: 'blocker 해결: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.'
+      answer_pattern: '블로커 해결: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.'
       sources:
       - ReviewReadinessResponse.data.blockers[].requiredAction
       - createReviewSnapshotReceipt.acceptedAt
@@ -27412,7 +27428,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-013.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-013
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-013: 4ec636dd4b7fab92a9457aedf10c2875b966c51224ea122c15195b8e70c054c4
+    specs/ui/screen-catalog.yaml#screens/CAS-013: a4a972f78f727e1c6f220b2e4e7f59b671c1545c88a920a949c0d1c59edfafe9
   implementation_source_digest: afcd62f1fcc8f6df86d7b76e701f8d9edcbc2af0a6674d99b8c6b1fa208c472f
   authored_section_ids:
   - summary
@@ -27466,7 +27482,7 @@ screens:
     - version-conflict
   primary_action:
     id: open-blocker
-    label: blocker 해결
+    label: 블로커 해결
     operation_id: null
     interaction_kind: NAVIGATION
     capability: none
@@ -27474,7 +27490,7 @@ screens:
     consequence: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.
   action_contracts:
   - action_id: open-blocker
-    label: blocker 해결
+    label: 블로커 해결
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
@@ -27484,7 +27500,7 @@ screens:
     consequence: 선택한 항목의 권한 있는 작업 화면으로 이동하며 현재 목록과 돌아올 위치를 보존한다.
     test_id: cas_013__action__open_blocker
   - action_id: create-snapshot
-    label: 검토 snapshot 생성
+    label: 검토 스냅샷 생성
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: createReviewSnapshot
     capability: review.editorial
@@ -27495,7 +27511,7 @@ screens:
     test_id: cas_013__action__create_snapshot
   navigation_actions:
   - action_id: open-blocker
-    label: blocker 해결
+    label: 블로커 해결
     contract:
       status: resolved
       target:
@@ -27575,7 +27591,7 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 실제 Public Web renderer로 대상 snapshot이 어떻게 공개되는지 private note 없이 검토한다.
-  canonical_object: 공개 Preview (caseId)
+  canonical_object: 공개 미리보기 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -27591,14 +27607,14 @@ screens:
   ten_second_contract:
     location:
       section: watermark
-      answer_pattern: 공개 Preview — 실제 Public Web renderer로 대상 snapshot이 어떻게 공개되는지 private note 없이 검토한다.
+      answer_pattern: 공개 미리보기 — 실제 Public Web renderer로 대상 snapshot이 어떻게 공개되는지 private note 없이 검토한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: watermark
-      answer_pattern: 공개 Preview의 preview 상태에서 DRAFT·snapshot hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 공개 미리보기의 preview 상태에서 DRAFT·snapshot hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - PublicationPreviewResponse.publicPayload.case.correctionStatus
       - PublicationPreviewResponse.publicPayload.case.publicState
@@ -27663,7 +27679,7 @@ screens:
       - PublicationPreviewResponse.publicPayload.case.updatedAt
     next_action:
       section: watermark
-      answer_pattern: 'Preview 재생성: server-side preview 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '미리보기 재생성: server-side preview 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - PublicationPreviewResponse.publicPayload.criticalUnknowns[].nextAction
       - previewPublicationReceipt.acceptedAt
@@ -27843,7 +27859,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-014.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-014
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-014: fa063b750db2ced859476fc00d5fe343c98a4f4fb635d23540e83673b986546e
+    specs/ui/screen-catalog.yaml#screens/CAS-014: 8a028aac3b09d1cf69a37de30f158fbe3544bef3733eef126b3bbddbefa9250b
   implementation_source_digest: 6b40fce1be3a7fc2e882b888131a0360a476bf414363b0933d63b493fe1ae222
   authored_section_ids:
   - watermark
@@ -27897,7 +27913,7 @@ screens:
     - render-error
   primary_action:
     id: refresh-preview
-    label: Preview 재생성
+    label: 미리보기 재생성
     operation_id: previewPublication
     interaction_kind: COMMAND
     capability: publication.preview
@@ -27905,7 +27921,7 @@ screens:
     consequence: server-side preview 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: refresh-preview
-    label: Preview 재생성
+    label: 미리보기 재생성
     interaction_kind: COMMAND
     operation_id: previewPublication
     capability: publication.preview
@@ -27922,10 +27938,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 독립 Snapshot 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
+    consequence: 독립 스냅샷 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
     test_id: cas_014__action__open_review
   - action_id: view-compact
-    label: 모바일 preview
+    label: 모바일 미리보기
     interaction_kind: COMMAND
     operation_id: null
     capability: none
@@ -28347,7 +28363,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 정정 Workspace로 이동해 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
+    consequence: 정정 작업공간로 이동해 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
     test_id: cas_015__action__open_request
   navigation_actions:
   - action_id: open-request
@@ -28532,7 +28548,7 @@ screens:
   - SECURITY_ADMIN
   - LEGAL_REVIEWER
   job: 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
-  canonical_object: 사건 Audit (caseId)
+  canonical_object: 사건 감사 (caseId)
   route_parameter_bindings:
   - route_parameter: caseId
     source: params.caseId
@@ -28545,14 +28561,14 @@ screens:
   ten_second_contract:
     location:
       section: scope
-      answer_pattern: 사건 Audit — 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
+      answer_pattern: 사건 감사 — 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: scope
-      answer_pattern: 사건 Audit의 audit scope에서 case-linked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 사건 감사의 audit scope에서 case-linked. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AuditExportResponse.status
       - CaseAuditEventsPage.asOf
@@ -28592,8 +28608,7 @@ screens:
       - AuditExportResponse.links[].rel
     next_action:
       section: scope
-      answer_pattern: '이벤트 상세: 사건 Audit로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로
-        조사한다.'
+      answer_pattern: '이벤트 상세: 사건 감사로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.'
       sources:
       - CaseAuditEventsPage.appliedFilters.action
       - CaseAuditEventsPage.items[].action
@@ -28743,7 +28758,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cas-016.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/CAS-016
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/CAS-016: e63041e731a91cd83f89fc8b9b612c026c8a61a7d82b1a0ef42f006fefa28770
+    specs/ui/screen-catalog.yaml#screens/CAS-016: 5f11dca5675535451af1cc460c2e5a51c143b1e30522537157f2abc486e2f655
   implementation_source_digest: 00ed34db070aefbbed6f9b9ad94233b5b75fd001cd3986f1ae93b6a945b97c71
   authored_section_ids:
   - scope
@@ -28798,7 +28813,7 @@ screens:
     interaction_kind: NAVIGATION
     capability: none
     assurance_level: NONE
-    consequence: 사건 Audit로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
+    consequence: 사건 감사로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
   action_contracts:
   - action_id: open-event
     label: 이벤트 상세
@@ -28808,10 +28823,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 사건 Audit로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
+    consequence: 사건 감사로 이동해 사건 관련 read/write·approval·download·break-glass event를 변경 불가능한 기록으로 조사한다.
     test_id: cas_016__action__open_event
   - action_id: create-audit-export
-    label: 감사 export 요청
+    label: 감사 내보내기 요청
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: createAuditExport
     capability: audit.export
@@ -28923,19 +28938,19 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 역할별 review snapshot을 위험·기한·독립성·변경 상태로 선택한다.
-  canonical_object: 검토 Queue
+  canonical_object: 검토 대기열
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: views
-      answer_pattern: 검토 Queue — 역할별 review snapshot을 위험·기한·독립성·변경 상태로 선택한다.
+      answer_pattern: 검토 대기열 — 역할별 review snapshot을 위험·기한·독립성·변경 상태로 선택한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: filters
-      answer_pattern: 검토 Queue의 필터에서 risk/state/due/reviewer. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 검토 대기열의 필터에서 risk/state/due/reviewer. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ReviewQueuePage.appliedFilters.overdueOnly
       - ReviewQueuePage.appliedFilters.reviewStatus
@@ -29128,7 +29143,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-001: 13df371801705b33f7768fd7b9cf460964c6f4d633d7cff9485ea7b17c2c1e0a
+    specs/ui/screen-catalog.yaml#screens/REV-001: 04be372a80d5355c0b1fe89d29200f38d001dd8e424dc936c617aad371cd8e18
   implementation_source_digest: 5318a397642873179a340e177af56accebc9a76713a9e6036155d3e93a5e8a95
   authored_section_ids:
   - views
@@ -29194,7 +29209,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 독립 Snapshot 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
+    consequence: 독립 스냅샷 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
     test_id: rev_001__action__open_review
   - action_id: assign-reviewer
     label: 검토자 배정
@@ -29291,7 +29306,7 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
-  canonical_object: 독립 Snapshot 검토 (snapshotId)
+  canonical_object: 독립 스냅샷 검토 (snapshotId)
   route_parameter_bindings:
   - route_parameter: snapshotId
     source: params.snapshotId
@@ -29304,14 +29319,14 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: 독립 Snapshot 검토 — 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
+      answer_pattern: 독립 스냅샷 검토 — 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 독립 Snapshot 검토의 snapshot에서 hash·version·author·stale. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 독립 스냅샷 검토의 snapshot에서 hash·version·author·stale. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - ReviewSnapshotResponse.automatedGates[].status
       - ReviewSnapshotResponse.caseVersion
@@ -29606,7 +29621,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-002: 7dbfd8f3419fdd760f8ad734da4ccd983ed55aded44165a76202db34b6e02b4c
+    specs/ui/screen-catalog.yaml#screens/REV-002: b3fc8a9aac8a93937249ade0e8f49a9973ad82f9244b437044944b9c20adc007
   implementation_source_digest: c63f91c5a63c89ed29ca0045ba87bf87031da2d70c393a64b254293ed0e8c6db
   authored_section_ids:
   - identity
@@ -29702,7 +29717,7 @@ screens:
     consequence: 긴급 임시 제한 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: rev_002__action__temporary_restriction
   - action_id: legal-hold
-    label: 법률 hold 설정
+    label: 법적 보류 설정
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: placeLegalHold
     capability: review.legal
@@ -29939,7 +29954,7 @@ screens:
       - PublicationReceiptResponse.links[].label
     next_action:
       section: target
-      answer_pattern: '최신 snapshot 게시: publication command 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '최신 스냅샷 게시: publication command 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - PublicationReceiptResponse.createdAt
       - PublicationReceiptResponse.data.auditEventId
@@ -30118,7 +30133,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rev-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/REV-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/REV-003: 05b441a787e481e8be56150c0df1f7eaabc656a8c52f841d31a86f7ed437ea17
+    specs/ui/screen-catalog.yaml#screens/REV-003: a0a8a2f8d3bc12f045f4c3d768893bc11fbb56e10794ef583e6fa11b4480177f
   implementation_source_digest: 29325bb3eab6074a05c03fb1f4f22e190d01102951db3bc045c081eb43e78b98
   authored_section_ids:
   - target
@@ -30173,7 +30188,7 @@ screens:
     - duplicate-command
   primary_action:
     id: publish
-    label: 최신 snapshot 게시
+    label: 최신 스냅샷 게시
     operation_id: publishCase
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     capability: publication.publish
@@ -30181,7 +30196,7 @@ screens:
     consequence: publication command 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: publish
-    label: 최신 snapshot 게시
+    label: 최신 스냅샷 게시
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: publishCase
     capability: publication.publish
@@ -30198,7 +30213,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 독립 Snapshot 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
+    consequence: 독립 스냅샷 검토로 이동해 불변 snapshot의 공개 preview·claim-evidence-response·diff·gate를 검토해 구조화된 결정을 내린다.
     test_id: rev_003__action__cancel
   - action_id: open-public
     label: 공개 페이지 열기
@@ -30413,19 +30428,19 @@ screens:
   - LEGAL_REVIEWER
   - PUBLISHER
   job: 외부·내부 정정 요청을 긴급도·SLA·영향·owner로 triage한다.
-  canonical_object: 정정 Queue
+  canonical_object: 정정 대기열
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: urgent
-      answer_pattern: 정정 Queue — 외부·내부 정정 요청을 긴급도·SLA·영향·owner로 triage한다.
+      answer_pattern: 정정 대기열 — 외부·내부 정정 요청을 긴급도·SLA·영향·owner로 triage한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: urgent
-      answer_pattern: 정정 Queue의 긴급 queue에서 privacy/identity/legal. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 정정 대기열의 긴급 queue에서 privacy/identity/legal. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CorrectionQueuePage.appliedFilters.overdueOnly
       - CorrectionQueuePage.appliedFilters.status
@@ -30630,7 +30645,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cor-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/COR-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/COR-001: b6469dd327c6d18ba6e4bdef624dc3250685c1a10198034e312625845acc8077
+    specs/ui/screen-catalog.yaml#screens/COR-001: ea6f5c0c3acfde2fb9dbb11f4dc0d4b8a7f8a66d9a65d5f7d9868b1b94027cc1
   implementation_source_digest: f132cf89359f1275a48236f7e3004a08dbc2c7f81511b3f0f28d9535c7ba7ff2
   authored_section_ids:
   - urgent
@@ -30697,7 +30712,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 정정 Workspace로 이동해 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
+    consequence: 정정 작업공간로 이동해 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
     test_id: cor_001__action__open_correction
   - action_id: assign
     label: 담당자 배정
@@ -30940,7 +30955,7 @@ screens:
   - PUBLISHER
   - AUDITOR
   job: 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
-  canonical_object: 정정 Workspace (correctionId)
+  canonical_object: 정정 작업공간 (correctionId)
   route_parameter_bindings:
   - route_parameter: correctionId
     source: params.correctionId
@@ -30959,14 +30974,14 @@ screens:
   ten_second_contract:
     location:
       section: request
-      answer_pattern: 정정 Workspace — 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
+      answer_pattern: 정정 작업공간 — 대상 claim/revision, 요청 근거, 영향, proposed correction, review와 알림을 완결한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: original
-      answer_pattern: 정정 Workspace의 원본에서 claim/revision/context. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 정정 작업공간의 원본에서 claim/revision/context. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - CorrectionWorkspaceResponse.data.affectedClaims[].validationStatus
       - CorrectionWorkspaceResponse.data.affectedClaims[].version
@@ -31284,7 +31299,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/cor-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/COR-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/COR-002: f7e33e58a9bb9b0a7706e527a3de4ebd9bbbb3e3159f8b49d9bafa9c76973ee6
+    specs/ui/screen-catalog.yaml#screens/COR-002: 8321a88c0ffb48021bb5b621f13a1584c013a88e2d25b91d5c0ffaf27407f06b
   implementation_source_digest: 7ceba292ccf7588806253248ebd1f96f2fe291141a1bc2d40388d41e03d523ff
   authored_section_ids:
   - request
@@ -31362,7 +31377,7 @@ screens:
     consequence: 정정 draft 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: cor_002__action__save_proposal
   - action_id: create-revision
-    label: 정정 revision 생성
+    label: 정정 개정본 생성
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: createCorrection
     capability: publication.correct
@@ -31489,19 +31504,19 @@ screens:
   - OPERATIONS
   - AUDITOR
   job: 모든 데이터 source의 상태·owner·sync·schema·quarantine·영향 규칙을 관리한다.
-  canonical_object: Source Registry
+  canonical_object: 출처 등록부
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: health
-      answer_pattern: Source Registry — 모든 데이터 source의 상태·owner·sync·schema·quarantine·영향 규칙을 관리한다.
+      answer_pattern: 출처 등록부 — 모든 데이터 source의 상태·owner·sync·schema·quarantine·영향 규칙을 관리한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: health
-      answer_pattern: Source Registry의 상태 요약에서 healthy/stale/incident. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 등록부의 상태 요약에서 healthy/stale/incident. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalSourcesPage.appliedFilters.status
       - InternalSourcesPage.asOf
@@ -31551,7 +31566,7 @@ screens:
       - InternalSourcesPage.items[].displayName
     next_action:
       section: health
-      answer_pattern: 'incident 확인: incident ack 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '인시던트 확인: incident ack 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - InternalSourcesPage.nextCursor
       - acknowledgeSourceIncidentReceipt.acceptedAt
@@ -31738,7 +31753,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-001: b26f5686886084f984651630d4760d61c23c95d2c423f802fc23fd0acf3d28b4
+    specs/ui/screen-catalog.yaml#screens/SRC-001: 582142c5a86e062d3d3a820e01934677d3ea6034ef0c36622923006b1cc12eeb
   implementation_source_digest: 1a39d6bb48069398e4ea348964feeb0c4660bffd16c94fb71d9af54556ee1c0c
   authored_section_ids:
   - health
@@ -31792,7 +31807,7 @@ screens:
     - permission-read-only
   primary_action:
     id: ack-incident
-    label: incident 확인
+    label: 인시던트 확인
     operation_id: acknowledgeSourceIncident
     interaction_kind: COMMAND
     capability: sources.operate
@@ -31800,17 +31815,17 @@ screens:
     consequence: incident ack 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: open-source
-    label: source 운영 보기
+    label: 출처 운영 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Source 상세로 이동해 source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
+    consequence: 출처 상세로 이동해 source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
     test_id: src_001__action__open_source
   - action_id: ack-incident
-    label: incident 확인
+    label: 인시던트 확인
     interaction_kind: COMMAND
     operation_id: acknowledgeSourceIncident
     capability: sources.operate
@@ -31820,7 +31835,7 @@ screens:
     consequence: incident ack 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: src_001__action__ack_incident
   - action_id: pause-source
-    label: source 일시 중지
+    label: 출처 일시 중지
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: pauseSource
     capability: sources.operate
@@ -31831,7 +31846,7 @@ screens:
     test_id: src_001__action__pause_source
   navigation_actions:
   - action_id: open-source
-    label: source 운영 보기
+    label: 출처 운영 보기
     contract:
       status: resolved
       target:
@@ -31927,7 +31942,7 @@ screens:
   - RULE_ANALYST
   - AUDITOR
   job: source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
-  canonical_object: Source 상세 (sourceId)
+  canonical_object: 출처 상세 (sourceId)
   route_parameter_bindings:
   - route_parameter: sourceId
     source: params.sourceId
@@ -31943,14 +31958,14 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: Source 상세 — source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
+      answer_pattern: 출처 상세 — source configuration·checkpoint·quality·SLA·downstream 영향을 진단한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: identity
-      answer_pattern: Source 상세의 source identity에서 owner·access·terms. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 상세의 source identity에서 owner·access·terms. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalSourceResponse.data.freshness.asOf
       - InternalSourceResponse.data.freshness.expectedFrequencySeconds
@@ -32239,7 +32254,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-002: 63634fff3b46115e03bfd200d65e0c665058f5277492ba2e9592019b65276aed
+    specs/ui/screen-catalog.yaml#screens/SRC-002: bd2c01ce175f8aa0db62c92683bf0073059c94be98315f80fe22b9c208aa262c
   implementation_source_digest: c155bdda714beb515e6d776ced284d35087edaa7d51d1496b70165ac7a3e8b09
   authored_section_ids:
   - identity
@@ -32313,17 +32328,17 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Source 실행 기록로 이동해 source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
+    consequence: 출처 실행 기록로 이동해 source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
     test_id: src_002__action__view_runs
   - action_id: view-drift
-    label: schema drift
+    label: 스키마 드리프트
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Schema Drift로 이동해 old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.
+    consequence: 스키마 드리프트로 이동해 old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.
     test_id: src_002__action__view_drift
   - action_id: start-manual-run
     label: 수동 실행 요청
@@ -32357,7 +32372,7 @@ screens:
       arrival_focus: destination main heading, selected record heading, or named fragment heading
       oracle: UX-NAV-SRC-002-VIEW-RUNS
   - action_id: view-drift
-    label: schema drift
+    label: 스키마 드리프트
     contract:
       status: resolved
       target:
@@ -32440,7 +32455,7 @@ screens:
   - OPERATIONS
   - AUDITOR
   job: source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
-  canonical_object: Source 실행 기록 (sourceId)
+  canonical_object: 출처 실행 기록 (sourceId)
   route_parameter_bindings:
   - route_parameter: sourceId
     source: params.sourceId
@@ -32453,14 +32468,14 @@ screens:
   ten_second_contract:
     location:
       section: summary
-      answer_pattern: Source 실행 기록 — source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
+      answer_pattern: 출처 실행 기록 — source 실행을 상태·기간·checkpoint·record count·오류로 탐색한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: summary
-      answer_pattern: Source 실행 기록의 run health에서 success/failure/lag. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 실행 기록의 run health에서 success/failure/lag. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SourceRunsPage.appliedFilters.status
       - SourceRunsPage.asOf
@@ -32653,7 +32668,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-003: df04630765ec1140b9f916df10c51bb853b0b976837cd86b99bf00d7577214b0
+    specs/ui/screen-catalog.yaml#screens/SRC-003: 0eb3db3e9537b2b852cfa00621bd49ef08732386f11a4ddb6695b624152032fc
   implementation_source_digest: 4a200851b9fbbec27d487623407e361501853273a741923127baa2b33ce16162
   authored_section_ids:
   - summary
@@ -32719,7 +32734,7 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Source 실행 상세로 이동해 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
+    consequence: 출처 실행 상세로 이동해 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
     test_id: src_003__action__open_run
   - action_id: retry-run
     label: 안전한 재시도
@@ -32819,7 +32834,7 @@ screens:
   - OPERATIONS
   - AUDITOR
   job: 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
-  canonical_object: Source 실행 상세 (sourceId, runId)
+  canonical_object: 출처 실행 상세 (sourceId, runId)
   route_parameter_bindings:
   - route_parameter: sourceId
     source: params.sourceId
@@ -32846,14 +32861,14 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: Source 실행 상세 — 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
+      answer_pattern: 출처 실행 상세 — 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: identity
-      answer_pattern: Source 실행 상세의 run identity에서 trigger·version·time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 출처 실행 상세의 run identity에서 trigger·version·time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - BinaryDownload.status
       - BinaryDownload.version
@@ -32867,6 +32882,7 @@ screens:
       section: identity
       answer_pattern: 먼저 답할 질문은 ‘무엇을 어디서부터 수집했는가?’이며, run identity에서 trigger·version·time.
       sources:
+      - BinaryDownload.rowCount
       - SourceRunResponse.summary
       - SourceRunResponse.title
     evidence:
@@ -32906,6 +32922,7 @@ screens:
       section: identity
       answer_pattern: '실패 구간 재시도: failed run retry 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
+      - BinaryDownload.receiptSha256
       - retrySourceRunReceipt.acceptedAt
       - retrySourceRunReceipt.aggregateId
       - retrySourceRunReceipt.aggregateVersion
@@ -32929,19 +32946,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.identity
     source_fields:
-    - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - SourceRunResponse.createdAt
-    - SourceRunResponse.data.checkpointAfter
-    - SourceRunResponse.data.checkpointBefore
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 8613bef86fb6f6898d4034ac083dff53b388e36a85ea0b7c91127b2821b89d9b
+    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -32959,19 +32976,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.scope
     source_fields:
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - SourceRunResponse.createdAt
-    - SourceRunResponse.data.checkpointAfter
-    - SourceRunResponse.data.checkpointBefore
-    - SourceRunResponse.data.completedAt
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e04e18b9dcd0a0f33ef4a5fc33b8eb907d23cc0a1648bbbc30e6980785555eee
+    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -32989,19 +33006,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.counts
     source_fields:
-    - BinaryDownload.version
-    - SourceRunResponse.createdAt
-    - SourceRunResponse.data.checkpointAfter
-    - SourceRunResponse.data.checkpointBefore
-    - SourceRunResponse.data.completedAt
-    - SourceRunResponse.data.errorDetail
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 720bd4e926c202c95f162377094ed95f43ea6aecf737195da387dc4bfc2b4e6a
+    source_fields_digest: b3f7621e9bf854600e9e739ccbb803f096b4bf099048c2502a6939385098a19b
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33019,19 +33036,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.errors
     source_fields:
-    - SourceRunResponse.createdAt
-    - SourceRunResponse.data.checkpointAfter
-    - SourceRunResponse.data.checkpointBefore
-    - SourceRunResponse.data.completedAt
-    - SourceRunResponse.data.errorDetail
-    - SourceRunResponse.data.id
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 593835c7a00861c5f63e5b52afd51e8e098c3e3682efd893eba2765fec044a62
+    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33049,19 +33066,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.artifacts
     source_fields:
-    - SourceRunResponse.data.checkpointAfter
-    - SourceRunResponse.data.checkpointBefore
-    - SourceRunResponse.data.completedAt
-    - SourceRunResponse.data.errorDetail
-    - SourceRunResponse.data.id
-    - SourceRunResponse.data.mode
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 19116ee8ef282154de4c12236752095cba515c48e954f9dbcfab5a6e83d78ad9
+    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33079,19 +33096,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.impact
     source_fields:
-    - SourceRunResponse.data.checkpointBefore
-    - SourceRunResponse.data.completedAt
-    - SourceRunResponse.data.errorDetail
-    - SourceRunResponse.data.id
-    - SourceRunResponse.data.mode
-    - SourceRunResponse.data.recordsChanged
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
+    - BinaryDownload.receiptSha256
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 37798afe25cbb010d08deccc116a7cb5f0f415a40039a1ddd9630f5bc3a65b04
+    source_fields_digest: 98441c0bf10fdbb4b8038ac9e74982cb95dbaea4c5342d6eae4e84fd3d1114bd
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33109,19 +33126,19 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: src_004.actions
     source_fields:
-    - SourceRunResponse.data.completedAt
-    - SourceRunResponse.data.errorDetail
-    - SourceRunResponse.data.id
-    - SourceRunResponse.data.mode
-    - SourceRunResponse.data.recordsChanged
-    - SourceRunResponse.data.recordsSeen
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
+    - BinaryDownload.receiptSha256
+    - BinaryDownload.rowCount
     implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
     source_paths:
     - apps/review-console/src/routes/+error.svelte
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.server.ts
     - apps/review-console/src/routes/internal/sources/[sourceId]/runs/[runId]/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 6a7ece2e0fff94eacf7d7b727a28594793a2ebd3f8475d4b90b9856cc4f1ebd1
+    source_fields_digest: 067a966f878277af3a24a8b2a5f853e1801c3a8a93dd6b94c7c5b7985011b059
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -33136,7 +33153,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-004: 426e8459f6e855f7bdd16547061158ae22d23eef03648b5bcdfe5390fc66fc19
+    specs/ui/screen-catalog.yaml#screens/SRC-004: 5cfbe8ae82e216cde5bf0a39cefffd35d974330543e4d6318d35376ec115141b
   implementation_source_digest: 5739ee956ed8d16b99a549822d1cc9c358cb84c335a13c208ac17ca1cda1c2f6
   authored_section_ids:
   - identity
@@ -33222,18 +33239,18 @@ screens:
     consequence: failed run retry 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: src_004__action__retry_failed
   - action_id: open-quarantine
-    label: 격리 record 보기
+    label: 격리 레코드 보기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Source 실행 상세로 이동해 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
+    consequence: 출처 실행 상세로 이동해 단일 수집 실행의 input scope·checkpoint·record flow·quarantine·오류를 재현한다.
     test_id: src_004__action__open_quarantine
   navigation_actions:
   - action_id: open-quarantine
-    label: 격리 record 보기
+    label: 격리 레코드 보기
     contract:
       status: resolved
       target:
@@ -33336,7 +33353,7 @@ screens:
   - RULE_ANALYST
   - OPERATIONS
   job: old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.
-  canonical_object: Schema Drift (sourceId)
+  canonical_object: 스키마 드리프트 (sourceId)
   route_parameter_bindings:
   - route_parameter: sourceId
     source: params.sourceId
@@ -33349,15 +33366,14 @@ screens:
   ten_second_contract:
     location:
       section: alert
-      answer_pattern: Schema Drift — old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을
-        승인한다.
+      answer_pattern: 스키마 드리프트 — old/new schema와 sample을 비교하고 parser·normalized field·rule·공개 영향 및 mapping을 승인한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: alert
-      answer_pattern: Schema Drift의 drift identity에서 detected version/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 스키마 드리프트의 drift identity에서 detected version/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - SchemaDriftResponse.data.status
       - SchemaDriftResponse.status
@@ -33656,7 +33672,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-005: bd553265cbca18e3fdadf5e1fb9eb7adf051c96a2339c3bffd62bc92e4ab0a50
+    specs/ui/screen-catalog.yaml#screens/SRC-005: 5b4c9da28377e550b6a10af37fcaef72ced4737ff46f7fa37da26743c923debc
   implementation_source_digest: 7f1df63345deeeec28588c6459fc2d980293c8387c6fe1e3f6533713fa0332cb
   authored_section_ids:
   - alert
@@ -33722,7 +33738,7 @@ screens:
     consequence: mapping rejection 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: approve-mapping
-    label: mapping 승인
+    label: 매핑 승인
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: approveSchemaMapping
     capability: sources.operate
@@ -33742,7 +33758,7 @@ screens:
     consequence: mapping rejection 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: src_005__action__reject_mapping
   - action_id: pause-source
-    label: source pause
+    label: 출처 일시 중지
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: pauseSource
     capability: sources.operate
@@ -33837,7 +33853,7 @@ screens:
   - OPERATIONS
   - SECURITY_ADMIN
   job: 기간·예상 건수·비용·중복 전략·영향·rollback을 검토해 bounded backfill/replay를 실행한다.
-  canonical_object: Backfill·Replay (sourceId)
+  canonical_object: 백필·재실행 (sourceId)
   route_parameter_bindings:
   - route_parameter: sourceId
     source: params.sourceId
@@ -33853,14 +33869,14 @@ screens:
   ten_second_contract:
     location:
       section: scope
-      answer_pattern: Backfill·Replay — 기간·예상 건수·비용·중복 전략·영향·rollback을 검토해 bounded backfill/replay를 실행한다.
+      answer_pattern: 백필·재실행 — 기간·예상 건수·비용·중복 전략·영향·rollback을 검토해 bounded backfill/replay를 실행한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: scope
-      answer_pattern: Backfill·Replay의 범위에서 date/IDs/checkpoint. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 백필·재실행의 범위에서 date/IDs/checkpoint. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - estimateBackfillReceipt.data.data.status
       - estimateBackfillReceipt.data.data.updatedAt
@@ -34157,7 +34173,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/src-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/SRC-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/SRC-006: a37e70aebffcf7a830abfb2ee336ad9b380cd68f40fda45df4f4adab76590be4
+    specs/ui/screen-catalog.yaml#screens/SRC-006: b825b89e2f22fc759a90b801506746484cffca36848a7477fa14d6cf344c09ff
   implementation_source_digest: a68ccb11f7d12a54dcbefb34c52e74b5c4fce46915851f7cee25ba6d222e16ca
   authored_section_ids:
   - scope
@@ -34234,7 +34250,7 @@ screens:
     consequence: backfill estimate 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: src_006__action__estimate
   - action_id: start
-    label: Backfill 시작
+    label: 백필 시작
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: startBackfill
     capability: sources.operate
@@ -34330,19 +34346,19 @@ screens:
   - INVESTIGATOR
   - AUDITOR
   job: 규칙의 active/shadow/retired version, owner, 평가, 적용 source를 탐색한다.
-  canonical_object: 탐지 규칙 Registry
+  canonical_object: 탐지 규칙 등록부
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: status
-      answer_pattern: 탐지 규칙 Registry — 규칙의 active/shadow/retired version, owner, 평가, 적용 source를 탐색한다.
+      answer_pattern: 탐지 규칙 등록부 — 규칙의 active/shadow/retired version, owner, 평가, 적용 source를 탐색한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: status
-      answer_pattern: 탐지 규칙 Registry의 규칙 상태에서 active/shadow/retired. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 탐지 규칙 등록부의 규칙 상태에서 active/shadow/retired. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalRulesPage.appliedFilters.status
       - InternalRulesPage.asOf
@@ -34375,7 +34391,7 @@ screens:
       - InternalRulesPage.items[].createdAt
     next_action:
       section: status
-      answer_pattern: '규칙 보기: 규칙 Version 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.'
+      answer_pattern: '규칙 보기: 규칙 버전 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.'
       sources:
       - InternalRulesPage.nextCursor
   section_mapping:
@@ -34513,7 +34529,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-001: da5f7ddca3f8dd557abeab2905625a1c6aea6bff299127f3e5fe7f384c08f01f
+    specs/ui/screen-catalog.yaml#screens/RULE-001: 67286617ddcbfd83c18681b9f617770202fdf1bdeaa4204fb1f88e55c83d3556
   implementation_source_digest: d106f2df9bbf3d031b67fe0e939333bbaca199ce5293bf2dc33128055ef59561
   authored_section_ids:
   - status
@@ -34568,7 +34584,7 @@ screens:
     interaction_kind: NAVIGATION
     capability: none
     assurance_level: NONE
-    consequence: 규칙 Version 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
+    consequence: 규칙 버전 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
   action_contracts:
   - action_id: open-rule
     label: 규칙 보기
@@ -34578,17 +34594,17 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 규칙 Version 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
+    consequence: 규칙 버전 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
     test_id: rule_001__action__open_rule
   - action_id: propose-version
-    label: 새 version 제안
+    label: 새 버전 제안
     interaction_kind: NAVIGATION
     operation_id: null
     capability: rules.propose
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 규칙 Version 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
+    consequence: 규칙 버전 상세로 이동해 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
     test_id: rule_001__action__propose_version
   navigation_actions:
   - action_id: open-rule
@@ -34619,7 +34635,7 @@ screens:
       arrival_focus: destination main heading, selected record heading, or named fragment heading
       oracle: UX-NAV-RULE-001-OPEN-RULE
   - action_id: propose-version
-    label: 새 version 제안
+    label: 새 버전 제안
     contract:
       status: resolved
       target:
@@ -34696,7 +34712,7 @@ screens:
   - INVESTIGATOR
   - AUDITOR
   job: 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
-  canonical_object: 규칙 Version 상세 (ruleId, version)
+  canonical_object: 규칙 버전 상세 (ruleId, version)
   route_parameter_bindings:
   - route_parameter: ruleId
     source: params.ruleId
@@ -34720,14 +34736,14 @@ screens:
   ten_second_contract:
     location:
       section: identity
-      answer_pattern: 규칙 Version 상세 — 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
+      answer_pattern: 규칙 버전 상세 — 불변 rule version의 목적·입력·formula·cohort·blocker·change·owner를 검토한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: identity
-      answer_pattern: 규칙 Version 상세의 version identity에서 status·owner·hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 규칙 버전 상세의 version identity에서 status·owner·hash. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - InternalRuleVersionResponse.createdAt
       - InternalRuleVersionResponse.data.codeDigest
@@ -34776,7 +34792,7 @@ screens:
       - InternalRuleVersionResponse.links[].href
     next_action:
       section: identity
-      answer_pattern: '다음 version 초안: version draft 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '다음 버전 초안: version draft 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - createRuleVersionDraftReceipt.acceptedAt
       - createRuleVersionDraftReceipt.aggregateId
@@ -35012,7 +35028,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-002: dad35a2f7fa4bfc855ec76163804164ed4a87ad0a493474ced7c4114a2dd2c7d
+    specs/ui/screen-catalog.yaml#screens/RULE-002: fe60a104b74bc93ef7ba051e4b2638c0548b422bc50740c41babf5a9f04965d3
   implementation_source_digest: a965c51464b5a67cee87730c2ed70970c5299b2e0b20aee495396fff55af2ce5
   authored_section_ids:
   - identity
@@ -35070,7 +35086,7 @@ screens:
     - source-field-missing
   primary_action:
     id: create-draft
-    label: 다음 version 초안
+    label: 다음 버전 초안
     operation_id: createRuleVersionDraft
     interaction_kind: COMMAND
     capability: rules.propose
@@ -35085,10 +35101,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 규칙 평가·Shadow로 이동해 gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
+    consequence: 규칙 평가·섀도 실행로 이동해 gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
     test_id: rule_002__action__open_evaluation
   - action_id: create-draft
-    label: 다음 version 초안
+    label: 다음 버전 초안
     interaction_kind: COMMAND
     operation_id: createRuleVersionDraft
     capability: rules.propose
@@ -35195,7 +35211,7 @@ screens:
   - INVESTIGATOR
   - EDITOR
   job: gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
-  canonical_object: 규칙 평가·Shadow (ruleId, version)
+  canonical_object: 규칙 평가·섀도 실행 (ruleId, version)
   route_parameter_bindings:
   - route_parameter: ruleId
     source: params.ruleId
@@ -35219,14 +35235,14 @@ screens:
   ten_second_contract:
     location:
       section: dataset
-      answer_pattern: 규칙 평가·Shadow — gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
+      answer_pattern: 규칙 평가·섀도 실행 — gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: dataset
-      answer_pattern: 규칙 평가·Shadow의 평가 dataset에서 version·coverage. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 규칙 평가·섀도 실행의 평가 dataset에서 version·coverage. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - RuleEvaluationResponse.data.version
       - RuleEvaluationResponse.status
@@ -35511,7 +35527,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-003: 5ed44e6cdb5565d23adcd6b7981d95d434b2c94c4e3fdd60f3053741930745cb
+    specs/ui/screen-catalog.yaml#screens/RULE-003: 3b06ed61e689e5918761f2b30674e4f5ea32c32a131929314c8bd5b0818bbd00
   implementation_source_digest: 5500cdcef99148f7b380431f98f534d9b61714704d8166cd6b042d707f78d469
   authored_section_ids:
   - dataset
@@ -35587,7 +35603,7 @@ screens:
     consequence: deterministic eval 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: rule_003__action__run_evaluation
   - action_id: start-shadow
-    label: Shadow 실행
+    label: 섀도 실행
     interaction_kind: COMMAND
     operation_id: startRuleShadow
     capability: rules.propose
@@ -36046,7 +36062,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/rule-004.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/RULE-004
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/RULE-004: 3982d1646322a459df483ca205d2397434c9276f3888e53ec2b3e2064c5b03bd
+    specs/ui/screen-catalog.yaml#screens/RULE-004: 7e06cdfb724438559ded5a6913aba48202d7f65258ed186fdd00768766bf71a2
   implementation_source_digest: b34973b52229ae217fd9909eb14fa2e0bff73b2de04d75c42af3ac974f7f7476
   authored_section_ids:
   - target
@@ -36133,7 +36149,7 @@ screens:
     consequence: schedule 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: rule_004__action__schedule
   - action_id: rollback
-    label: 이전 version으로 rollback
+    label: 이전 버전으로 되돌리기
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: rollbackRuleVersion
     capability: rules.activate
@@ -36319,19 +36335,19 @@ screens:
   - SECURITY_ADMIN
   - AUDITOR
   job: 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
-  canonical_object: 운영 Overview
+  canonical_object: 운영 개요
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: incidents
-      answer_pattern: 운영 Overview — 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
+      answer_pattern: 운영 개요 — 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: incidents
-      answer_pattern: 운영 Overview의 active incident에서 영향·owner·started. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 운영 개요의 active incident에서 영향·owner·started. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - OperationsOverviewResponse.incidents[].status
       - OperationsOverviewResponse.incidents[].updatedAt
@@ -36378,7 +36394,7 @@ screens:
       - OperationsOverviewResponse.queues[].readyCount
     next_action:
       section: incidents
-      answer_pattern: 'incident 열기: 운영 Overview로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.'
+      answer_pattern: '인시던트 열기: 운영 개요로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.'
       sources:
       - OperationsOverviewResponse.recentActions[].action
       - OperationsOverviewResponse.recentActions[].actor.actorId
@@ -36636,7 +36652,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-001: 95d7630a0fb880b8c749b6267f76ab161404deb3d755175d3eec3fbf599eb1b6
+    specs/ui/screen-catalog.yaml#screens/OPS-001: b369cf5d245e09407e67265badaec7ca403b247e520e8e55f84b2f92084ea8f0
   implementation_source_digest: 184f581c26e17d5215d09da8f34bb2324eac98df16190645475bb885d0892b29
   authored_section_ids:
   - incidents
@@ -36694,22 +36710,22 @@ screens:
     - telemetry-gap
   primary_action:
     id: open-incident
-    label: incident 열기
+    label: 인시던트 열기
     operation_id: null
     interaction_kind: NAVIGATION
     capability: none
     assurance_level: NONE
-    consequence: 운영 Overview로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
+    consequence: 운영 개요로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
   action_contracts:
   - action_id: open-incident
-    label: incident 열기
+    label: 인시던트 열기
     interaction_kind: NAVIGATION
     operation_id: null
     capability: none
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 운영 Overview로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
+    consequence: 운영 개요로 이동해 서비스·source·job·projection·비용·보안 상태를 영향과 SLO 중심으로 파악한다.
     test_id: ops_001__action__open_incident
   - action_id: open-jobs
     label: 작업 큐
@@ -36719,21 +36735,21 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 작업 Queue·DLQ로 이동해 durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
+    consequence: 작업 대기열·DLQ로 이동해 durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
     test_id: ops_001__action__open_jobs
   - action_id: open-kill
-    label: Kill switch
+    label: 킬 스위치
     interaction_kind: NAVIGATION
     operation_id: null
     capability: kill_switch.execute
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: Kill Switch로 이동해 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
+    consequence: 킬 스위치로 이동해 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
     test_id: ops_001__action__open_kill
   navigation_actions:
   - action_id: open-incident
-    label: incident 열기
+    label: 인시던트 열기
     contract:
       status: resolved
       target:
@@ -36773,7 +36789,7 @@ screens:
       arrival_focus: destination main heading, selected record heading, or named fragment heading
       oracle: UX-NAV-OPS-001-OPEN-JOBS
   - action_id: open-kill
-    label: Kill switch
+    label: 킬 스위치
     contract:
       status: resolved
       target:
@@ -37039,19 +37055,19 @@ screens:
   - OPERATIONS
   - DATA_OPERATOR
   job: durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
-  canonical_object: 작업 Queue·DLQ
+  canonical_object: 작업 대기열·DLQ
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: summary
-      answer_pattern: 작업 Queue·DLQ — durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
+      answer_pattern: 작업 대기열·DLQ — durable job을 type·state·age·failure fingerprint로 탐색하고 안전하게 재시도·격리한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: filters
-      answer_pattern: 작업 Queue·DLQ의 필터에서 type/state/fingerprint. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 작업 대기열·DLQ의 필터에서 type/state/fingerprint. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - JobsPage.appliedFilters.jobStatus
       - JobsPage.asOf
@@ -37275,7 +37291,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-002.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-002
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-002: 448831b86ef5e6b42891592dbb9e8e3e2319826ee1b3a3e0f37d90b4e6a37ac5
+    specs/ui/screen-catalog.yaml#screens/OPS-002: cb54c369ba14281805150b2fd43fcde52229ba19dadf721631d672314a22db1a
   implementation_source_digest: 90ac55701daeee9f0f0b01f1405d36981703777ba8788157d4c8f730ff98b243
   authored_section_ids:
   - summary
@@ -37357,7 +37373,7 @@ screens:
     consequence: bounded retry 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: ops_002__action__retry_selected
   - action_id: pause-queue
-    label: Queue 일시 중지
+    label: 대기열 일시 중지
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: pauseJobQueue
     capability: jobs.operate
@@ -38040,6 +38056,7 @@ screens:
       - BinaryDownload.version
       - BudgetOverviewResponse.data.providers[].lastTestStatus
       - BudgetOverviewResponse.data.providers[].routingStatus
+      - BudgetOverviewResponse.data.summary.asOf
       - BudgetOverviewResponse.data.summary.status
       - BudgetOverviewResponse.data.updatedAt
       - BudgetOverviewResponse.status
@@ -38051,28 +38068,28 @@ screens:
       section: envelope
       answer_pattern: 먼저 답할 질문은 ‘현재 spend와 forecast는 얼마인가?’이며, 예산 envelope에서 daily/monthly.
       sources:
+      - BinaryDownload.rowCount
       - BudgetOverviewResponse.data.summary.alertThreshold
+      - BudgetOverviewResponse.data.summary.asOf
       - BudgetOverviewResponse.data.summary.currency
       - BudgetOverviewResponse.data.summary.dailyLimit
       - BudgetOverviewResponse.data.summary.dailyUsed
       - BudgetOverviewResponse.data.summary.fallbackAction
       - BudgetOverviewResponse.data.summary.forecastAssumption
+      - BudgetOverviewResponse.data.summary.forecastConfidence
       - BudgetOverviewResponse.data.summary.hardLimit
       - BudgetOverviewResponse.data.summary.lastChangeReason
       - BudgetOverviewResponse.data.summary.lastChangedBy
-      - BudgetOverviewResponse.data.summary.monthlyLimit
-      - BudgetOverviewResponse.data.summary.monthlyUsed
-      - BudgetOverviewResponse.data.summary.softLimit
     evidence:
       section: envelope
       answer_pattern: 예산 envelope의 daily/monthly.가 판단 근거이며 각 항목은 출처, revision, exact locator와 검증 상태를 함께 연다.
       sources:
-      - BinaryDownload.id
-      - BinaryDownload.status
-      - BinaryDownload.version
-      - BudgetOverviewResponse.createdAt
-      - BudgetOverviewResponse.data.dailySeries[].amount
-      - BudgetOverviewResponse.data.dailySeries[].at
+      - BinaryDownload.binary
+      - BinaryDownload.byteLength
+      - BinaryDownload.contentBase64
+      - BinaryDownload.contentSha256
+      - BinaryDownload.filename
+      - BinaryDownload.format
     unknown_or_disputed:
       section: envelope
       answer_pattern: 예산 envelope에서 daily/monthly. 중 미확인, 반대 근거, 소명과 제한을 확인된 사실과 분리한다.
@@ -38093,6 +38110,7 @@ screens:
       section: envelope
       answer_pattern: '예산 한도 변경: budget limit 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
+      - BinaryDownload.receiptSha256
       - BudgetOverviewResponse.data.summary.fallbackAction
       - updateBudgetLimitReceipt.acceptedAt
       - updateBudgetLimitReceipt.aggregateId
@@ -38104,7 +38122,6 @@ screens:
       - updateBudgetLimitReceipt.operationId
       - updateBudgetLimitReceipt.receiptToken
       - updateBudgetLimitReceipt.requestId
-      - updateBudgetLimitReceipt.status
   section_mapping:
   - order: 1
     id: envelope
@@ -38117,12 +38134,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.envelope
     source_fields:
-    - BinaryDownload.id
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - BudgetOverviewResponse.createdAt
-    - BudgetOverviewResponse.data.dailySeries[].amount
-    - BudgetOverviewResponse.data.dailySeries[].at
+    - BinaryDownload.binary
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38130,7 +38147,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 4720fb7cdce9e290d6f40d9da764a0a7413eb1cd89cf7743e18d3e5dd894a141
+    source_fields_digest: 68f92e293bf434bba0c12401032d3a87db5330465e76c14c820f998a511ca2ba
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38148,12 +38165,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.spend
     source_fields:
-    - BinaryDownload.status
-    - BinaryDownload.version
-    - BudgetOverviewResponse.createdAt
-    - BudgetOverviewResponse.data.dailySeries[].amount
-    - BudgetOverviewResponse.data.dailySeries[].at
-    - BudgetOverviewResponse.data.providers[].enabled
+    - BinaryDownload.byteLength
+    - BinaryDownload.contentBase64
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38161,7 +38178,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 868e5a095da3f2a8132a855760c8af345714f02a5c63a30427989ecda03a0ad1
+    source_fields_digest: 4b4eb4fa669566973b93dca105763711d568bee238a0cf978be833dc7c186358
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38180,6 +38197,7 @@ screens:
     typed_slice: ops_004.forecast
     source_fields:
     - BudgetOverviewResponse.data.summary.forecastAssumption
+    - BudgetOverviewResponse.data.summary.forecastConfidence
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38187,7 +38205,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: e12d270241ea0aa3365641942534cbf216bf1079da2be0463f93502ac30320b5
+    source_fields_digest: e62971b531d76c8575a080c2c893d86f09c2b284fb8f3df0d1500597780efb22
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38205,12 +38223,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.limits
     source_fields:
-    - BudgetOverviewResponse.createdAt
-    - BudgetOverviewResponse.data.dailySeries[].amount
-    - BudgetOverviewResponse.data.dailySeries[].at
-    - BudgetOverviewResponse.data.providers[].enabled
-    - BudgetOverviewResponse.data.providers[].id
-    - BudgetOverviewResponse.data.providers[].lastTestAt
+    - BinaryDownload.contentSha256
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38218,7 +38236,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 6451fd7c5c0847a9b365a085e16125d3ab64ab10628005b196a37f8fcb1e4b65
+    source_fields_digest: 0308f2163ea002ba4de26f57740ea959c08297be2f0d989281df395584aace03
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38236,12 +38254,12 @@ screens:
       kind: AUTHORITY_COMPATIBLE
     typed_slice: ops_004.alerts
     source_fields:
-    - BudgetOverviewResponse.data.dailySeries[].amount
-    - BudgetOverviewResponse.data.dailySeries[].at
-    - BudgetOverviewResponse.data.providers[].enabled
-    - BudgetOverviewResponse.data.providers[].id
-    - BudgetOverviewResponse.data.providers[].lastTestAt
-    - BudgetOverviewResponse.data.providers[].lastTestStatus
+    - BinaryDownload.filename
+    - BinaryDownload.format
+    - BinaryDownload.from
+    - BinaryDownload.groupBy
+    - BinaryDownload.id
+    - BinaryDownload.mediaType
     implementation_source_digest: 697ea5349689407515d4b65d198f553231ba7b9864818134974c9c328342fa12
     source_paths:
     - apps/review-console/src/lib/view-models/ops-004.ts
@@ -38249,7 +38267,7 @@ screens:
     - apps/review-console/src/routes/internal/operations/budgets/+page.server.ts
     - apps/review-console/src/routes/internal/operations/budgets/+page.svelte
     - packages/ui/src/view-models/generated.ts
-    source_fields_digest: 417eb4675d72eeb829bb63533a20832fd0c0ed1a6f1cf9fb92e54653670d512b
+    source_fields_digest: ceb3155f63b6e7df336b29b17fb067e7b8bf8caec5c1680bcfbcee7a1e103ef5
     source_classification: DISPLAY_SAFE_ALLOWLIST
     heading_level: 2
     landmark: region
@@ -38749,7 +38767,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-005.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-005
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-005: efaf36cb2a240c44cbe3e59aa7f058557b876ee9b41f45436721c8e85c1097bb
+    specs/ui/screen-catalog.yaml#screens/OPS-005: 7ec7d365fc21719a4d47c585e6585835f8ee1ea1034f632decc2ab3c5d1fa4ab
   implementation_source_digest: 49e0a0b50ce407832d1e345aedcb1d1d4adc9487d6c2a19d7b421f9cb56c0ae5
   authored_section_ids:
   - status
@@ -38823,7 +38841,7 @@ screens:
     consequence: 외부 공급자 상태로 이동해 LLM·OCR·email·object storage 등 공급자의 health·latency·quota·privacy mode를 관리한다.
     test_id: ops_005__action__open_provider
   - action_id: disable-routing
-    label: Routing 중지
+    label: 라우팅 중지
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: disableProviderRouting
     capability: kill_switch.execute
@@ -39096,19 +39114,19 @@ screens:
   - EXECUTIVE_APPROVER
   - AUDITOR
   job: 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
-  canonical_object: Kill Switch
+  canonical_object: 킬 스위치
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: active
-      answer_pattern: Kill Switch — 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
+      answer_pattern: 킬 스위치 — 수집·AI·게시·알림·외부 제출 기능을 영향 범위와 만료를 두고 안전하게 중지·재개한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: active
-      answer_pattern: Kill Switch의 활성 switch에서 scope·reason·expiry. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 킬 스위치의 활성 switch에서 scope·reason·expiry. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - KillSwitchesPage.appliedFilters.state
       - KillSwitchesPage.asOf
@@ -39147,7 +39165,7 @@ screens:
       - KillSwitchesPage.items[].expiresAt
     next_action:
       section: active
-      answer_pattern: 'Kill switch 활성화: activate 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
+      answer_pattern: '킬 스위치 활성화: activate 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.'
       sources:
       - KillSwitchesPage.nextCursor
       - activateKillSwitchReceipt.acceptedAt
@@ -39360,7 +39378,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/ops-006.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/OPS-006
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/OPS-006: 44f5203cdd5904398e8cfb07b0ae35f45848c81b25ca1ce166c6c9b67657835a
+    specs/ui/screen-catalog.yaml#screens/OPS-006: 22ef16609c6c246b2b24d73e4eb955576fe01befe011e2a225cd39671d26cad4
   implementation_source_digest: 16a0bb0d46f41918a88bbfb8c818c7136e26b80fe246abeb3a668b011466a55b
   authored_section_ids:
   - active
@@ -39416,7 +39434,7 @@ screens:
     - reauth-required
   primary_action:
     id: activate
-    label: Kill switch 활성화
+    label: 킬 스위치 활성화
     operation_id: activateKillSwitch
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     capability: kill_switch.execute
@@ -39424,7 +39442,7 @@ screens:
     consequence: activate 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
   action_contracts:
   - action_id: activate
-    label: Kill switch 활성화
+    label: 킬 스위치 활성화
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: activateKillSwitch
     capability: kill_switch.execute
@@ -39628,19 +39646,19 @@ screens:
   - SECURITY_ADMIN
   - LEGAL_REVIEWER
   job: actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
-  canonical_object: 감사 로그 Explorer
+  canonical_object: 감사 로그 탐색기
   route_parameter_bindings: []
   ten_second_contract:
     location:
       section: query
-      answer_pattern: 감사 로그 Explorer — actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
+      answer_pattern: 감사 로그 탐색기 — actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
       sources:
       - route.params
       - screen title
       - authorized object identity
     state:
       section: query
-      answer_pattern: 감사 로그 Explorer의 감사 검색에서 actor/action/object/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
+      answer_pattern: 감사 로그 탐색기의 감사 검색에서 actor/action/object/time. 현재 상태, 기준 시각과 마지막 중요 변경을 함께 보여준다.
       sources:
       - AuditEventsSearchResultPage.asOf
       - AuditExportResponse.status
@@ -39884,7 +39902,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/aud-001.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/AUD-001
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/AUD-001: a0b86922503fa15f6aee75020e07a4284b0be235e110c748b05deb2155141fde
+    specs/ui/screen-catalog.yaml#screens/AUD-001: 86d9f8cdaa55e99a89d50fc642655ec09b8c7d840ae5f17cc93629f63effb9a2
   implementation_source_digest: c4db21d07fcce91fe303491f436a0f5c486c01318c0a07630a54431973b81578
   authored_section_ids:
   - query
@@ -39953,10 +39971,10 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-    consequence: 감사 로그 Explorer로 이동해 actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
+    consequence: 감사 로그 탐색기로 이동해 actor·action·object·policy·기간으로 immutable audit event를 검색·검증·export한다.
     test_id: aud_001__action__open_event
   - action_id: export
-    label: 감사 export 요청
+    label: 감사 내보내기 요청
     interaction_kind: DESTRUCTIVE_CONFIRMATION
     operation_id: createAuditExport
     capability: audit.export
@@ -41461,7 +41479,7 @@ screens:
   runtime_trace_path: implementation-evidence/runtime-traces/adm-003.json
   authority_source_path: specs/ui/screen-catalog.yaml#screens/ADM-003
   authority_source_sha256:
-    specs/ui/screen-catalog.yaml#screens/ADM-003: d77b7870a6910d3b5bb34a073a855a55dd9fb5b12867b2681f1143439402d017
+    specs/ui/screen-catalog.yaml#screens/ADM-003: 50532b83424d9485ebee42f6b21eb97feffa22d6f41fc376f117284060fd6be3
   implementation_source_digest: 53919c78658f245ad92acdc7b98f13fd717b355cf25a833dcb08ba68c68a83ae
   authored_section_ids:
   - catalog
@@ -41544,7 +41562,7 @@ screens:
     consequence: role change proposal 요청을 제출하고 저장된 결과 상태와 영수증을 확인한다.
     test_id: adm_003__action__propose_change
   - action_id: export-matrix
-    label: 권한 matrix 다운로드
+    label: 권한 매트릭스 다운로드
     interaction_kind: DOWNLOAD
     operation_id: null
     capability: audit.read

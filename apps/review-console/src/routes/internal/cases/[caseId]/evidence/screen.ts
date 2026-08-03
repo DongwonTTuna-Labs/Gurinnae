@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "matrix",
-      title: "evidence matrix",
+      title: "근거 관계표",
       component: "EvidenceLedger",
       purpose: "hypothesis/claim 관계.",
       test_id: "cas_004__section__matrix",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "gaps",
-      title: "근거 gap",
+      title: "근거 부족",
       component: "EvidenceLedger",
       purpose: "unresolved questions.",
       test_id: "cas_004__section__gaps",
@@ -63,7 +63,7 @@ export const screen = {
     },
     {
       id: "link",
-      label: "claim/가설 연결",
+      label: "주장/가설 연결",
       capability: "evidence.create",
       operation_id: "linkEvidence",
       interaction_kind: "COMMAND",

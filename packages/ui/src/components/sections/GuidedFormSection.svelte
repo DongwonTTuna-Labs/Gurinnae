@@ -117,6 +117,11 @@ function formAction(actionId: string): string {
     .join("&");
   return query ? `?/${actionId}&${query}` : `?/${actionId}`;
 }
+function actionLabel(actionId: string): string {
+  const action = screen.actions.find((candidate) => candidate.id === actionId);
+  if (!action) throw new Error(`화면 동작 계약 누락: ${screen.id}.${actionId}`);
+  return action.label;
+}
 type AutoCompleteToken =
   | "email"
   | "tel"
@@ -152,7 +157,7 @@ function autocompleteFor(name: string): AutoCompleteToken {
         {#if field.name === "answers"}<StructuredJsonField idPrefix={formFieldId(screen.id, saveAction.id, field.name)} name="answers" label="질문별 답변" value={answers} attachmentOptions={attachmentOptions} required={field.required} invalid={invalidField(saveAction.id, field)} />
         {:else if field.name === "publicationConsent"}<StructuredJsonField idPrefix={formFieldId(screen.id, saveAction.id, field.name)} name="publicationConsent" label="공개 동의" value={consent} attachmentOptions={attachmentOptions} required={field.required} invalid={invalidField(saveAction.id, field)} />
         {:else if field.readonly}<input type="hidden" name={field.name} value={field.value ?? ""} />
-        {:else if field.name !== "answers" && field.name !== "publicationConsent"}<label for={formFieldId(screen.id, saveAction.id, field.name)}><span>{field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span><input id={formFieldId(screen.id, saveAction.id, field.name)} name={field.name} type={field.type} autocomplete={autocompleteFor(field.name)} value={field.value ?? ""} required={field.required} aria-invalid={invalidField(saveAction.id, field) ? "true" : undefined} aria-describedby={`action-${saveAction.id}-field-help`} /></label>{/if}
+        {:else if field.name !== "answers" && field.name !== "publicationConsent"}<label for={formFieldId(screen.id, saveAction.id, field.name)}><span>{humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span><input id={formFieldId(screen.id, saveAction.id, field.name)} name={field.name} type={field.type} autocomplete={autocompleteFor(field.name)} value={field.value ?? ""} required={field.required} aria-invalid={invalidField(saveAction.id, field) ? "true" : undefined} aria-describedby={`action-${saveAction.id}-field-help`} /></label>{/if}
       {/each}
       <button class="primary-button" type="submit">{saveAction.label}</button>
     </form>
@@ -174,7 +179,7 @@ function autocompleteFor(name: string): AutoCompleteToken {
     </form>
   {:else}
     <p>입력 필드: <strong>{fieldCount}</strong>개</p>
-    {#if fieldGroups.length > 0}<dl class="guided-field-summary" aria-label="입력 항목 안내">{#each fieldGroups as group (group.actionId)}<div><dt>{group.actionId}</dt><dd>{group.fields.map((field) => `${field.label && field.label !== field.name ? field.label : field.name}${field.required ? " · 필수" : ""}`).join(" · ")}</dd></div>{/each}</dl>
+    {#if fieldGroups.length > 0}<dl class="guided-field-summary" aria-label="입력 항목 안내">{#each fieldGroups as group (group.actionId)}<div><dt>{actionLabel(group.actionId)}</dt><dd>{group.fields.map((field) => `${humanFieldLabel(field.name)}${field.required ? " · 필수" : ""}`).join(" · ")}</dd></div>{/each}</dl>
     {:else}<p role="status">현재 세션에서 입력할 항목이 없습니다.</p>{/if}
   {/if}
 </div>

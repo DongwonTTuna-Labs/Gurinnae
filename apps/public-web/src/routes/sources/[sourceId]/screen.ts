@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "source 설명",
+      title: "출처 설명",
       component: "StructuredContentSection",
       purpose: "owner·접근 방식.",
       test_id: "pub_017__section__identity",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "schema",
-      title: "schema",
+      title: "데이터 구조",
       component: "RevisionTimeline",
       purpose: "현재 version·변경 이력.",
       test_id: "pub_017__section__schema",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "quality",
-      title: "known quality",
+      title: "알려진 품질 이슈",
       component: "StructuredContentSection",
       purpose: "누락·중복·형식.",
       test_id: "pub_017__section__quality",
@@ -66,7 +66,7 @@ export const screen = {
   actions: [
     {
       id: "view-official",
-      label: "공식 source 열기",
+      label: "공식 출처 열기",
       capability: "none",
       interaction_kind: "EXTERNAL_LINK",
       assurance_level: "NONE",

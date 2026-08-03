@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-006",
-  title: "공개 Claim 작성",
+  title: "공개 주장 작성",
   route: "/internal/cases/{caseId}/claims",
   archetype: "WORKSPACE",
   sections: [
     {
       order: 1,
       id: "summary",
-      title: "claim readiness",
+      title: "주장 준비도",
       component: "ClaimWorkbench",
       purpose: "invalid/blocking.",
       test_id: "cas_006__section__summary",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "claims",
-      title: "claim 목록",
+      title: "주장 목록",
       component: "DataCollection",
       purpose: "type·visibility·review.",
       test_id: "cas_006__section__claims",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "add-claim",
-      label: "Claim 추가",
+      label: "주장 추가",
       capability: "claims.author",
       operation_id: "addClaim",
       interaction_kind: "COMMAND",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "save-claim",
-      label: "Claim 저장",
+      label: "주장 저장",
       capability: "claims.author",
       operation_id: "updateClaim",
       interaction_kind: "COMMAND",

@@ -1,5 +1,10 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../../index";
+import {
+  urlFilterArrayValues,
+  urlFilterContractFor,
+  urlFilterScalarValue,
+} from "../../url-filter-contracts";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, screen, runtime, projection }: ScreenSectionProps = $props();
@@ -7,14 +12,46 @@ let query = $state("");
 let role = $state("");
 let type = $state("");
 let filterState = $state("");
+let urlFilters = $state({
+  q: "",
+  types: "",
+  publicationState: "",
+  dateFrom: "",
+  dateTo: "",
+  agencyId: "",
+  supplierId: "",
+  ruleId: "",
+  publishedFrom: "",
+  publishedTo: "",
+  hasResponse: "",
+  hasCorrection: "",
+  status: "",
+  eventType: "",
+  actorId: "",
+  from: "",
+  to: "",
+  sort: "",
+});
 let initialized = $state(false);
 const agentRunScreen = $derived(
   screen.id === "CAS-010" || screen.id === "CAS-011",
 );
+const urlFilterContract = $derived(urlFilterContractFor(screen.id));
 const showStateMessage = $derived(
   screen.sections.find((candidate) => candidate.component === "UnifiedSearch")
     ?.id === section.id,
 );
+const ownsPrimaryUrlAction = $derived(
+  urlFilterContract !== undefined && showStateMessage,
+);
+const formAction = $derived(
+  runtime.pathname ?? (screen.route === "/" ? "/search" : screen.route),
+);
+
+function repeatedValue(searchParams: URLSearchParams, key: string): string {
+  return searchParams.getAll(key).join(", ");
+}
+
 $effect(() => {
   if (initialized) return;
   const searchParams = new URLSearchParams(
@@ -24,6 +61,26 @@ $effect(() => {
   role = searchParams.get("role") ?? "";
   type = searchParams.get(agentRunScreen ? "agentType" : "type") ?? "";
   filterState = searchParams.get(agentRunScreen ? "status" : "state") ?? "";
+  urlFilters = {
+    q: searchParams.get("q") ?? "",
+    types: repeatedValue(searchParams, "types"),
+    publicationState: repeatedValue(searchParams, "publicationState"),
+    dateFrom: searchParams.get("dateFrom") ?? "",
+    dateTo: searchParams.get("dateTo") ?? "",
+    agencyId: searchParams.get("agencyId") ?? "",
+    supplierId: searchParams.get("supplierId") ?? "",
+    ruleId: searchParams.get("ruleId") ?? "",
+    publishedFrom: searchParams.get("publishedFrom") ?? "",
+    publishedTo: searchParams.get("publishedTo") ?? "",
+    hasResponse: searchParams.get("hasResponse") ?? "",
+    hasCorrection: searchParams.get("hasCorrection") ?? "",
+    status: repeatedValue(searchParams, "status"),
+    eventType: repeatedValue(searchParams, "eventType"),
+    actorId: searchParams.get("actorId") ?? "",
+    from: searchParams.get("from") ?? "",
+    to: searchParams.get("to") ?? "",
+    sort: searchParams.get("sort") ?? "",
+  };
   initialized = true;
 });
 const stateMessage = $derived(
@@ -39,8 +96,114 @@ const stateMessage = $derived(
 );
 </script>
 <SectionHeading {section} kicker="검색" />
-<form class="unified-search" method="GET" action={runtime.pathname ?? (screen.route === "/" ? "/search" : screen.route)} role="search">
-  <label for={`${section.test_id}-query`}>{agentRunScreen ? "케이스 ID로 실행 기록 찾기" : "기관·업체·계약·사건 검색"}</label>
+{#if urlFilterContract}
+<form
+  id={ownsPrimaryUrlAction ? `action-${urlFilterContract.actionId}` : undefined}
+  class="unified-search"
+  method="GET"
+  action={formAction}
+  role="search"
+  data-action-id={ownsPrimaryUrlAction ? urlFilterContract.actionId : undefined}
+>
+  {#if screen.id === "PUB-002"}
+    <label for={`${section.test_id}-query`}>기관·업체·계약·사건 검색</label>
+    <div class="unified-search__query">
+      <input bind:value={urlFilters.q} id={`${section.test_id}-query`} data-query-key="q" type="search" autocomplete="off" placeholder="이름·계약번호·키워드" />
+      <button type="submit">{urlFilterContract.actionLabel}</button>
+    </div>
+    <details class="unified-search__filters">
+      <summary>유형·공개 상태·기간·정렬</summary>
+      <div class="unified-search__filter-grid">
+        <label for={`${section.test_id}-types`}>객체 유형 (쉼표로 구분)<input bind:value={urlFilters.types} id={`${section.test_id}-types`} data-query-key="types" autocomplete="off" placeholder="case, contract" /></label>
+        <label for={`${section.test_id}-publication-state`}>공개 상태 (쉼표로 구분)<input bind:value={urlFilters.publicationState} id={`${section.test_id}-publication-state`} data-query-key="publicationState" autocomplete="off" /></label>
+        <label for={`${section.test_id}-date-from`}>시작일<input bind:value={urlFilters.dateFrom} id={`${section.test_id}-date-from`} data-query-key="dateFrom" type="date" /></label>
+        <label for={`${section.test_id}-date-to`}>종료일<input bind:value={urlFilters.dateTo} id={`${section.test_id}-date-to`} data-query-key="dateTo" type="date" /></label>
+        <label for={`${section.test_id}-sort`}>정렬<select bind:value={urlFilters.sort} id={`${section.test_id}-sort`} data-query-key="sort"><option value="">기본 정렬</option><option value="relevance">관련도</option><option value="updated_desc">최근 갱신순</option><option value="title_asc">제목순</option></select></label>
+      </div>
+    </details>
+  {:else if screen.id === "PUB-003"}
+    <label for={`${section.test_id}-publication-state`}>공개 상태 (쉼표로 구분)</label>
+    <div class="unified-search__query">
+      <input bind:value={urlFilters.publicationState} id={`${section.test_id}-publication-state`} data-query-key="publicationState" autocomplete="off" placeholder="PUBLISHED_ANOMALY, CORRECTED" />
+      <button type="submit">{urlFilterContract.actionLabel}</button>
+    </div>
+    <details class="unified-search__filters">
+      <summary>기관·업체·규칙·기간·소명·정렬</summary>
+      <div class="unified-search__filter-grid">
+        <label for={`${section.test_id}-agency-id`}>기관 식별자<input bind:value={urlFilters.agencyId} id={`${section.test_id}-agency-id`} data-query-key="agencyId" autocomplete="off" /></label>
+        <label for={`${section.test_id}-supplier-id`}>업체 식별자<input bind:value={urlFilters.supplierId} id={`${section.test_id}-supplier-id`} data-query-key="supplierId" autocomplete="off" /></label>
+        <label for={`${section.test_id}-rule-id`}>규칙 식별자<input bind:value={urlFilters.ruleId} id={`${section.test_id}-rule-id`} data-query-key="ruleId" autocomplete="off" /></label>
+        <label for={`${section.test_id}-published-from`}>공개 시작일<input bind:value={urlFilters.publishedFrom} id={`${section.test_id}-published-from`} data-query-key="publishedFrom" type="date" /></label>
+        <label for={`${section.test_id}-published-to`}>공개 종료일<input bind:value={urlFilters.publishedTo} id={`${section.test_id}-published-to`} data-query-key="publishedTo" type="date" /></label>
+        <label for={`${section.test_id}-has-response`}>소명<select bind:value={urlFilters.hasResponse} id={`${section.test_id}-has-response`} data-query-key="hasResponse"><option value="">전체</option><option value="true">있음</option><option value="false">없음</option></select></label>
+        <label for={`${section.test_id}-has-correction`}>정정<select bind:value={urlFilters.hasCorrection} id={`${section.test_id}-has-correction`} data-query-key="hasCorrection"><option value="">전체</option><option value="true">있음</option><option value="false">없음</option></select></label>
+        <label for={`${section.test_id}-sort`}>정렬<select bind:value={urlFilters.sort} id={`${section.test_id}-sort`} data-query-key="sort"><option value="">기본 정렬</option><option value="updated_desc">최근 갱신순</option><option value="published_desc">최근 공개순</option><option value="title_asc">제목순</option></select></label>
+      </div>
+    </details>
+  {:else if screen.id === "INT-003"}
+    <label for={`${section.test_id}-query`}>식별자·텍스트·위치 검색</label>
+    <div class="unified-search__query">
+      <input bind:value={urlFilters.q} id={`${section.test_id}-query`} data-query-key="q" type="search" autocomplete="off" placeholder="찾을 내용을 입력하세요" />
+      <button type="submit">{urlFilterContract.actionLabel}</button>
+    </div>
+    <details class="unified-search__filters">
+      <summary>객체 유형·상태·정렬</summary>
+      <div class="unified-search__filter-grid">
+        <label for={`${section.test_id}-types`}>객체 유형 (쉼표로 구분)<input bind:value={urlFilters.types} id={`${section.test_id}-types`} data-query-key="types" autocomplete="off" placeholder="case, signal, evidence, run" /></label>
+        <label for={`${section.test_id}-status`}>상태 (쉼표로 구분)<input bind:value={urlFilters.status} id={`${section.test_id}-status`} data-query-key="status" autocomplete="off" /></label>
+        <label for={`${section.test_id}-sort`}>정렬<select bind:value={urlFilters.sort} id={`${section.test_id}-sort`} data-query-key="sort"><option value="">기본 정렬</option><option value="relevance">관련도</option><option value="updated_desc">최근 갱신순</option><option value="title_asc">제목순</option></select></label>
+      </div>
+    </details>
+  {:else}
+    <label for={`${section.test_id}-event-type`}>이벤트 유형 (쉼표로 구분)</label>
+    <div class="unified-search__query">
+      <input bind:value={urlFilters.eventType} id={`${section.test_id}-event-type`} data-query-key="eventType" autocomplete="off" placeholder="REVISION_PUBLISHED, CASE_UPDATED" />
+      <button type="submit">{urlFilterContract.actionLabel}</button>
+    </div>
+    <details class="unified-search__filters">
+      <summary>행위자·기간·정렬</summary>
+      <div class="unified-search__filter-grid">
+        <label for={`${section.test_id}-actor-id`}>행위자 식별자<input bind:value={urlFilters.actorId} id={`${section.test_id}-actor-id`} data-query-key="actorId" autocomplete="off" /></label>
+        <label for={`${section.test_id}-from`}>시작 시각<input bind:value={urlFilters.from} id={`${section.test_id}-from`} data-query-key="from" autocomplete="off" placeholder="2026-07-27T00:00:00Z" /></label>
+        <label for={`${section.test_id}-to`}>종료 시각<input bind:value={urlFilters.to} id={`${section.test_id}-to`} data-query-key="to" autocomplete="off" placeholder="2026-07-27T23:59:59Z" /></label>
+        <label for={`${section.test_id}-sort`}>정렬<select bind:value={urlFilters.sort} id={`${section.test_id}-sort`} data-query-key="sort"><option value="">기본 정렬</option><option value="occurred_desc">최신순</option><option value="occurred_asc">오래된순</option></select></label>
+      </div>
+    </details>
+  {/if}
+  {#if screen.id === "PUB-002"}
+    {#if urlFilterScalarValue(urlFilters.q)}<input type="hidden" name="q" value={urlFilterScalarValue(urlFilters.q)} />{/if}
+    {#each urlFilterArrayValues(urlFilters.types) as value}<input type="hidden" name="types" {value} />{/each}
+    {#each urlFilterArrayValues(urlFilters.publicationState) as value}<input type="hidden" name="publicationState" {value} />{/each}
+    {#if urlFilterScalarValue(urlFilters.dateFrom)}<input type="hidden" name="dateFrom" value={urlFilterScalarValue(urlFilters.dateFrom)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.dateTo)}<input type="hidden" name="dateTo" value={urlFilterScalarValue(urlFilters.dateTo)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.sort)}<input type="hidden" name="sort" value={urlFilterScalarValue(urlFilters.sort)} />{/if}
+  {:else if screen.id === "PUB-003"}
+    {#each urlFilterArrayValues(urlFilters.publicationState) as value}<input type="hidden" name="publicationState" {value} />{/each}
+    {#if urlFilterScalarValue(urlFilters.agencyId)}<input type="hidden" name="agencyId" value={urlFilterScalarValue(urlFilters.agencyId)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.supplierId)}<input type="hidden" name="supplierId" value={urlFilterScalarValue(urlFilters.supplierId)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.ruleId)}<input type="hidden" name="ruleId" value={urlFilterScalarValue(urlFilters.ruleId)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.publishedFrom)}<input type="hidden" name="publishedFrom" value={urlFilterScalarValue(urlFilters.publishedFrom)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.publishedTo)}<input type="hidden" name="publishedTo" value={urlFilterScalarValue(urlFilters.publishedTo)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.hasResponse)}<input type="hidden" name="hasResponse" value={urlFilterScalarValue(urlFilters.hasResponse)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.hasCorrection)}<input type="hidden" name="hasCorrection" value={urlFilterScalarValue(urlFilters.hasCorrection)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.sort)}<input type="hidden" name="sort" value={urlFilterScalarValue(urlFilters.sort)} />{/if}
+  {:else if screen.id === "INT-003"}
+    {#if urlFilterScalarValue(urlFilters.q)}<input type="hidden" name="q" value={urlFilterScalarValue(urlFilters.q)} />{/if}
+    {#each urlFilterArrayValues(urlFilters.types) as value}<input type="hidden" name="types" {value} />{/each}
+    {#each urlFilterArrayValues(urlFilters.status) as value}<input type="hidden" name="status" {value} />{/each}
+    {#if urlFilterScalarValue(urlFilters.sort)}<input type="hidden" name="sort" value={urlFilterScalarValue(urlFilters.sort)} />{/if}
+  {:else}
+    {#each urlFilterArrayValues(urlFilters.eventType) as value}<input type="hidden" name="eventType" {value} />{/each}
+    {#if urlFilterScalarValue(urlFilters.actorId)}<input type="hidden" name="actorId" value={urlFilterScalarValue(urlFilters.actorId)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.from)}<input type="hidden" name="from" value={urlFilterScalarValue(urlFilters.from)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.to)}<input type="hidden" name="to" value={urlFilterScalarValue(urlFilters.to)} />{/if}
+    {#if urlFilterScalarValue(urlFilters.sort)}<input type="hidden" name="sort" value={urlFilterScalarValue(urlFilters.sort)} />{/if}
+  {/if}
+  {#if showStateMessage}<p class="unified-search__status" aria-live="polite" role="status">{stateMessage}</p>{/if}
+</form>
+{:else}
+<form class="unified-search" method="GET" action={formAction} role="search">
+  <label for={`${section.test_id}-query`}>{agentRunScreen ? "사건 식별자로 실행 기록 찾기" : "기관·업체·계약·사건 검색"}</label>
   <div class="unified-search__query">
     <input bind:value={query} id={`${section.test_id}-query`} name={agentRunScreen ? "caseId" : "q"} type="search" autocomplete="off" placeholder={agentRunScreen ? "UUID를 입력하세요" : "찾을 내용을 입력하세요"} />
     <button type="submit">검색</button>
@@ -60,6 +223,7 @@ const stateMessage = $derived(
   </details>
   {#if showStateMessage}<p class="unified-search__status" aria-live="polite" role="status">{stateMessage}</p>{/if}
 </form>
+{/if}
 
 <style>
   .unified-search {
@@ -84,6 +248,7 @@ const stateMessage = $derived(
   }
 
   .unified-search__query input,
+  .unified-search__filter-grid input,
   .unified-search__filter-grid select {
     width: 100%;
     min-width: 0;
@@ -173,6 +338,7 @@ const stateMessage = $derived(
     .unified-search,
     .unified-search__filters,
     .unified-search__query input,
+    .unified-search__filter-grid input,
     .unified-search__filter-grid select,
     .unified-search__query button {
       border-color: CanvasText;

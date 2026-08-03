@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "RULE-003",
-  title: "규칙 평가·Shadow",
+  title: "규칙 평가·섀도 실행",
   route: "/internal/rules/{ruleId}/versions/{version}/evaluation",
   archetype: "OPERATIONS",
   sections: [
     {
       order: 1,
       id: "dataset",
-      title: "평가 dataset",
+      title: "평가 자료",
       component: "CoverageStatement",
       purpose: "version·coverage.",
       test_id: "rule_003__section__dataset",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "metrics",
-      title: "품질 metric",
+      title: "품질 지표",
       component: "StructuredContentSection",
       purpose: "precision/recall where valid.",
       test_id: "rule_003__section__metrics",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "shadow",
-      title: "shadow",
+      title: "병행 평가",
       component: "StructuredContentSection",
       purpose: "count·cost·diff.",
       test_id: "rule_003__section__shadow",
@@ -76,7 +76,7 @@ export const screen = {
     },
     {
       id: "start-shadow",
-      label: "Shadow 실행",
+      label: "섀도 실행",
       capability: "rules.propose",
       operation_id: "startRuleShadow",
       interaction_kind: "COMMAND",

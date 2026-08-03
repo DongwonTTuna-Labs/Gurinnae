@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "summary",
-      title: "coverage 요약",
+      title: "수집 범위 요약",
       component: "StatusAndRevisionHeader",
       purpose: "전체 범위와 current status.",
       test_id: "pub_015__section__summary",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "sources",
-      title: "source별 범위",
+      title: "출처별 범위",
       component: "CoverageStatement",
       purpose: "기간·기관·갱신.",
       test_id: "pub_015__section__sources",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "gaps",
-      title: "known gaps",
+      title: "알려진 누락",
       component: "StructuredContentSection",
       purpose: "미수집·누락·license.",
       test_id: "pub_015__section__gaps",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "open-source",
-      label: "source 상세",
+      label: "출처 상세",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "download-coverage",
-      label: "coverage JSON 다운로드",
+      label: "범위 JSON 다운로드",
       capability: "none",
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",

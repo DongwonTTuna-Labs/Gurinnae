@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "COR-002",
-  title: "정정 Workspace",
+  title: "정정 작업공간",
   route: "/internal/corrections/{correctionId}",
   archetype: "WORKSPACE",
   sections: [
@@ -76,7 +76,7 @@ export const screen = {
     },
     {
       id: "create-revision",
-      label: "정정 revision 생성",
+      label: "정정 개정본 생성",
       capability: "publication.correct",
       operation_id: "createCorrection",
       guard: "reviews + reason",

@@ -8,7 +8,7 @@ let { section, runtime, projection }: ScreenSectionProps = $props();
 <div class="status-revision-grid">
   {#if projection}
     {#each projection.fields as field}<p><span>{field.label}</span><strong>{field.value ?? "확인 필요"}</strong></p>{/each}
-  {:else}<p role="status">권위 projection을 불러오는 중입니다.</p>{/if}
+  {:else}<p role="status">권위 투영값을 불러오는 중입니다.</p>{/if}
 </div>
 
 <style>

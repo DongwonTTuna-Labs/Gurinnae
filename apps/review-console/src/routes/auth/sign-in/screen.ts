@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "signin",
-      title: "SSO 로그인",
+      title: "조직 계정 로그인",
       component: "StructuredContentSection",
       purpose: "OIDC 시작.",
       test_id: "auth_001__section__signin",

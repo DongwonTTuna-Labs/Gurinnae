@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-002",
-  title: "사건 Overview",
+  title: "사건 개요",
   route: "/internal/cases/{caseId}/overview",
   archetype: "WORKSPACE",
   sections: [
     {
       order: 1,
       id: "header",
-      title: "identity·state·version",
+      title: "식별 정보·상태·버전",
       component: "StructuredContentSection",
       purpose: "assignment·due.",
       test_id: "cas_002__section__header",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "known-unknown",
-      title: "Known/Unknown/Response",
+      title: "확인·미확인·소명",
       component: "KnownUnknownResponse",
       purpose: "핵심 요약.",
       test_id: "cas_002__section__known-unknown",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "readiness",
-      title: "진행과 gate",
+      title: "진행·통과 조건",
       component: "StructuredContentSection",
       purpose: "blocking task.",
       test_id: "cas_002__section__readiness",

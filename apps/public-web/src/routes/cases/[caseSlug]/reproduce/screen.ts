@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "inputs",
-      title: "입력과 digest",
+      title: "입력·무결성 요약값",
       component: "StructuredContentSection",
       purpose: "공개 가능한 normalized input.",
       test_id: "pub_006__section__inputs",

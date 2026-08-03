@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "mission",
-      title: "미션",
+      title: "운영 목적",
       component: "StructuredContentSection",
       purpose: "제품 정의.",
       test_id: "pub_022__section__mission",

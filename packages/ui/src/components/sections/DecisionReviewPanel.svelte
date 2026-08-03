@@ -20,7 +20,7 @@ let { section, screen, runtime, projection }: ScreenSectionProps = $props();
        controls or bypass the single approval path. -->
   <ApprovalDecisionDialog {screen} {runtime} dialogId={`decision-dialog-${screen.id.toLowerCase()}-${section.id.toLowerCase()}`} />
 {/if}
-{#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="결정할 검토 snapshot이 없습니다." />{/if}
+{#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="결정할 검토본이 없습니다." />{/if}
 
 <style>
 .decision-gate {

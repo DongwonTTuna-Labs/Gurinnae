@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "기관 identity",
+      title: "기관 식별 정보",
       component: "RevisionTimeline",
       purpose: "공식명·유형·관할·변경 이력.",
       test_id: "pub_008__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "coverage",
-      title: "coverage",
+      title: "수집 범위",
       component: "CoverageStatement",
       purpose: "source·기간·누락.",
       test_id: "pub_008__section__coverage",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "metrics",
-      title: "설명 통계",
+      title: "계약 현황 통계",
       component: "StatusAndRevisionHeader",
       purpose: "계약 수·금액·상태 분포와 denominator.",
       test_id: "pub_008__section__metrics",

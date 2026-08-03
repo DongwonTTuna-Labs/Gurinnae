@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "locator",
-      title: "locator",
+      title: "정확한 위치",
       component: "StructuredContentSection",
       purpose: "page/row/field.",
       test_id: "cas_005__section__locator",
@@ -79,7 +79,7 @@ export const screen = {
     },
     {
       id: "create-redaction",
-      label: "공개용 redaction 생성",
+      label: "공개용 가림 처리 생성",
       capability: "evidence.verify",
       operation_id: "createEvidenceRedaction",
       interaction_kind: "COMMAND",

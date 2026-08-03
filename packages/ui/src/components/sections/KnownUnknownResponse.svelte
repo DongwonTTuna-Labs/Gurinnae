@@ -13,7 +13,7 @@ const showResponse = $derived(/response|party/i.test(section.id));
     {#if projection}
       <dl>{#each projection.fields.filter((field) => field.known) as field}<div><dt>{field.label}</dt><dd>{field.value}</dd></div>{/each}</dl>
     {:else}
-      <p>권위 projection을 불러오는 중입니다.</p>
+      <p>권위 투영값을 불러오는 중입니다.</p>
     {/if}
   </article>
   <article>

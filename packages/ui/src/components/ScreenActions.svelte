@@ -1,12 +1,14 @@
 <script lang="ts">
 import type { ScreenField, ScreenRuntime, ScreenViewModel } from "../index";
 import { localActionHref } from "../local-actions";
+import { displayReadonlyFieldValue } from "../screen-action-display";
 import {
   formFieldId,
   humanFieldLabel,
   typedScreenViewModel,
 } from "../screen-contract";
 import BotChallenge from "./BotChallenge.svelte";
+import RowSelectionNavigation from "./RowSelectionNavigation.svelte";
 import StructuredJsonField from "./StructuredJsonField.svelte";
 
 let { screen, runtime }: { screen: ScreenViewModel; runtime: ScreenRuntime } =
@@ -21,15 +23,7 @@ const interactionKind = (action: ScreenViewModel["actions"][number]) =>
   typeof action.interaction_kind === "string"
     ? action.interaction_kind
     : "NAVIGATION";
-type AutoCompleteToken =
-  | "email"
-  | "tel"
-  | "given-name"
-  | "family-name"
-  | "name"
-  | "language"
-  | "off";
-const autocompleteFor = (name: string): AutoCompleteToken => {
+const autocompleteFor = (name: string) => {
   const normalized = name.toLowerCase();
   if (normalized.includes("email")) return "email";
   if (normalized.includes("phone") || normalized.includes("tel")) return "tel";
@@ -44,6 +38,8 @@ const autocompleteFor = (name: string): AutoCompleteToken => {
 };
 const hrefFor = (action: ScreenViewModel["actions"][number]) =>
   localActionHref(screen, runtime, action);
+const optionsFor = (actionId: string) =>
+  runtime.navigationOptions?.[actionId] ?? [];
 const formAction = (actionId: string) => {
   const search = runtime.search ?? "";
   const query = search
@@ -134,6 +130,7 @@ const visibleActions = $derived(
         interactionKind(action) === "DOWNLOAD" ||
         (interactionKind(action) === "COMMAND" &&
           supportsLocalCommand(action)) ||
+        optionsFor(action.id).length > 0 ||
         hrefFor(action) !== undefined,
     ),
 );
@@ -146,7 +143,7 @@ function runLocalCommand(action: ScreenViewModel["actions"][number]) {
           .filter((field) => field.known && field.value !== null)
           .map((field) => `${field.value} (${field.source})`)
           .join("\n")
-      : "서버 권위 projection을 확인할 수 없습니다.";
+      : "서버 권위 투영값을 확인할 수 없습니다.";
     void navigator.clipboard.writeText(
       `${screen.title}\n${window.location.href}\n\n근거·식별자\n${evidence}`,
     );
@@ -248,15 +245,15 @@ function downloadHref(
                       challengeProof[action.id] = proof;
                     }}
                   />
-                {:else}<label for={formFieldId(screen.id, action.id, field.name)}><span>{field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
-                  {#if field.readonly}<input id={formFieldId(screen.id, action.id, field.name)} type="hidden" name={field.name} value={field.value ?? ""} readonly /><output>{field.value === undefined ? "—" : String(field.value)}</output>
+                {:else}<label for={formFieldId(screen.id, action.id, field.name)}><span>{humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
+                  {#if field.readonly}<input id={formFieldId(screen.id, action.id, field.name)} type="hidden" name={field.name} value={field.value ?? ""} readonly /><output>{displayReadonlyFieldValue(field)}</output>
                   {:else if field.type === "boolean" && !field.required}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>
                     <option value="" selected={field.value === undefined}>변경 안 함</option>
                     <option value="true" selected={field.value === true}>예</option>
                     <option value="false" selected={field.value === false}>아니오</option>
                   </select>
                   {:else if field.type === "boolean"}<input id={formFieldId(screen.id, action.id, field.name)} type="checkbox" name={field.name} value="true" checked={field.value === true} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />
-                  {:else if field.type === "json" && (field.name === "answers" || field.name.toLowerCase().includes("consent"))}<StructuredJsonField idPrefix={formFieldId(screen.id, action.id, field.name)} name={field.name} label={field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)} value={field.value} required={field.required} invalid={invalidField(action.id, field)} />
+                  {:else if field.type === "json" && (field.name === "answers" || field.name.toLowerCase().includes("consent"))}<StructuredJsonField idPrefix={formFieldId(screen.id, action.id, field.name)} name={field.name} label={humanFieldLabel(field.name)} value={field.value} required={field.required} invalid={invalidField(action.id, field)} />
                   {:else if field.type === "json"}<textarea id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} rows="4" aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{typeof field.value === "string" ? field.value : ""}</textarea>
                   {:else if field.options}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{option}</option>{/each}</select>
                   {:else}<input id={formFieldId(screen.id, action.id, field.name)} type={field.type} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} readonly={field.readonly} value={field.value ?? ""} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />{/if}
@@ -270,8 +267,10 @@ function downloadHref(
             <div class="download-unavailable" role="status" data-action-id={action.id}><span>{action.label}</span><small>현재 다운로드를 준비할 수 없습니다. 잠시 후 화면을 새로고침해 다시 시도하세요.</small></div>
           {:else if interactionKind(action) === "COMMAND"}
             <button id={`action-${action.id}`} class="secondary-button local-action" type="button" onclick={() => runLocalCommand(action)} data-action-id={action.id}>{action.label}</button>
+          {:else if optionsFor(action.id).length > 0}
+            <RowSelectionNavigation actionId={action.id} actionLabel={action.label} options={optionsFor(action.id)} buttonClass={actionButtonClass(action.id)} external={interactionKind(action) === "EXTERNAL_LINK"} />
           {:else if hrefFor(action)}
-            <a id={`action-${action.id}`} class="secondary-button local-action" href={hrefFor(action)} target={interactionKind(action) === "EXTERNAL_LINK" ? "_blank" : undefined} rel={interactionKind(action) === "EXTERNAL_LINK" ? "noreferrer" : undefined} data-action-id={action.id}>{action.label}</a>
+            <a id={`action-${action.id}`} class="secondary-button local-action" href={hrefFor(action)} target={interactionKind(action) === "EXTERNAL_LINK" ? "_blank" : undefined} rel={interactionKind(action) === "EXTERNAL_LINK" ? "noopener noreferrer" : undefined} data-action-id={action.id}>{action.label}</a>
           {/if}
         {/each}
       </div>
@@ -298,14 +297,9 @@ function downloadHref(
     font-weight: 650;
     letter-spacing: 0.04em;
   }
-  h2 {
-    font-size: 1.125rem;
-    font-weight: 650;
-  }
-  h3 {
-    font-size: 1rem;
-    font-weight: 650;
-  }
+  h2, h3 { font-weight: 650; }
+  h2 { font-size: 1.125rem; }
+  h3 { font-size: 1rem; }
   .action-grid {
     display: grid;
     grid-column: 1 / -1;

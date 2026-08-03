@@ -2,14 +2,19 @@
 
 mod config;
 
+use sqlx::migrate::Migrator;
 use sqlx::postgres::PgPoolOptions;
 use thiserror::Error;
 
-/// The runtime contains the 24 byte-immutable authority migrations plus the
-/// six additive v13 migrations.  Keep this separate from the authority
-/// validator's base count: changing the latter would silently weaken the
-/// hash-pinned archive lock.
-pub const EXPECTED_MIGRATION_COUNT: i64 = 30;
+static MIGRATOR: Migrator = sqlx::migrate!("../../db/migrations");
+
+fn expected_migration_sequence() -> Vec<i64> {
+    MIGRATOR
+        .migrations
+        .iter()
+        .map(|migration| migration.version)
+        .collect()
+}
 
 #[derive(Debug, Error)]
 enum MigratorError {
@@ -19,12 +24,12 @@ enum MigratorError {
     Connect(#[source] sqlx::Error),
     #[error("database migration failed")]
     Migrate(#[source] sqlx::migrate::MigrateError),
-    #[error("database migration count mismatch: expected {EXPECTED_MIGRATION_COUNT}, found {0}")]
-    MigrationCount(i64),
-    #[error(
-        "database migration sequence is incomplete: expected versions 1..={EXPECTED_MIGRATION_COUNT}, found {0}"
-    )]
-    MigrationSequence(String),
+    #[error("embedded migration count cannot fit in the database ledger type: {0}")]
+    EmbeddedMigrationCount(usize),
+    #[error("database migration count mismatch: expected {expected}, found {found}")]
+    MigrationCount { expected: i64, found: i64 },
+    #[error("database migration sequence is incomplete: expected {expected}, found {found}")]
+    MigrationSequence { expected: String, found: String },
     #[error("database migration count query failed")]
     Count(#[source] sqlx::Error),
 }
@@ -33,34 +38,36 @@ enum MigratorError {
 async fn main() -> Result<(), MigratorError> {
     tracing_subscriber::fmt().json().init();
     let config = config::Config::from_env()?;
+    let expected_sequence = expected_migration_sequence();
+    let expected_migration_count = i64::try_from(expected_sequence.len())
+        .map_err(|_| MigratorError::EmbeddedMigrationCount(expected_sequence.len()))?;
     let pool = PgPoolOptions::new()
         .max_connections(1)
         .connect(&config.database_url)
         .await
         .map_err(MigratorError::Connect)?;
-    sqlx::migrate!("../../db/migrations")
-        .run(&pool)
-        .await
-        .map_err(MigratorError::Migrate)?;
+    MIGRATOR.run(&pool).await.map_err(MigratorError::Migrate)?;
     let migration_count: i64 =
         sqlx::query_scalar("SELECT count(*) FROM _sqlx_migrations WHERE success")
             .fetch_one(&pool)
             .await
             .map_err(MigratorError::Count)?;
-    if migration_count != EXPECTED_MIGRATION_COUNT {
-        return Err(MigratorError::MigrationCount(migration_count));
+    if migration_count != expected_migration_count {
+        return Err(MigratorError::MigrationCount {
+            expected: expected_migration_count,
+            found: migration_count,
+        });
     }
     let sequence: Vec<i64> =
         sqlx::query_scalar("SELECT version FROM _sqlx_migrations WHERE success ORDER BY version")
             .fetch_all(&pool)
             .await
             .map_err(MigratorError::Count)?;
-    let expected: Vec<i64> = (1..=EXPECTED_MIGRATION_COUNT).collect();
-    if sequence != expected {
-        return Err(MigratorError::MigrationSequence(format!(
-            "expected {:?}, found {:?}",
-            expected, sequence
-        )));
+    if sequence != expected_sequence {
+        return Err(MigratorError::MigrationSequence {
+            expected: format!("{expected_sequence:?}"),
+            found: format!("{sequence:?}"),
+        });
     }
     tracing::info!(migration_count, "database migrations completed");
     Ok(())
@@ -68,18 +75,15 @@ async fn main() -> Result<(), MigratorError> {
 
 #[cfg(test)]
 mod tests {
-    use super::EXPECTED_MIGRATION_COUNT;
+    use super::expected_migration_sequence;
 
     #[test]
-    fn runtime_count_is_additive_over_immutable_authority_base() {
-        assert_eq!(EXPECTED_MIGRATION_COUNT, 30);
-    }
-
-    #[test]
-    fn expected_sequence_has_no_reserved_gap() {
-        let versions: Vec<i64> = (1..=EXPECTED_MIGRATION_COUNT).collect();
+    fn embedded_migration_sequence_is_complete_and_contiguous() {
+        let versions = expected_migration_sequence();
+        let expected_last = i64::try_from(versions.len()).ok();
+        assert!(!versions.is_empty());
         assert_eq!(versions.first(), Some(&1));
-        assert_eq!(versions.last(), Some(&30));
-        assert_eq!(versions.len() as i64, EXPECTED_MIGRATION_COUNT);
+        assert_eq!(versions.last(), expected_last.as_ref());
+        assert!(versions.windows(2).all(|pair| pair[1] == pair[0] + 1));
     }
 }

@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-011",
-  title: "Agent 실행 상세",
+  title: "에이전트 실행 상세",
   route: "/internal/cases/{caseId}/agent-runs/{runId}",
   archetype: "WORKSPACE",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "실행 identity",
+      title: "실행 식별 정보",
       component: "StructuredContentSection",
       purpose: "purpose·version·timestamps.",
       test_id: "cas_011__section__identity",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "model",
-      title: "모델·policy",
+      title: "모델·정책",
       component: "StructuredContentSection",
       purpose: "provider·prompt version.",
       test_id: "cas_011__section__model",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "output",
-      title: "structured output",
+      title: "구조화 출력",
       component: "StructuredContentSection",
       purpose: "validation.",
       test_id: "cas_011__section__output",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "citations",
-      title: "citation",
+      title: "인용 근거",
       component: "StructuredContentSection",
       purpose: "source 존재.",
       test_id: "cas_011__section__citations",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "safety",
-      title: "safety",
+      title: "안전성 검사",
       component: "StructuredContentSection",
       purpose: "injection/PII.",
       test_id: "cas_011__section__safety",

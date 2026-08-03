@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "resources",
-      title: "resource",
+      title: "제공 자원",
       component: "RevisionAndCorrectionPanel",
       purpose: "case/contract/entity/method/correction.",
       test_id: "pub_021__section__resources",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "pagination",
-      title: "pagination",
+      title: "페이지 조회",
       component: "StructuredContentSection",
       purpose: "cursor·sort.",
       test_id: "pub_021__section__pagination",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "versioning",
-      title: "versioning",
+      title: "버전 관리",
       component: "StructuredContentSection",
       purpose: "OpenAPI와 deprecation.",
       test_id: "pub_021__section__versioning",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "download",
-      title: "OpenAPI",
+      title: "공개 인터페이스 명세",
       component: "StructuredContentSection",
       purpose: "JSON 다운로드.",
       test_id: "pub_021__section__download",

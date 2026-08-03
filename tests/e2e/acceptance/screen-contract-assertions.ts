@@ -33,6 +33,7 @@ export type Screen = {
   id: string;
   surface: string;
   route: string;
+  archetype: string;
   users: string[];
   job: string;
   questions: string[];
@@ -198,6 +199,7 @@ export function catalogScreens(): Screen[] {
       id: stringValue(item.id, `${context}.id`),
       surface: stringValue(item.surface, `${context}.surface`),
       route: stringValue(item.route, `${context}.route`),
+      archetype: stringValue(item.archetype, `${context}.archetype`),
       users: stringList(item.primary_users, `${context}.primary_users`),
       job: stringValue(item.primary_job, `${context}.primary_job`),
       questions: stringList(item.user_questions, `${context}.user_questions`),

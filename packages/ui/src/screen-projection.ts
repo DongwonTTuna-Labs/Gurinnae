@@ -1,3 +1,4 @@
+import { explicitKoreanContextLabel } from "./field-labels";
 import { ROUTE_SCREEN_CONTRACTS } from "./generated-screen-contracts";
 import { journeyForScreenId } from "./generated-screen-journeys";
 import type { ScreenProjectionBinding } from "./generated-screen-projections";
@@ -224,10 +225,13 @@ function envelopeFields(
       : undefined;
   const fields = fieldNames.map((name) => {
     const value = section?.fields[name];
+    const label = value?.contextualLabel
+      ? explicitKoreanContextLabel(value.contextualLabel)
+      : labelFor(name);
     if (sensitiveName.test(name)) {
       return {
         name,
-        label: labelFor(name),
+        label,
         value: null,
         known: false,
         source: "redacted",
@@ -235,7 +239,7 @@ function envelopeFields(
     }
     return {
       name,
-      label: labelFor(name),
+      label,
       value: value?.value ?? null,
       known: value?.known === true && value.value !== null,
       source: value?.source ?? `authority:${screenId}.${sectionId}.${name}`,
@@ -303,7 +307,12 @@ export function projectFetchedData(
       blocked: boolean;
       fields: Record<
         string,
-        { value: SafeProjectionValue | null; known: boolean; source: string }
+        {
+          contextualLabel?: string;
+          value: SafeProjectionValue | null;
+          known: boolean;
+          source: string;
+        }
       >;
       analysis?: import("./screen-projection-specialized-types").AnalysisProjection;
     }
@@ -335,7 +344,12 @@ export function projectFetchedData(
       // projections. Merge every field they explicitly emit (including
       // response journeys and CAS visualizations) while never exposing the
       // underlying DTO to the browser.
-      existing.fields[projectedField.name] = projectedField;
+      existing.fields[projectedField.name] = {
+        contextualLabel: projectedField.label,
+        value: projectedField.value,
+        known: projectedField.known,
+        source: projectedField.source,
+      };
     }
     if (specialized.analysis) existing.analysis = specialized.analysis;
     sections[section.id] = existing;

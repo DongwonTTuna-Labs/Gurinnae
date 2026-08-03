@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "history",
-      title: "revision·정정 이력",
+      title: "개정·정정 이력",
       component: "StatusAndRevisionHeader",
       purpose: "immutable.",
       test_id: "cas_015__section__history",

@@ -65,7 +65,7 @@ const stateMessage = $derived(
       </section>
     {/if}
   {:else}
-    <p role="status">서버 권위 projection을 불러오는 중입니다.</p>
+    <p role="status">서버 권위 투영값을 불러오는 중입니다.</p>
   {/if}
 </div>
 

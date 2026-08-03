@@ -1,4 +1,4 @@
-# RULE-002 — 규칙 Version 상세
+# RULE-002 — 규칙 버전 상세
 
 상태: **FINAL / REQUIRED COMPLETE**  
 Route: `/internal/rules/{ruleId}/versions/{version}`  
@@ -52,7 +52,7 @@ Test prefix: `rule_002`
 | Action ID | Label | Interaction | Assurance | Capability | Operation |
 |---|---|---|---|---|---|
 | `open-evaluation` | 평가 보기 | `NAVIGATION` | `NONE` | `none` | `local-only` |
-| `create-draft` | 다음 version 초안 | `COMMAND` | `ACTIVE_SESSION` | `rules.propose` | `createRuleVersionDraft` |
+| `create-draft` | 다음 버전 초안 | `COMMAND` | `ACTIVE_SESSION` | `rules.propose` | `createRuleVersionDraft` |
 | `download-definition` | 정의 다운로드 | `DOWNLOAD` | `NONE` | `none` | `local-only` |
 
 Primary action: `create-draft`

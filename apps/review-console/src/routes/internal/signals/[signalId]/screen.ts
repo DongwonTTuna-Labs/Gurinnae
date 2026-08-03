@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SIG-002",
-  title: "Signal 검토",
+  title: "신호 검토",
   route: "/internal/signals/{signalId}",
   archetype: "DECISION_REVIEW",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "source·rule·freshness",
+      title: "출처·규칙·최신성",
       component: "CoverageStatement",
       purpose: "입력 version.",
       test_id: "sig_002__section__identity",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "quality",
-      title: "blocker·품질",
+      title: "차단 요인·품질",
       component: "StructuredContentSection",
       purpose: "unit/VAT/bundle.",
       test_id: "sig_002__section__quality",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "related",
-      title: "관련 signal/case",
+      title: "관련 신호·사건",
       component: "SignalTriagePanel",
       purpose: "duplicate.",
       test_id: "sig_002__section__related",
@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "ai",
-      title: "AI 제안",
+      title: "인공지능 제안",
       component: "AgentSuggestionPanel",
       purpose: "보조.",
       test_id: "sig_002__section__ai",
@@ -65,7 +65,7 @@ export const screen = {
     {
       order: 8,
       id: "decision",
-      title: "triage 결정",
+      title: "분류 결정",
       component: "DecisionReviewPanel",
       purpose: "reason code.",
       test_id: "sig_002__section__decision",

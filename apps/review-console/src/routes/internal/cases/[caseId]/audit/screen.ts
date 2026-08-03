@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-016",
-  title: "사건 Audit",
+  title: "사건 감사",
   route: "/internal/cases/{caseId}/audit",
   archetype: "WORKSPACE",
   sections: [
     {
       order: 1,
       id: "scope",
-      title: "audit scope",
+      title: "감사 범위",
       component: "StructuredContentSection",
       purpose: "case-linked.",
       test_id: "cas_016__section__scope",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "exports",
-      title: "export",
+      title: "내보내기",
       component: "StructuredContentSection",
       purpose: "watermark·audit.",
       test_id: "cas_016__section__exports",
@@ -52,7 +52,7 @@ export const screen = {
     },
     {
       id: "create-audit-export",
-      label: "감사 export 요청",
+      label: "감사 내보내기 요청",
       capability: "audit.export",
       operation_id: "createAuditExport",
       guard:

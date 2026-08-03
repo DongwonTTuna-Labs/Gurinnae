@@ -22,11 +22,13 @@ import {
   findAggregateId,
   formIdempotencyKey,
   hash,
+  isAnonymousProofAction,
   isRedirect,
   normalize,
   problemTitle,
   queryString,
   renderRoute,
+  safeInternalReturnTo,
   sameOrigin,
   sessionToken,
   stringExtension,
@@ -64,7 +66,15 @@ async function runAction(
   if (!operationId)
     throw redirect(303, renderRoute(screen.route, event.params));
   const indexed = operations.get(operationId);
-  if (!indexed) return fail(500, { message: "operation contract missing" });
+  if (!indexed) return fail(500, { message: "작업 계약을 찾지 못했습니다." });
+  if (operationId === "startOidcLogin" && isAnonymousProofAction(action)) {
+    if (!sameOrigin(event)) return fail(403, { message: "CSRF_ORIGIN_DENIED" });
+    const returnTo = safeInternalReturnTo(
+      event.url.searchParams.get("returnTo"),
+      event.url,
+    );
+    throw redirect(303, `/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
   const session = sessionToken(event);
   const csrfToken = csrf(event);
   if (!session || !csrfToken)
@@ -442,7 +452,7 @@ export async function executePending(
   elevated: ElevatedAuthorization,
 ) {
   const indexed = operations.get(pending.operationId);
-  if (!indexed) throw new Error("pending operation contract missing");
+  if (!indexed) throw new Error("대기 중인 작업 계약을 찾지 못했습니다.");
   let result: Awaited<ReturnType<typeof controlRequest>> | undefined;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     result = await controlRequest(

@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SIG-001",
-  title: "Signal Queue",
+  title: "신호 대기열",
   route: "/internal/signals",
   archetype: "QUEUE",
   sections: [
     {
       order: 1,
       id: "scope",
-      title: "queue 상태",
+      title: "대기열 상태",
       component: "StatusAndRevisionHeader",
       purpose: "SLA·count.",
       test_id: "sig_001__section__scope",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "bulk",
-      title: "제한된 bulk",
+      title: "제한된 일괄 처리",
       component: "StructuredContentSection",
       purpose: "assign/label.",
       test_id: "sig_001__section__bulk",

@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "OPS-001",
-  title: "운영 Overview",
+  title: "운영 개요",
   route: "/internal/operations",
   archetype: "OPERATIONS",
   sections: [
     {
       order: 1,
       id: "incidents",
-      title: "active incident",
+      title: "진행 중 장애",
       component: "OperationsStatusPanel",
       purpose: "영향·owner·started.",
       test_id: "ops_001__section__incidents",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "services",
-      title: "서비스 health",
+      title: "서비스 상태",
       component: "OperationsStatusPanel",
       purpose: "API/web/worker.",
       test_id: "ops_001__section__services",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "pipelines",
-      title: "pipeline",
+      title: "처리 흐름",
       component: "StructuredContentSection",
       purpose: "ingest/analysis/projection.",
       test_id: "ops_001__section__pipelines",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "queues",
-      title: "queue·DLQ",
+      title: "작업 대기열·실패 격리함",
       component: "DataCollection",
       purpose: "age/backlog.",
       test_id: "ops_001__section__queues",
@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "slo",
-      title: "SLO",
+      title: "서비스 수준 목표",
       component: "StructuredContentSection",
       purpose: "trend·error budget.",
       test_id: "ops_001__section__slo",
@@ -66,7 +66,7 @@ export const screen = {
   actions: [
     {
       id: "open-incident",
-      label: "incident 열기",
+      label: "인시던트 열기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -86,7 +86,7 @@ export const screen = {
     },
     {
       id: "open-kill",
-      label: "Kill switch",
+      label: "킬 스위치",
       capability: "kill_switch.execute",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

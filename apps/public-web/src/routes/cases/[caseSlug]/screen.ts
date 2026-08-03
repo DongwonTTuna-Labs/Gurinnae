@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "status",
-      title: "상태·revision·freshness",
+      title: "상태·개정·최신성",
       component: "StatusAndRevisionHeader",
       purpose: "정정·철회와 최신성을 가장 먼저 표시한다.",
       test_id: "pub_004__section__status",
@@ -73,7 +73,7 @@ export const screen = {
     {
       order: 9,
       id: "revision",
-      title: "정정·revision",
+      title: "정정·개정 이력",
       component: "StatusAndRevisionHeader",
       purpose: "불변 revision과 변경 이유.",
       test_id: "pub_004__section__revision",

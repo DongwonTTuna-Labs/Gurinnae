@@ -20,6 +20,40 @@ export type ResponseProgressState =
   | "error";
 export type CaseTaskLink = { label: string; href: string };
 
+const BREADCRUMB_LABELS: Readonly<Record<string, string>> = {
+  about: "소개",
+  admin: "관리",
+  agencies: "기관",
+  "agent-runs": "에이전트 실행",
+  audit: "감사",
+  auth: "인증",
+  cases: "사례",
+  claims: "주장",
+  contracts: "계약",
+  "correction-request": "정정 요청",
+  corrections: "정정",
+  evidence: "근거",
+  hypotheses: "가설",
+  internal: "내부",
+  jobs: "작업",
+  methodology: "방법론",
+  operations: "운영",
+  preview: "미리보기",
+  respond: "응답",
+  responses: "응답",
+  review: "검토",
+  revisions: "개정판",
+  rules: "규칙",
+  runs: "실행",
+  signals: "신호",
+  sources: "출처",
+  subscription: "업데이트 구독",
+  suppliers: "업체",
+  users: "사용자",
+  versions: "버전",
+};
+const ROUTE_PARAMETER_SEGMENT = /^\{[^{}]+\}$/;
+
 const BUSY_STATES: readonly ScreenRuntime["state"][] = [
   "loading",
   "initial-loading",
@@ -131,26 +165,25 @@ export function breadcrumbItemsForScreen(
   const path = pathname ?? screen.route;
   if (path === "/" || screen.id === "PUB-001") return [];
   const segments = path.split("/").filter(Boolean);
-  const labels: Record<string, string> = {
-    cases: "사례",
-    revisions: "개정판",
-    evidence: "근거",
-    claims: "주장",
-    hypotheses: "가설",
-    responses: "응답",
-    review: "검토",
-    preview: "미리보기",
-    corrections: "정정",
-    audit: "감사",
-    sources: "출처",
-    rules: "규칙",
-    operations: "운영",
-  };
+  const routeSegments = screen.route.split("/").filter(Boolean);
   const items: BreadcrumbItem[] = [{ label: "홈", href: "/" }];
   let href = "";
-  for (const segment of segments.slice(0, -1)) {
+  for (const [index, segment] of segments.slice(0, -1).entries()) {
     href += `/${segment}`;
-    items.push({ label: labels[segment] ?? segment, href });
+    const routeSegment = routeSegments[index];
+    if (routeSegment && ROUTE_PARAMETER_SEGMENT.test(routeSegment)) {
+      items.push({ label: segment, href });
+      continue;
+    }
+    const label = Object.hasOwn(BREADCRUMB_LABELS, segment)
+      ? BREADCRUMB_LABELS[segment]
+      : undefined;
+    if (!label) {
+      throw new Error(
+        `breadcrumb label missing for static route segment: ${segment}`,
+      );
+    }
+    items.push({ label, href });
   }
   items.push({ label: screen.title, href: path });
   return items;
@@ -226,7 +259,7 @@ export function caseTaskLinksForPath(
     { label: "미리보기", href: `${prefix}/preview` },
     { label: "정정", href: `${prefix}/corrections` },
     { label: "감사", href: `${prefix}/audit` },
-    { label: "Agent 실행", href: `${prefix}/agent-runs` },
+    { label: "에이전트 실행", href: `${prefix}/agent-runs` },
     { label: "응답", href: `${prefix}/responses` },
     { label: "타임라인", href: `${prefix}/timeline` },
   ];

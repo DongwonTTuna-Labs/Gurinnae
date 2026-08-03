@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "snapshots",
-      title: "snapshot",
+      title: "시점별 자료",
       component: "StructuredContentSection",
       purpose: "생성 시각·version·checksum.",
       test_id: "pub_020__section__snapshots",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "schemas",
-      title: "schema",
+      title: "데이터 구조",
       component: "StructuredContentSection",
       purpose: "field dictionary.",
       test_id: "pub_020__section__schemas",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "limits",
-      title: "rate/size",
+      title: "요청량·크기 제한",
       component: "StructuredContentSection",
       purpose: "API와 bulk export.",
       test_id: "pub_020__section__limits",
@@ -68,7 +68,7 @@ export const screen = {
     },
     {
       id: "view-schema",
-      label: "schema 보기",
+      label: "스키마 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

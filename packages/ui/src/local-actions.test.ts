@@ -31,6 +31,18 @@ describe("local action destinations", () => {
     ).toBe("/cases");
   });
 
+  it.each([
+    ["AUTH-001", "sign-in"],
+    ["AUTH-004", "sign-in-again"],
+  ])("routes %s authentication through the server OIDC entrypoint", (id, actionId) => {
+    expect(
+      localActionHref(screen(id, "/auth/sign-in"), runtime(), {
+        id: actionId,
+        label: actionId,
+      }),
+    ).toBe("/auth/login");
+  });
+
   it("uses a server-owned destination for record navigation", () => {
     expect(
       localActionHref(
@@ -72,6 +84,35 @@ describe("local action destinations", () => {
           destinations: { "open-contract": "//untrusted.example/contracts/1" },
         },
         { id: "open-contract", label: "계약 보기" },
+      ),
+    ).toBeUndefined();
+  });
+
+  it("uses only a server-owned PUB-017 official source destination", () => {
+    const source = screen("PUB-017", "/sources/source-1");
+    const action = {
+      id: "view-official",
+      label: "공식 출처 열기",
+      interaction_kind: "EXTERNAL_LINK",
+    } as const;
+    expect(
+      localActionHref(
+        source,
+        {
+          ...runtime(),
+          pathname: "/sources/source-1",
+          destinations: {
+            "view-official": "https://www.data.go.kr/",
+          },
+        },
+        action,
+      ),
+    ).toBe("https://www.data.go.kr/");
+    expect(
+      localActionHref(
+        source,
+        { ...runtime(), pathname: "/sources/source-1" },
+        action,
       ),
     ).toBeUndefined();
   });

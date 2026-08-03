@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "critical",
-      title: "긴급 blocker",
+      title: "긴급 차단 요인",
       component: "RevisionAndCorrectionPanel",
       purpose: "publication/correction/security.",
       test_id: "int_001__section__critical",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "incidents",
-      title: "source/ops incident",
+      title: "출처·운영 장애",
       component: "OperationsStatusPanel",
       purpose: "영향.",
       test_id: "int_001__section__incidents",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "queues",
-      title: "queue health",
+      title: "대기열 상태",
       component: "KnownUnknownResponse",
       purpose: "review/response/job.",
       test_id: "int_001__section__queues",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "open-incident",
-      label: "incident 보기",
+      label: "인시던트 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

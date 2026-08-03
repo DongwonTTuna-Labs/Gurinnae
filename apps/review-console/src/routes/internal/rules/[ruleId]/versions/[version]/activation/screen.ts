@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "gates",
-      title: "quality gate",
+      title: "품질 검증",
       component: "DecisionReviewPanel",
       purpose: "eval/shadow/review.",
       test_id: "rule_004__section__gates",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "rollback",
-      title: "rollback",
+      title: "되돌리기",
       component: "StructuredContentSection",
       purpose: "target/version.",
       test_id: "rule_004__section__rollback",
@@ -87,7 +87,7 @@ export const screen = {
     },
     {
       id: "rollback",
-      label: "이전 version으로 rollback",
+      label: "이전 버전으로 되돌리기",
       capability: "rules.activate",
       operation_id: "rollbackRuleVersion",
       interaction_kind: "DESTRUCTIVE_CONFIRMATION",

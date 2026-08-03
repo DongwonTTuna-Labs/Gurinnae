@@ -10,7 +10,10 @@ struct CaseFilters {
     sort: String,
 }
 
-fn case_filters(query: &Query, relation: Option<(&str, &str)>) -> Result<CaseFilters, ServiceError> {
+fn case_filters(
+    query: &Query,
+    relation: Option<(&str, &str)>,
+) -> Result<CaseFilters, ServiceError> {
     let states = query.many("publicationState");
     let agency = relation
         .filter(|value| value.0 == "agency")
@@ -135,14 +138,8 @@ async fn get_case(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
     obj.insert("title".into(), json!(&title));
     obj.insert("publicState".into(), json!(row.public_state));
     obj.insert("revision".into(), json!(row.latest_revision));
-    obj.insert(
-        "publishedAt".into(),
-        json!(timestamp(row.published_at)?),
-    );
-    obj.insert(
-        "updatedAt".into(),
-        json!(timestamp(row.updated_at)?),
-    );
+    obj.insert("publishedAt".into(), json!(timestamp(row.published_at)?));
+    obj.insert("updatedAt".into(), json!(timestamp(row.updated_at)?));
     obj.insert("summary".into(), json!(&summary));
     for key in [
         "confirmedFacts",
@@ -413,19 +410,15 @@ async fn list_sources(pool: &PgPool, query: &Query) -> Result<Value, ServiceErro
     page(items, query, json!({"status":statuses}))
 }
 async fn get_source(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
-    let r=sqlx::query_as!(SourceRow, "SELECT source_id,display_name,status,last_success_at,lag_seconds,affected_scope,public_message,updated_at FROM public.source_status WHERE source_id=$1", id).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
-    let SourceRow {
-        source_id: _,
+    let r=sqlx::query_as!(SourceDetailRow, "SELECT source_status.display_name,source_status.status,source_status.updated_at,source_official_urls.official_url AS \"official_url?\" FROM public.source_status source_status LEFT JOIN public.source_official_urls source_official_urls ON source_official_urls.source_id=source_status.source_id WHERE source_status.source_id=$1", id).fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
+    let SourceDetailRow {
         display_name,
         status,
-        last_success_at: _,
-        lag_seconds: _,
-        affected_scope: _,
-        public_message: _,
         updated_at,
+        official_url,
     } = r;
     Ok(
-        json!({"id":{"id":id,"status":status,"version":1},"status":status,"data":{"sourceId":id,"displayName":display_name,"owner":"공개 데이터 제공기관","accessType":"PUBLIC","status":status,"coverage":{"dateRange":{"label":"공개 projection 기간"},"sourceIds":[id],"recordCount":0,"knownGaps":[],"freshness":{"asOf":timestamp(updated_at)?,"status":"CURRENT"}},"freshness":{"asOf":timestamp(updated_at)?,"status":"CURRENT"},"knownIssues":[]},"links":[]}),
+        json!({"id":{"id":id,"status":status,"version":1},"status":status,"data":{"sourceId":id,"displayName":display_name,"owner":"공개 데이터 제공기관","accessType":"PUBLIC","officialUrl":official_url,"status":status,"coverage":{"dateRange":{"label":"공개 projection 기간"},"sourceIds":[id],"recordCount":0,"knownGaps":[],"freshness":{"asOf":timestamp(updated_at)?,"status":"CURRENT"}},"freshness":{"asOf":timestamp(updated_at)?,"status":"CURRENT"},"knownIssues":[]},"links":[]}),
     )
 }
 

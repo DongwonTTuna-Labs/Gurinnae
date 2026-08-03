@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "versions",
-      title: "version history",
+      title: "버전 이력",
       component: "StructuredContentSection",
       purpose: "변경·retired.",
       test_id: "pub_014__section__versions",

@@ -564,6 +564,13 @@ struct SourceRow {
     updated_at: OffsetDateTime,
 }
 
+struct SourceDetailRow {
+    display_name: String,
+    status: String,
+    updated_at: OffsetDateTime,
+    official_url: Option<String>,
+}
+
 fn entity_ref(id: Option<Uuid>, name: Option<String>, kind: &str) -> Value {
     match id {
         Some(id) => json!({

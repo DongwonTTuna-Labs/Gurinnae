@@ -147,10 +147,42 @@ export function actionPreset(
     ...recordProperty(action, "preset"),
   };
 }
-export function localActionIds(screen: ScreenViewModel): string[] {
+export function isAnonymousProofAction(
+  action: ScreenViewModel["actions"][number],
+): boolean {
+  return (
+    stringProperty(action, "operation_id") === "startOidcLogin" &&
+    stringProperty(action, "interaction_kind") === "COMMAND" &&
+    stringProperty(action, "capability") === "none" &&
+    stringProperty(action, "assurance_level") === "ANONYMOUS_PROOF"
+  );
+}
+export function unauthenticatedActionIds(screen: ScreenViewModel): string[] {
   return screen.actions
-    .filter((action) => action.local_only === true)
+    .filter(
+      (action) => action.local_only === true || isAnonymousProofAction(action),
+    )
     .map((action) => action.id);
+}
+export function safeInternalReturnTo(
+  requested: string | null,
+  base: URL,
+): string {
+  const fallback = "/internal/dashboard";
+  if (
+    !requested?.startsWith("/") ||
+    requested.startsWith("//") ||
+    requested.includes("\\")
+  )
+    return fallback;
+  const candidate = new URL(requested, base);
+  if (
+    candidate.origin !== base.origin ||
+    (candidate.pathname !== "/internal" &&
+      !candidate.pathname.startsWith("/internal/"))
+  )
+    return fallback;
+  return `${candidate.pathname}${candidate.search}${candidate.hash}`;
 }
 export function actionIdempotencyKeys(
   screen: ScreenViewModel,

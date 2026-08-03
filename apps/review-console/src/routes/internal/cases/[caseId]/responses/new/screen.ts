@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "target",
-      title: "대상·contact",
+      title: "대상·연락처",
       component: "StructuredContentSection",
       purpose: "source·latest verification.",
       test_id: "cas_009__section__target",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "disclosure",
-      title: "공개·privacy 안내",
+      title: "공개·개인정보 안내",
       component: "StatusAndRevisionHeader",
       purpose: "template.",
       test_id: "cas_009__section__disclosure",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "preview",
-      title: "이메일·portal preview",
+      title: "이메일·포털 미리보기",
       component: "DecisionReviewPanel",
       purpose: "phishing guidance.",
       test_id: "cas_009__section__preview",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "gate",
-      title: "발송 gate",
+      title: "발송 조건",
       component: "StructuredContentSection",
       purpose: "duplicate/legal.",
       test_id: "cas_009__section__gate",

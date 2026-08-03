@@ -49,15 +49,15 @@ const displayedDigest = $derived(
       <span>승인 지문 {displayedDigest}</span>
     </div>
   {/if}
-  {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="승인 가능한 서버 권위 proposal이 없습니다." />{:else}<p role="status">승인 projection을 불러오는 중입니다.</p>{/if}
+  {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="승인 가능한 서버 권위 제안이 없습니다." />{:else}<p role="status">승인 투영값을 불러오는 중입니다.</p>{/if}
   {#if selectedTarget && !canDecide}<p class="inline-state conflict" role="status">제안 버전 또는 승인 지문이 최신이 아니어서 결정을 기록할 수 없습니다.</p>{/if}
   {#if canDecide}
-    <p class="selected-proposal-note" role="status">서버가 확인한 proposal과 버전에 결속되었습니다. 결정 사유를 입력하세요.</p>
+    <p class="selected-proposal-note" role="status">서버가 확인한 제안과 버전에 결속되었습니다. 결정 사유를 입력하세요.</p>
     <ApprovalDecisionDialog {screen} {runtime} dialogId={`approval-decision-${screen.id.toLowerCase()}`} />
   {/if}
   {#if runtime.state === "receipt"}<p class="inline-state" role="status">전달 영수증이 저장되었습니다. 같은 내용은 receipt 확인 전 재전송하지 않습니다.</p>
-  {:else if runtime.state === "conflict"}<p class="inline-state conflict" role="status">승인 대상 버전이 바뀌었습니다. 새 preview를 확인해야 합니다.</p>
-  {:else if runtime.state === "stale"}<p class="inline-state stale" role="status">승인 projection이 오래되었습니다. 새 digest와 version을 다시 확인하세요.</p>{/if}
+  {:else if runtime.state === "conflict"}<p class="inline-state conflict" role="status">승인 대상 버전이 바뀌었습니다. 새 미리보기를 확인해야 합니다.</p>
+  {:else if runtime.state === "stale"}<p class="inline-state stale" role="status">승인 투영값이 오래되었습니다. 새 지문과 버전을 다시 확인하세요.</p>{/if}
 </div>
 
 <style>

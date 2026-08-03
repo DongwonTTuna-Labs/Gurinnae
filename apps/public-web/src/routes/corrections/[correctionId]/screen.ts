@@ -68,7 +68,7 @@ export const screen = {
     },
     {
       id: "view-old-revision",
-      label: "이전 revision 보기",
+      label: "이전 개정본 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

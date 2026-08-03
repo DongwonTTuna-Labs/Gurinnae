@@ -6,9 +6,9 @@ import type {
 } from "../../index";
 import { isBusyState, responseStepForScreen } from "../../screen-chrome";
 import type { ScreenProjection } from "../../screen-projection";
+import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
 import ResponseHeader from "../ResponseHeader.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
-import SectionList from "../screen/SectionList.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
 import ResponseProgress from "./ResponseProgress.svelte";
@@ -35,7 +35,7 @@ const busy = $derived(isBusyState(runtime.state));
     <ScreenHeading variant="response" {screen} {runtime} {contract} {projection} {responseStep} />
     {#if screen.id !== "RSP-008"}<div class="request-summary"><strong>{contract.objectLabel}</strong><span>세션·권한·제출 기한은 제출 단계마다 서버가 다시 확인됩니다.</span></div>{/if}
     <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />
-    <div class="form-card"><SectionList variant="form" {screen} {runtime} {contract} {projection} /></div>
+    <div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
   </main>
 </div>
 

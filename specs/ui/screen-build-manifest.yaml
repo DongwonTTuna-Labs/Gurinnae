@@ -586,7 +586,7 @@ screens:
 - id: PUB-005
   surface: public
   route: /cases/{caseSlug}/revisions/{revision}
-  title: 사건 공개 revision
+  title: 사건 공개 개정본
   archetype: EVIDENCE_LANDING
   access: anonymous
   layout:
@@ -626,7 +626,7 @@ screens:
     test_id: pub_005__section__citation
   actions:
   - id: view-latest
-    label: 최신 revision 보기
+    label: 최신 개정본 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -642,7 +642,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: copy-citation
-    label: 이 revision 인용
+    label: 이 개정본 인용
     capability: none
     local_only: true
     persistence: none
@@ -1933,7 +1933,7 @@ screens:
     test_id: pub_015__section__changes
   actions:
   - id: open-source
-    label: source 상세
+    label: 출처 상세
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -1941,7 +1941,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: download-coverage
-    label: coverage JSON 다운로드
+    label: 범위 JSON 다운로드
     capability: none
     interaction_kind: DOWNLOAD
     assurance_level: NONE
@@ -2046,7 +2046,7 @@ screens:
     test_id: pub_016__section__terms
   actions:
   - id: open-source
-    label: source 상세
+    label: 출처 상세
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -2162,7 +2162,7 @@ screens:
     test_id: pub_017__section__impact
   actions:
   - id: view-official
-    label: 공식 source 열기
+    label: 공식 출처 열기
     capability: none
     interaction_kind: EXTERNAL_LINK
     assurance_level: NONE
@@ -2404,7 +2404,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: view-old-revision
-    label: 이전 revision 보기
+    label: 이전 개정본 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -2532,7 +2532,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: view-schema
-    label: schema 보기
+    label: 스키마 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -2902,7 +2902,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: view-governance
-    label: governance 보기
+    label: 거버넌스 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -5771,7 +5771,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: open-incident
-    label: incident 보기
+    label: 인시던트 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -6194,7 +6194,7 @@ screens:
 - id: SIG-001
   surface: internal
   route: /internal/signals
-  title: Signal Queue
+  title: 신호 대기열
   archetype: QUEUE
   access: oidc
   layout:
@@ -6320,7 +6320,7 @@ screens:
 - id: SIG-002
   surface: internal
   route: /internal/signals/{signalId}
-  title: Signal 검토
+  title: 신호 검토
   archetype: DECISION_REVIEW
   access: oidc
   layout:
@@ -6479,7 +6479,7 @@ screens:
 - id: CAS-001
   surface: internal
   route: /internal/cases
-  title: 사건 Queue
+  title: 사건 대기열
   archetype: QUEUE
   access: oidc
   layout:
@@ -6604,7 +6604,7 @@ screens:
 - id: CAS-002
   surface: internal
   route: /internal/cases/{caseId}/overview
-  title: 사건 Overview
+  title: 사건 개요
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -6748,7 +6748,7 @@ screens:
 - id: CAS-003
   surface: internal
   route: /internal/cases/{caseId}/signals
-  title: 연결된 Signal
+  title: 연결된 신호
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -6781,7 +6781,7 @@ screens:
     test_id: cas_003__section__relationships
   actions:
   - id: open-signal
-    label: signal 보기
+    label: 신호 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -6789,7 +6789,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: link-signal
-    label: signal 연결
+    label: 신호 연결
     capability: cases.investigate
     operation_id: linkSignalToCase
     interaction_kind: COMMAND
@@ -6930,7 +6930,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: link
-    label: claim/가설 연결
+    label: 주장/가설 연결
     capability: evidence.create
     operation_id: linkEvidence
     interaction_kind: COMMAND
@@ -7074,7 +7074,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: create-redaction
-    label: 공개용 redaction 생성
+    label: 공개용 가림 처리 생성
     capability: evidence.verify
     operation_id: createEvidenceRedaction
     interaction_kind: COMMAND
@@ -7155,7 +7155,7 @@ screens:
 - id: CAS-006
   surface: internal
   route: /internal/cases/{caseId}/claims
-  title: 공개 Claim 작성
+  title: 공개 주장 작성
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -7201,7 +7201,7 @@ screens:
     test_id: cas_006__section__relationships
   actions:
   - id: add-claim
-    label: Claim 추가
+    label: 주장 추가
     capability: claims.author
     operation_id: addClaim
     interaction_kind: COMMAND
@@ -7209,7 +7209,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: save-claim
-    label: Claim 저장
+    label: 주장 저장
     capability: claims.author
     operation_id: updateClaim
     interaction_kind: COMMAND
@@ -7491,7 +7491,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: approve-excerpt
-    label: 공개 excerpt 승인
+    label: 공개 발췌문 승인
     capability: responses.review
     operation_id: approveResponseExcerpt
     interaction_kind: COMMAND
@@ -7698,7 +7698,7 @@ screens:
 - id: CAS-010
   surface: internal
   route: /internal/cases/{caseId}/agent-runs
-  title: Agent 실행
+  title: 에이전트 실행
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -7816,7 +7816,7 @@ screens:
 - id: CAS-011
   surface: internal
   route: /internal/cases/{caseId}/agent-runs/{runId}
-  title: Agent 실행 상세
+  title: 에이전트 실행 상세
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -7978,7 +7978,7 @@ screens:
 - id: CAS-012
   surface: internal
   route: /internal/cases/{caseId}/timeline
-  title: 사건 Timeline
+  title: 사건 타임라인
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -8035,7 +8035,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: export
-    label: timeline export
+    label: 타임라인 내보내기
     capability: audit.read
     interaction_kind: DOWNLOAD
     assurance_level: NONE
@@ -8143,7 +8143,7 @@ screens:
     test_id: cas_013__section__snapshot
   actions:
   - id: open-blocker
-    label: blocker 해결
+    label: 블로커 해결
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -8151,7 +8151,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: create-snapshot
-    label: 검토 snapshot 생성
+    label: 검토 스냅샷 생성
     capability: review.editorial
     operation_id: createReviewSnapshot
     guard: all required gates + expected version
@@ -8221,7 +8221,7 @@ screens:
 - id: CAS-014
   surface: internal
   route: /internal/cases/{caseId}/preview
-  title: 공개 Preview
+  title: 공개 미리보기
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -8267,7 +8267,7 @@ screens:
     test_id: cas_014__section__diff
   actions:
   - id: refresh-preview
-    label: Preview 재생성
+    label: 미리보기 재생성
     capability: publication.preview
     operation_id: previewPublication
     interaction_kind: COMMAND
@@ -8283,7 +8283,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: view-compact
-    label: 모바일 preview
+    label: 모바일 미리보기
     capability: none
     local_only: true
     persistence: browser_session
@@ -8491,7 +8491,7 @@ screens:
 - id: CAS-016
   surface: internal
   route: /internal/cases/{caseId}/audit
-  title: 사건 Audit
+  title: 사건 감사
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -8539,7 +8539,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: create-audit-export
-    label: 감사 export 요청
+    label: 감사 내보내기 요청
     capability: audit.export
     operation_id: createAuditExport
     guard: bounded range + exact scope + reason + watermark policy + expiry + step-up
@@ -8614,7 +8614,7 @@ screens:
 - id: REV-001
   surface: internal
   route: /internal/review
-  title: 검토 Queue
+  title: 검토 대기열
   archetype: QUEUE
   access: oidc
   layout:
@@ -8731,7 +8731,7 @@ screens:
 - id: REV-002
   surface: internal
   route: /internal/review/{snapshotId}
-  title: 독립 Snapshot 검토
+  title: 독립 스냅샷 검토
   archetype: DECISION_REVIEW
   access: oidc
   layout:
@@ -8817,7 +8817,7 @@ screens:
     step_up_required: true
     confirmation_required: true
   - id: legal-hold
-    label: 법률 hold 설정
+    label: 법적 보류 설정
     capability: review.legal
     operation_id: placeLegalHold
     guard: exact object + scope + authority reference + optional expiry + expected case version + step-up
@@ -8946,7 +8946,7 @@ screens:
     test_id: rev_003__section__receipt
   actions:
   - id: publish
-    label: 최신 snapshot 게시
+    label: 최신 스냅샷 게시
     capability: publication.publish
     operation_id: publishCase
     guard: recent reauth + exact snapshot + idempotency
@@ -9039,7 +9039,7 @@ screens:
 - id: COR-001
   surface: internal
   route: /internal/corrections
-  title: 정정 Queue
+  title: 정정 대기열
   archetype: QUEUE
   access: oidc
   layout:
@@ -9170,7 +9170,7 @@ screens:
 - id: COR-002
   surface: internal
   route: /internal/corrections/{correctionId}
-  title: 정정 Workspace
+  title: 정정 작업공간
   archetype: WORKSPACE
   access: oidc
   layout:
@@ -9236,7 +9236,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: create-revision
-    label: 정정 revision 생성
+    label: 정정 개정본 생성
     capability: publication.correct
     operation_id: createCorrection
     guard: reviews + reason
@@ -9344,7 +9344,7 @@ screens:
 - id: SRC-001
   surface: internal
   route: /internal/sources
-  title: Source Registry
+  title: 출처 등록부
   archetype: OPERATIONS
   access: oidc
   layout:
@@ -9390,7 +9390,7 @@ screens:
     test_id: src_001__section__ownership
   actions:
   - id: open-source
-    label: source 운영 보기
+    label: 출처 운영 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -9398,7 +9398,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: ack-incident
-    label: incident 확인
+    label: 인시던트 확인
     capability: sources.operate
     operation_id: acknowledgeSourceIncident
     interaction_kind: COMMAND
@@ -9406,7 +9406,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: pause-source
-    label: source 일시 중지
+    label: 출처 일시 중지
     capability: sources.operate
     operation_id: pauseSource
     guard: reason + impact
@@ -9482,7 +9482,7 @@ screens:
 - id: SRC-002
   surface: internal
   route: /internal/sources/{sourceId}
-  title: Source 상세
+  title: 출처 상세
   archetype: OPERATIONS
   access: oidc
   layout:
@@ -9548,7 +9548,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: view-drift
-    label: schema drift
+    label: 스키마 드리프트
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -9625,7 +9625,7 @@ screens:
 - id: SRC-003
   surface: internal
   route: /internal/sources/{sourceId}/runs
-  title: Source 실행 기록
+  title: 출처 실행 기록
   archetype: QUEUE
   access: oidc
   layout:
@@ -9743,7 +9743,7 @@ screens:
 - id: SRC-004
   surface: internal
   route: /internal/sources/{sourceId}/runs/{runId}
-  title: Source 실행 상세
+  title: 출처 실행 상세
   archetype: OPERATIONS
   access: oidc
   layout:
@@ -9817,7 +9817,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: open-quarantine
-    label: 격리 record 보기
+    label: 격리 레코드 보기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -9891,7 +9891,7 @@ screens:
 - id: SRC-005
   surface: internal
   route: /internal/sources/{sourceId}/schema-drift
-  title: Schema Drift
+  title: 스키마 드리프트
   archetype: DECISION_REVIEW
   access: oidc
   layout:
@@ -9949,7 +9949,7 @@ screens:
     test_id: src_005__section__decision
   actions:
   - id: approve-mapping
-    label: mapping 승인
+    label: 매핑 승인
     capability: sources.operate
     operation_id: approveSchemaMapping
     guard: shadow pass + reviewer
@@ -9966,7 +9966,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: pause-source
-    label: source pause
+    label: 출처 일시 중지
     capability: sources.operate
     operation_id: pauseSource
     interaction_kind: DESTRUCTIVE_CONFIRMATION
@@ -10047,7 +10047,7 @@ screens:
 - id: SRC-006
   surface: internal
   route: /internal/sources/{sourceId}/backfill
-  title: Backfill·Replay
+  title: 백필·재실행
   archetype: DECISION_REVIEW
   access: oidc
   layout:
@@ -10113,7 +10113,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: start
-    label: Backfill 시작
+    label: 백필 시작
     capability: sources.operate
     operation_id: startBackfill
     guard: estimate + approval + reauth
@@ -10199,7 +10199,7 @@ screens:
 - id: RULE-001
   surface: internal
   route: /internal/rules
-  title: 탐지 규칙 Registry
+  title: 탐지 규칙 등록부
   archetype: SEARCH_INDEX
   access: oidc
   layout:
@@ -10247,7 +10247,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: propose-version
-    label: 새 version 제안
+    label: 새 버전 제안
     capability: rules.propose
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -10309,7 +10309,7 @@ screens:
 - id: RULE-002
   surface: internal
   route: /internal/rules/{ruleId}/versions/{version}
-  title: 규칙 Version 상세
+  title: 규칙 버전 상세
   archetype: ENTITY_DETAIL
   access: oidc
   layout:
@@ -10375,7 +10375,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: create-draft
-    label: 다음 version 초안
+    label: 다음 버전 초안
     capability: rules.propose
     operation_id: createRuleVersionDraft
     interaction_kind: COMMAND
@@ -10451,7 +10451,7 @@ screens:
 - id: RULE-003
   surface: internal
   route: /internal/rules/{ruleId}/versions/{version}/evaluation
-  title: 규칙 평가·Shadow
+  title: 규칙 평가·섀도 실행
   archetype: OPERATIONS
   access: oidc
   layout:
@@ -10517,7 +10517,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: start-shadow
-    label: Shadow 실행
+    label: 섀도 실행
     capability: rules.propose
     operation_id: startRuleShadow
     interaction_kind: COMMAND
@@ -10675,7 +10675,7 @@ screens:
     step_up_required: true
     confirmation_required: true
   - id: rollback
-    label: 이전 version으로 rollback
+    label: 이전 버전으로 되돌리기
     capability: rules.activate
     operation_id: rollbackRuleVersion
     interaction_kind: DESTRUCTIVE_CONFIRMATION
@@ -10757,7 +10757,7 @@ screens:
 - id: OPS-001
   surface: internal
   route: /internal/operations
-  title: 운영 Overview
+  title: 운영 개요
   archetype: OPERATIONS
   access: oidc
   layout:
@@ -10815,7 +10815,7 @@ screens:
     test_id: ops_001__section__slo
   actions:
   - id: open-incident
-    label: incident 열기
+    label: 인시던트 열기
     capability: none
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -10831,7 +10831,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: open-kill
-    label: Kill switch
+    label: 킬 스위치
     capability: kill_switch.execute
     interaction_kind: NAVIGATION
     assurance_level: NONE
@@ -10893,7 +10893,7 @@ screens:
 - id: OPS-002
   surface: internal
   route: /internal/operations/jobs
-  title: 작업 Queue·DLQ
+  title: 작업 대기열·DLQ
   archetype: QUEUE
   access: oidc
   layout:
@@ -10956,7 +10956,7 @@ screens:
     step_up_required: false
     confirmation_required: false
   - id: pause-queue
-    label: Queue 일시 중지
+    label: 대기열 일시 중지
     capability: jobs.operate
     operation_id: pauseJobQueue
     guard: impact + reason
@@ -11397,7 +11397,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: disable-routing
-    label: Routing 중지
+    label: 라우팅 중지
     capability: kill_switch.execute
     operation_id: disableProviderRouting
     guard: scope + reason
@@ -11481,7 +11481,7 @@ screens:
 - id: OPS-006
   surface: internal
   route: /internal/operations/kill-switches
-  title: Kill Switch
+  title: 킬 스위치
   archetype: DECISION_REVIEW
   access: oidc
   layout:
@@ -11533,7 +11533,7 @@ screens:
     test_id: ops_006__section__runbook
   actions:
   - id: activate
-    label: Kill switch 활성화
+    label: 킬 스위치 활성화
     capability: kill_switch.execute
     operation_id: activateKillSwitch
     guard: reauth + reason + expiry + two-person where required
@@ -11633,7 +11633,7 @@ screens:
 - id: AUD-001
   surface: internal
   route: /internal/audit
-  title: 감사 로그 Explorer
+  title: 감사 로그 탐색기
   archetype: SEARCH_INDEX
   access: oidc
   layout:
@@ -11687,7 +11687,7 @@ screens:
     confirmation_required: false
     local_only: true
   - id: export
-    label: 감사 export 요청
+    label: 감사 내보내기 요청
     capability: audit.export
     operation_id: createAuditExport
     guard: bounded range + exact scope + reason + watermark policy + expiry + step-up
@@ -12157,7 +12157,7 @@ screens:
     step_up_required: true
     confirmation_required: false
   - id: export-matrix
-    label: 권한 matrix 다운로드
+    label: 권한 매트릭스 다운로드
     capability: audit.read
     interaction_kind: DOWNLOAD
     assurance_level: NONE
