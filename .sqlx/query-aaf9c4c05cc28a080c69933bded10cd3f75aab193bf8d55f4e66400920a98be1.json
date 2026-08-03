@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_configs SET enabled=true,routing_policy=$2, data_retention_policy=$3,last_connection_test_at=clock_timestamp(), last_connection_test_status='SUCCEEDED',version=version+1 WHERE id=$1 AND version=$4 RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "aaf9c4c05cc28a080c69933bded10cd3f75aab193bf8d55f4e66400920a98be1"
+}

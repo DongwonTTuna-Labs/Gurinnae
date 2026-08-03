@@ -1,0 +1,216 @@
+schema_version: 1
+proposal_version: 2026-07-29.0033-provider-control-execution.v1
+status: FINAL
+scope:
+  migration: 0033_provider_control_execution.sql
+  exact_relations:
+    - ops.action_approval_provider_control_details
+
+existing_relation_changes:
+  - relation: editorial.conflict_snapshots
+    changes:
+      - action_kind admits PROVIDER_CONTROL for the immutable proposal review conflict snapshot
+      - candidate_role admits OPERATIONS because it is the only existing role carrying both actions.review and jobs.operate for connection-test review
+  - relation: ops.action_proposals
+    changes:
+      - action_kind admits PROVIDER_CONTROL as the eighteenth closed ActionKind
+  - relation: ops.action_proposal_versions
+    changes:
+      - action_detail_kind admits PROVIDER_CONTROL and remains bound to one typed immutable detail row
+  - relation: ops.in_flight_effects
+    changes:
+      - action_kind admits PROVIDER_CONTROL
+      - the existing immutable mutation guard and owner-routine ACL boundary remain unchanged, preserving cancel, retry and reconciliation transitions for every ActionKind
+  - relation: ops.execution_authorizations
+    changes:
+      - action_kind admits PROVIDER_CONTROL
+      - private.ExecuteProviderControl is bound to one exact provider operation, provider version, target request digest and effect boundary
+  - relation: ops.execution_attempts
+    changes:
+      - the existing immutable mutation guard and owner-routine ACL boundary remain unchanged, preserving cancel, retry and reconciliation transitions for every ActionKind
+  - relation: ops.provider_configs
+    changes:
+      - a successful authorized disable, model upgrade or auto-upgrade setting applies under the persisted version and configuration digest fence
+      - the NOLOGIN migrator owner receives UPDATE only on the six fields consumed by fixed-path SECURITY DEFINER provider-control routines
+  - relation: ops.provider_connection_tests
+    changes:
+      - test and upgrade success record only actual gateway, provider request, provider payload and measured usage proof
+      - the NOLOGIN migrator owner receives INSERT for fixed-path SECURITY DEFINER completion only
+  - relation: ops.provider_model_upgrade_attempts
+    changes:
+      - an authorized model upgrade advances the matching queued manual attempt under the expected provider-version fence
+  - relation: ops.provider_model_upgrade_receipts
+    changes:
+      - successful model upgrade appends one immutable receipt bound to the actual gateway and measured usage proof
+  - relation: ops.execution_receipts
+    changes:
+      - claim and terminal provider-control transitions append the canonical execution receipt chain
+  - relation: ops.audit_events
+    changes:
+      - provider-control terminal outcomes append one owner-routine audit event
+  - relation: ops.outbox
+    changes:
+      - terminal provider-control outcomes append action.execution_completed.v1
+  - relation: ops.inbox
+    changes:
+      - the NOLOGIN migrator owner receives SELECT so a claim can bind the unprocessed provider-control-execution-worker event
+
+tables:
+  ops.action_approval_provider_control_details:
+    owner_role: gurine_migrator
+    owning_component: services/control-api::action_approval
+    owning_domain: gurine_domain::action::ProviderControlApprovalDetail
+    detail_kind: PROVIDER_CONTROL
+    validator: ops.action_approval_provider_control_detail_v1_is_valid(bytea)
+    domain: ProviderControlApprovalDetail
+    repository: services/control-api::action_approval
+    logical_owner: action-approval
+    writer_components: [control-api]
+    mutation: IMMUTABLE
+    columns:
+      proposal_id: {type: uuid, nullable: false}
+      proposal_version: {type: bigint, nullable: false}
+      detail_kind: {type: text, nullable: false}
+      detail_binding_canonical: {type: bytea, nullable: false, rust_type: Vec<u8>}
+      action_detail_digest: {type: char(64), nullable: false}
+      approval_digest: {type: char(64), nullable: false}
+      content_digest: {type: char(64), nullable: false}
+      operation_id: {type: text, nullable: false}
+      provider_reference: {type: text, nullable: false}
+      provider_id: {type: uuid, nullable: false}
+      expected_provider_version: {type: bigint, nullable: false}
+      reason_digest: {type: char(64), nullable: true}
+      creator_actor_id: {type: uuid, nullable: false}
+      required_creator_capability: {type: text, nullable: false}
+      provider_configuration_digest: {type: char(64), nullable: false}
+      provider_idempotency_key_sha256: {type: char(64), nullable: false}
+      test_model: {type: text, nullable: true}
+      target_model_id: {type: text, nullable: true}
+      requested_processing_region: {type: text, nullable: true}
+      requested_retention_mode: {type: text, nullable: true}
+      requested_policy_version: {type: text, nullable: true}
+      requested_policy_sha256: {type: char(64), nullable: true}
+      auto_upgrade_enabled: {type: boolean, nullable: true}
+      auto_upgrade_track: {type: text, nullable: true}
+      created_at: {type: timestamptz, nullable: false, default: clock_timestamp()}
+    primary_key:
+      name: action_approval_provider_control_details_pk
+      columns: [proposal_id, proposal_version]
+    uniques:
+      - name: action_approval_provider_control_details_binding_uq
+        columns: [proposal_id, proposal_version, detail_kind, action_detail_digest]
+      - name: action_approval_provider_control_details_approval_uq
+        columns: [proposal_id, proposal_version, approval_digest, operation_id, provider_id, expected_provider_version]
+    foreign_keys:
+      - {name: action_approval_provider_control_details_provider_id_fkey, columns: [provider_id], references: "ops.provider_configs(id)", on_delete: RESTRICT}
+      - {name: action_approval_provider_control_details_creator_actor_id_fkey, columns: [creator_actor_id], references: "ops.users(id)", on_delete: RESTRICT}
+      - {name: action_approval_provider_control_details_version_fk, columns: [proposal_id, proposal_version, detail_kind, action_detail_digest], references: "ops.action_proposal_versions(proposal_id, version, action_detail_kind, action_detail_digest)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+      - {name: action_approval_provider_control_details_approval_fk, columns: [proposal_id, proposal_version, approval_digest], references: "ops.action_proposal_versions(proposal_id, version, approval_digest)", on_delete: RESTRICT, deferrable: "INITIALLY DEFERRED"}
+    checks:
+      - {name: action_approval_provider_control_details_kind_ck, expression: "detail_kind = 'PROVIDER_CONTROL'"}
+      - {name: action_approval_provider_control_details_operation_ck, expression: "operation_id IN ('disableProviderRouting','testProviderConnection','upgradeProviderModel','setModelAutoUpgrade')"}
+      - name: action_approval_provider_control_details_scalar_ck
+        expression: >-
+          expected_provider_version > 0
+          AND length(btrim(provider_reference)) BETWEEN 1 AND 100
+          AND provider_configuration_digest ~ '^[0-9a-f]{64}$'
+          AND provider_idempotency_key_sha256 ~ '^[0-9a-f]{64}$'
+          AND action_detail_digest ~ '^[0-9a-f]{64}$'
+          AND approval_digest ~ '^[0-9a-f]{64}$'
+          AND content_digest ~ '^[0-9a-f]{64}$'
+          AND (reason_digest IS NULL OR reason_digest ~ '^[0-9a-f]{64}$')
+      - name: action_approval_provider_control_details_capability_ck
+        expression: >-
+          (operation_id = 'testProviderConnection' AND required_creator_capability = 'jobs.operate')
+          OR (operation_id <> 'testProviderConnection' AND required_creator_capability = 'kill_switch.execute')
+      - name: action_approval_provider_control_details_policy_all_or_none_ck
+        expression: >-
+          num_nonnulls(requested_processing_region, requested_retention_mode,
+          requested_policy_version, requested_policy_sha256) IN (0,4)
+      - name: action_approval_provider_control_details_policy_ck
+        expression: >-
+          requested_processing_region IS NULL OR (
+          requested_processing_region ~ '^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$'
+          AND requested_retention_mode IN ('ZERO_RETENTION','BOUNDED_PROVIDER_RETENTION','LOCAL_ONLY')
+          AND length(btrim(requested_policy_version)) BETWEEN 1 AND 64
+          AND requested_policy_sha256 ~ '^[0-9a-f]{64}$')
+      - name: action_approval_provider_control_details_branch_ck
+        expression: >-
+          (operation_id = 'disableProviderRouting' AND reason_digest IS NOT NULL
+          AND test_model IS NULL AND target_model_id IS NULL
+          AND requested_processing_region IS NULL
+          AND auto_upgrade_enabled IS NULL AND auto_upgrade_track IS NULL)
+          OR (operation_id = 'testProviderConnection' AND test_model IS NOT NULL
+          AND length(btrim(test_model)) BETWEEN 1 AND 255
+          AND target_model_id IS NULL AND requested_processing_region IS NULL
+          AND auto_upgrade_enabled IS NULL AND auto_upgrade_track IS NULL)
+          OR (operation_id = 'upgradeProviderModel' AND reason_digest IS NOT NULL
+          AND target_model_id IS NOT NULL
+          AND length(btrim(target_model_id)) BETWEEN 1 AND 255
+          AND test_model IS NULL
+          AND auto_upgrade_enabled IS NULL AND auto_upgrade_track IS NULL)
+          OR (operation_id = 'setModelAutoUpgrade' AND reason_digest IS NOT NULL
+          AND test_model IS NULL AND target_model_id IS NULL
+          AND requested_processing_region IS NULL
+          AND auto_upgrade_enabled IS NOT NULL
+          AND ((NOT auto_upgrade_enabled AND (auto_upgrade_track IS NULL
+          OR length(btrim(auto_upgrade_track)) BETWEEN 1 AND 128))
+          OR (auto_upgrade_enabled AND auto_upgrade_track IS NOT NULL
+          AND length(btrim(auto_upgrade_track)) BETWEEN 1 AND 128)))
+      - {name: action_approval_provider_control_details_canonical_ck, expression: "octet_length(detail_binding_canonical) > 0"}
+    triggers:
+      - {name: ops_action_approval_provider_control_details_immutable, timing: BEFORE, events: [UPDATE, DELETE], function: ops.reject_mutation(), guarantees: [typed approval detail is immutable after authorization binding]}
+    grants:
+      owner_routine_only: no runtime role receives direct relation privileges; fixed-path owner routines are the only write and read boundary
+    rls: {enabled: false, forced: false, reason: immutable internal approval detail; all runtime roles use owner routines and have no direct table privilege}
+    retention: {record_class: ACTION_APPROVAL_RECORD, trigger: proposal approval graph retention expiry, terminal_action: PRESERVE_IMMUTABLE_RECEIPT_CHAIN, legal_hold_key: proposal_id, backup_behavior: restore with proposal version and execution receipt graph}
+    repository_roundtrip:
+      write: control-api owner routine materializes exactly one detail from the sealed PROVIDER_CONTROL proposal branch
+      read: analysis-worker owner routine claims only the exact approved proposal version and digest
+      assertions:
+        - the four operation branches are closed and mutually exclusive
+        - nullable operation fields cannot make a branch pass through SQL three-valued logic
+        - provider id version configuration and idempotency digests bind the execution authorization
+        - direct runtime table mutation is denied
+    mutability:
+      mode: APPEND_ONLY_TYPED_DETAIL
+      allowed_updates: []
+      delete: REVERSE_FK_RETENTION_ONLY
+      immutable_trigger: ops.reject_mutation()
+      writer: control-api proposal review owner routine only
+    concurrency:
+      isolation: SERIALIZABLE
+      parent_child_constraint: deferred parent proposal-version and approval-digest foreign keys
+      lock_order: parent proposal then proposal version then provider configuration then selected typed detail
+    source_binding_contract:
+      conditional_checks:
+        - operation_id selects exactly one of four nullable field branches and the operation-selected creator capability
+        - provider_reference provider_id expected_provider_version configuration digest and idempotency digest bind one current provider snapshot
+        - a first model activation carries all four policy fields while an existing configured policy carries none
+      required_source_candidate_keys:
+        - ops.provider_configs(id,version)
+        - ops.action_proposal_versions(proposal_id,version,action_detail_kind,action_detail_digest)
+        - ops.action_proposal_versions(proposal_id,version,approval_digest)
+      source_index: [provider_id, expected_provider_version, operation_id, proposal_id, proposal_version]
+
+owner_routines:
+  ops.action_approval_provider_control_detail_v1_is_valid:
+    signature: ops.action_approval_provider_control_detail_v1_is_valid(bytea) RETURNS boolean
+    security: {mode: SECURITY INVOKER, owner: gurine_migrator, search_path: [pg_catalog, pg_temp], public_execute: false, runtime_execute: []}
+    effect: matches the existing typed-detail validator catalogue and rejects null or empty canonical bytes
+  ops.claim_provider_control_execution_v1:
+    signature: ops.claim_provider_control_execution_v1(uuid, uuid, bigint, char(64), char(64), text) RETURNS jsonb
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: claims only an unprocessed provider-control-execution-worker inbox event bound to the exact current PROVIDER_CONTROL authorization, provider snapshot, generation and worker fence before egress
+  ops.provider_control_execution_result_v1_is_valid:
+    signature: ops.provider_control_execution_result_v1_is_valid(jsonb, text) RETURNS boolean
+    security: {mode: SECURITY INVOKER, owner: gurine_migrator, search_path: [pg_catalog, ops, pg_temp], public_execute: false, runtime_execute: []}
+    effect: validates the closed NO_EGRESS or PROVIDER_SUCCESS result branch, exact proof digest fields and nonnegative integral usage shape
+  ops.complete_provider_control_execution_v1:
+    signature: ops.complete_provider_control_execution_v1(uuid, bigint, bigint, jsonb, uuid) RETURNS jsonb
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: consumes one current claim fence and atomically applies the selected operation, actual proof receipts, audit, cost facts where measured, outbox and immutable success receipt; exact replay returns the stored receipt without writes
+  ops.fail_provider_control_execution_v1:
+    signature: ops.fail_provider_control_execution_v1(uuid, bigint, bigint, text, char(64), boolean, uuid) RETURNS jsonb
+    security: {mode: SECURITY DEFINER, owner: gurine_migrator, search_path: [pg_catalog, ops, extensions, pg_temp], public_execute: false, runtime_execute: [gurine_analysis_worker]}
+    effect: consumes one current claim fence; database-only failure records definitive no-egress retryable or permanent failure while any uncertain provider-bound failure becomes reconciliation-required without synthetic proof

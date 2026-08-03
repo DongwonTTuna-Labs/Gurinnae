@@ -71,11 +71,11 @@ export const screen = {
       id: "export",
       label: "비용 보고서",
       capability: "audit.read",
-      operation_id: "exportCostReport",
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",
       step_up_required: false,
       confirmation_required: false,
+      local_only: true,
     },
     {
       id: "open-provider",
@@ -98,7 +98,6 @@ export const screen = {
     "unauthorized",
     "forbidden",
     "conflict",
-    "reauth-required",
   ],
   dataOperations: [
     {

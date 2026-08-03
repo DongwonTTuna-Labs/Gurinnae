@@ -9,8 +9,8 @@
     "triggers": 37,
     "policies": 5
   },
-  "concurrencyContractCount": 64,
-  "concurrencyCatalogResolved": 64,
+  "concurrencyContractCount": 66,
+  "concurrencyCatalogResolved": 66,
   "requiredTests": [
     "active-catalog-object-counts",
     "actor-assertion-replay-rejected",

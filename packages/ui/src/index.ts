@@ -2,6 +2,7 @@ export { default as ScreenPage } from "./components/ScreenPage.svelte";
 export * from "./decision-contract";
 export * from "./generated-screen-journeys";
 export * from "./local-actions";
+export * from "./relay-model-catalog";
 export * from "./row-selection-navigation";
 export * from "./screen-archetype";
 export * from "./screen-chrome";
@@ -37,6 +38,7 @@ export type ScreenField = {
   options?: readonly string[];
   value?: string | number | boolean;
   readonly?: boolean;
+  payloadPath?: readonly [string, string];
   challengeAction?: string;
 };
 
@@ -116,6 +118,8 @@ export type ScreenRuntime = {
   projection?: ScreenRuntimeProjection;
   errors: readonly string[];
   forms: Record<string, readonly ScreenField[]>;
+  /** Concise action-form captions selected at the server-owned form boundary. */
+  formCaptions?: Readonly<Record<string, string>>;
   formOperationIds?: Readonly<Record<string, string>>;
   idempotencyKeys?: Readonly<Record<string, string>>;
   botChallenge?: BotChallengeRuntime;
@@ -159,6 +163,8 @@ export type ScreenRuntime = {
   }[];
   /** Action-scoped, server-validated row destinations exposed as label + href only. */
   navigationOptions?: import("./row-selection-navigation").RowSelectionNavigationOptions;
+  /** Closed OPS-005 model/provider ledger; raw relay DTOs remain server-only. */
+  relayModelCatalog?: import("./relay-model-catalog").RelayModelCatalogViewModel;
   /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
   destinations?: Readonly<Record<string, string>>;
   /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */

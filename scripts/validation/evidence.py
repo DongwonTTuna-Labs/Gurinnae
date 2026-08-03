@@ -55,7 +55,7 @@ def validate(root: Path, result: Validation) -> None:
     result.require(codegen.get('result') == 'PASS', 'code generation evidence is not PASS')
     result.require(codegen.get('strict_typescript_compile') == 'PASS', 'generated clients did not pass strict TypeScript compile')
     result.require(codegen.get('deterministic_regeneration') == 'PASS', 'generated clients are not deterministic')
-    expected_operations = {'public': 41, 'submission': 34, 'control': 131, 'identity-internal': 9}
+    expected_operations = {'public': 41, 'submission': 34, 'control': 134, 'identity-internal': 9}
     result.require(set(codegen.get('contracts', {})) == set(expected_operations), 'code generation evidence does not cover four clients')
     for name, operation_count in expected_operations.items():
         item = codegen['contracts'][name]

@@ -17,6 +17,10 @@ def resolve(policy:dict,fixed:dict)->str:
 
 def validate(root:Path,result:Validation)->None:
  assurance=load_yaml(root/'specs/auth/assurance-policy.yaml'); operations=load_yaml(root/'specs/api/operation-contracts.yaml')['operations']; commands=load_yaml(root/'specs/application/command-semantics.yaml')['commands']; traces=load_yaml(root/'specs/traceability/final-traceability.yaml')['operations']; screens=load_yaml(root/'specs/ui/screen-catalog.yaml')['screens']
+ additive_operations=load_yaml(root/'specs/product/addendum-operation-contracts.yaml'); additive_by={o['operation_id']:o for o in additive_operations['operations']}
+ side_door_ids=set(additive_operations.get('provider_control_http_side_door',{}).get('operation_ids',[]))
+ action_contracts=load_yaml(root/'specs/ui/screen-action-contracts.yaml')
+ proposal_entries={(row['screen_id'],row['legacy_action_id']):row for row in action_contracts.get('legacy_side_door_fences',[]) if 'proposal_binding' in row}
  op_by={o['operation_id']:o for o in operations}; cmd_by={c['operation_id']:c for c in commands}; trace_by={t['operation_id']:t for t in traces}; catalog={c['operation_id']:c for c in assurance['commands']}; command_ids={o['operation_id'] for o in operations if o['operation_kind']=='COMMAND'}
  result.require(assurance['status']=='FINAL' and assurance['specification_version']=='13.0.0','assurance catalog must be FINAL v13')
  result.require(set(assurance['levels'])==LEVELS,'assurance levels differ')
@@ -33,7 +37,8 @@ def validate(root:Path,result:Validation)->None:
     result.require(condition['required_level'] in LEVELS and condition['when']['operator'] in {'EQUALS','IN'},f'{oid}: invalid assurance condition')
     if condition['required_level']=='STEP_UP': possible=True
   if possible: step_up_possible+=1
-  result.require(('STEP_UP_REQUIRED' in op['authorization_errors'])==possible,f'{oid}: STEP_UP_REQUIRED differs from reachable policy branches')
+  if oid in side_door_ids: result.require(not op['authorization_errors'],f'{oid}: provider-control side-door authorization errors must be empty')
+  else: result.require(('STEP_UP_REQUIRED' in op['authorization_errors'])==possible,f'{oid}: STEP_UP_REQUIRED differs from reachable policy branches')
   static_required=policy['mode']=='STATIC' and policy['default']=='STEP_UP'
   result.require(op['step_up_required']==cmd['authorization']['step_up_required']==record['step_up_required']==static_required,f'{oid}: static step-up flag differs')
   if possible:
@@ -54,8 +59,15 @@ def validate(root:Path,result:Validation)->None:
    if op['operation_kind']!='COMMAND':
     result.require(action.get('step_up_required') is False,f"{screen['id']}:{action['id']}: query/navigation cannot require step-up")
     continue
-   resolved=resolve(op['assurance_policy'],action.get('fixed_request',{}))
-   if op['assurance_policy']['mode']=='CONDITIONAL': result.require(bool(action.get('fixed_request')),f"{screen['id']}:{action['id']}: conditional operation lacks fixed_request")
+   proposal_entry=proposal_entries.get((screen['id'],action['id']))
+   if proposal_entry:
+    entry_id=proposal_entry.get('required_entry_operation'); entry=additive_by.get(entry_id)
+    result.require(proposal_entry.get('legacy_operation_id')==oid,f"{screen['id']}:{action['id']}: proposal operation binding differs")
+    result.require(entry is not None and entry.get('kind')=='COMMAND',f"{screen['id']}:{action['id']}: proposal entry operation is missing or not a command")
+    resolved=entry.get('assurance') if entry else None
+   else:
+    resolved=resolve(op['assurance_policy'],action.get('fixed_request',{}))
+    if op['assurance_policy']['mode']=='CONDITIONAL': result.require(bool(action.get('fixed_request')),f"{screen['id']}:{action['id']}: conditional operation lacks fixed_request")
    result.require(action.get('assurance_level')==resolved,f"{screen['id']}:{action['id']}: action assurance {action.get('assurance_level')} != {resolved}")
    result.require(action.get('step_up_required')==(resolved=='STEP_UP'),f"{screen['id']}:{action['id']}: step-up flag differs from resolved assurance")
    if screen['surface'] in {'public','response'}: result.require(resolved!='STEP_UP',f"{screen['id']}:{action['id']}: public/response surface cannot use internal OIDC step-up")

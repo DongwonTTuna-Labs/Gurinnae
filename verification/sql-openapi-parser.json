@@ -1,8 +1,10 @@
 {
   "specification_version": "13.0.0",
-  "verified_at": "2026-07-12",
+  "verified_at": "2026-07-29",
   "result": "PASS",
   "postgresql": {
+    "verified_at": "2026-07-12",
+    "scope": "Frozen 24-migration base parser history; this is not the additive runtime migration inventory.",
     "parser": "pglast 7.11",
     "migrations": 24,
     "errors": 0,
@@ -10,17 +12,20 @@
     "log": "verification/parsers/sql-validation.txt"
   },
   "openapi": {
+    "verified_at": "2026-07-29",
     "validator": "openapi-spec-validator 0.7.2",
     "documents": 5,
     "errors": 0,
     "details": [],
     "operation_counts": {
       "specs/api/public-api.openapi.yaml": 41,
-      "specs/api/submission-api.openapi.yaml": 34,
-      "specs/api/control-api.openapi.yaml": 131,
+      "specs/api/submission-api.openapi.yaml": 42,
+      "specs/api/control-api.openapi.yaml": 170,
       "specs/api/identity-provider.openapi.yaml": 6,
       "specs/api/identity-service-internal.openapi.yaml": 9
     },
-    "log": "verification/parsers/openapi-validation.txt"
+    "validation_command": "PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/validate_final_spec.py --section api --strict",
+    "historical_log": "verification/parsers/openapi-validation.txt",
+    "historical_log_verified_at": "2026-07-12"
   }
 }

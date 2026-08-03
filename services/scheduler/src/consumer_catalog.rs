@@ -1,5 +1,19 @@
-pub(crate) fn consumers_for(event_type: &str) -> &'static [(&'static str, &'static str)] {
-    match event_type {
+use serde_json::Value;
+
+const PROVIDER_CONTROL_CONSUMERS: &[(&str, &str)] = &[
+    ("provider-control-execution-worker", "analysis-worker"),
+    ("audit-indexer", "projection-worker"),
+];
+const ACTION_EXECUTION_CONSUMERS: &[(&str, &str)] = &[
+    ("action-execution-worker", "workflow-worker"),
+    ("audit-indexer", "projection-worker"),
+];
+
+pub(crate) fn consumers_for(
+    event_type: &str,
+    payload: &Value,
+) -> Result<&'static [(&'static str, &'static str)], &'static str> {
+    let consumers: &'static [(&'static str, &'static str)] = match event_type {
         "workflow.rule_activation_applied.v1" => &[
             ("analysis-worker", "analysis-worker"),
             ("scheduler", "scheduler"),
@@ -18,7 +32,17 @@ pub(crate) fn consumers_for(event_type: &str) -> &'static [(&'static str, &'stat
         | "export.dataset_requested.v1"
         | "source.schema_drift_detected.v1"
         | "workflow.response_submitted.v1" => &[("workflow-worker", "workflow-worker")],
-        "action.execution_authorized.v1" => &[("action-execution-worker", "workflow-worker")],
+        "action.execution_authorized.v1" => {
+            let action_kind = payload
+                .get("actionKind")
+                .and_then(Value::as_str)
+                .ok_or("action.execution_authorized.v1 payload requires a string actionKind")?;
+            if action_kind == "PROVIDER_CONTROL" {
+                PROVIDER_CONTROL_CONSUMERS
+            } else {
+                ACTION_EXECUTION_CONSUMERS
+            }
+        }
         "attachment.scan_completed.v1"
         | "intake.contact_received.v1"
         | "notification.correction_received.v1"
@@ -55,7 +79,8 @@ pub(crate) fn consumers_for(event_type: &str) -> &'static [(&'static str, &'stat
             ("audit-indexer", "projection-worker"),
         ],
         _ => &[],
-    }
+    };
+    Ok(consumers)
 }
 
 #[cfg(test)]
@@ -64,25 +89,60 @@ mod tests {
 
     #[test]
     fn consumer_catalog_contract_is_embedded() {
+        let empty_payload = serde_json::json!({});
         assert_eq!(
-            consumers_for("source.document_stored.v1"),
-            &[("document-extractor", "document-extractor")]
+            consumers_for("source.document_stored.v1", &empty_payload),
+            Ok(&[("document-extractor", "document-extractor")][..])
         );
         assert_eq!(
-            consumers_for("source.document_parsed.v1"),
-            &[("ingest-worker", "ingest-worker")]
+            consumers_for("source.document_parsed.v1", &empty_payload),
+            Ok(&[("ingest-worker", "ingest-worker")][..])
         );
         assert_eq!(
-            consumers_for("workflow.rule_activation_applied.v1"),
-            &[
+            consumers_for("workflow.rule_activation_applied.v1", &empty_payload),
+            Ok(&[
                 ("analysis-worker", "analysis-worker"),
                 ("scheduler", "scheduler")
-            ]
+            ][..])
         );
-        assert!(consumers_for("case.assigned.v1").is_empty());
         assert_eq!(
-            consumers_for("action.execution_authorized.v1"),
-            &[("action-execution-worker", "workflow-worker")]
+            consumers_for("case.assigned.v1", &empty_payload),
+            Ok(&[][..])
         );
+    }
+
+    #[test]
+    fn provider_control_authorization_routes_to_executor_and_audit() {
+        assert_eq!(
+            consumers_for(
+                "action.execution_authorized.v1",
+                &serde_json::json!({"actionKind": "PROVIDER_CONTROL"}),
+            ),
+            Ok(PROVIDER_CONTROL_CONSUMERS)
+        );
+    }
+
+    #[test]
+    fn existing_action_execution_routes_to_executor_and_audit() {
+        assert_eq!(
+            consumers_for(
+                "action.execution_authorized.v1",
+                &serde_json::json!({"actionKind": "COMMUNICATION"}),
+            ),
+            Ok(ACTION_EXECUTION_CONSUMERS)
+        );
+    }
+
+    #[test]
+    fn action_authorization_without_string_kind_fails_closed() {
+        for payload in [
+            serde_json::json!({"executionId": "missing-kind"}),
+            serde_json::json!({"actionKind": 17}),
+        ] {
+            assert_eq!(
+                consumers_for("action.execution_authorized.v1", &payload),
+                Err("action.execution_authorized.v1 payload requires a string actionKind")
+            );
+        }
     }
 }

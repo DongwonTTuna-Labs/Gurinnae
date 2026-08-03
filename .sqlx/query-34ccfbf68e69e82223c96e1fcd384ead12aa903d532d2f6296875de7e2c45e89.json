@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.relay_model_catalog_sync_runs SET status='SUCCEEDED',model_count=$2, gateway_receipt_sha256=CAST($3 AS char(64)),payload_sha256=CAST($4 AS char(64)), completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "34ccfbf68e69e82223c96e1fcd384ead12aa903d532d2f6296875de7e2c45e89"
+}

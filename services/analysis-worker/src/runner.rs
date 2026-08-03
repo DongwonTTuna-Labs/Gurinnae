@@ -24,8 +24,15 @@ use uuid::Uuid;
 
 use crate::config::Config;
 
+#[path = "analysis_relay_upgrade_receipt.rs"]
+mod analysis_relay_upgrade_receipt;
 #[path = "analysis_runtime_snapshot.rs"]
 mod analysis_runtime_snapshot;
+
+use analysis_relay_upgrade_receipt::{
+    RelayUpgradeAttemptKind, RelayUpgradeReceipt, RelayUpgradeReceiptInput,
+    RelayUpgradeReceiptOutcome,
+};
 
 struct State {
     pool: PgPool,
@@ -43,6 +50,7 @@ pub enum WorkerError {
     Job(#[source] JobError),
 }
 
+#[derive(Debug)]
 pub(crate) enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
@@ -195,6 +203,28 @@ async fn reconcile_terminal_failure(
                 .map_err(JobError::Database)?;
             }
         }
+        "RELAY_MODEL_CATALOG_SYNC" => {
+            if let Some(id) = job
+                .payload
+                .get("catalogSyncRunId")
+                .and_then(Value::as_str)
+                .and_then(|value| Uuid::parse_str(value).ok())
+            {
+                sqlx::query!(
+                    "UPDATE ops.relay_model_catalog_sync_runs SET status='FAILED',error_code=$2, \
+                       started_at=COALESCE(started_at,clock_timestamp()),completed_at=clock_timestamp() \
+                     WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+                    id,
+                    code,
+                )
+                .execute(&mut *tx)
+                .await
+                .map_err(JobError::Database)?;
+            }
+        }
+        "PROVIDER_MODEL_UPGRADE" => {
+            reconcile_relay_upgrade_failure(&mut tx, job, code).await?;
+        }
         "EVENT_DELIVERY" => {
             if let Some(event_id) = job
                 .payload
@@ -202,11 +232,13 @@ async fn reconcile_terminal_failure(
                 .and_then(Value::as_str)
                 .and_then(|value| Uuid::parse_str(value).ok())
             {
+                let consumer = event_delivery_inbox_consumer(job);
                 sqlx::query!(
                     "UPDATE ops.inbox SET processed_at=COALESCE(processed_at,clock_timestamp()), \
-                       result=$2 WHERE consumer='analysis-worker' AND event_id=$1",
+                       result=$2 WHERE consumer=$3 AND event_id=$1",
                     event_id,
                     format!("FAILED:{code}"),
+                    consumer,
                 )
                 .execute(&mut *tx)
                 .await
@@ -216,6 +248,14 @@ async fn reconcile_terminal_failure(
         _ => {}
     }
     tx.commit().await.map_err(JobError::Database)
+}
+
+fn event_delivery_inbox_consumer(job: &ClaimedJob) -> &'static str {
+    if job.payload.get("consumerId").and_then(Value::as_str) == Some(PROVIDER_CONTROL_CONSUMER) {
+        PROVIDER_CONTROL_CONSUMER
+    } else {
+        "analysis-worker"
+    }
 }
 
 async fn reconcile_agent_run(
@@ -261,10 +301,12 @@ async fn reconcile_agent_run(
 
 async fn handle(state: &State, job: &ClaimedJob) -> Result<Value, Failure> {
     match job.job_type.as_str() {
-        "EVENT_DELIVERY" => activation_event(&state.pool, job).await,
+        "EVENT_DELIVERY" => analysis_event(state, job).await,
         "RULE_EVALUATION" => rule_evaluation(&state.pool, job).await,
         "AGENT_RUN" => agent_run(state, job).await,
         "PROVIDER_CONNECTION_TEST" => provider_connection_test(state, job).await,
+        "RELAY_MODEL_CATALOG_SYNC" => relay_model_catalog_sync(state, job).await,
+        "PROVIDER_MODEL_UPGRADE" => provider_model_upgrade(state, job).await,
         _ => Err(Failure::Terminal(
             "UNSUPPORTED_JOB_TYPE",
             job.job_type.clone(),
@@ -277,6 +319,12 @@ include!("analysis_job_persistence.rs");
 include!("analysis_context.rs");
 include!("analysis_source_use_roots.rs");
 include!("analysis_provider_connection.rs");
+include!("analysis_provider_rights.rs");
+include!("analysis_relay_protocol.rs");
+include!("analysis_provider_control.rs");
+include!("analysis_relay_catalog.rs");
+include!("analysis_provider_upgrade.rs");
+include!("analysis_provider_upgrade_failure.rs");
 include!("analysis_provider.rs");
 include!("analysis_provider_types.rs");
 include!("analysis_provider_persistence.rs");

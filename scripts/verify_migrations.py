@@ -19,6 +19,8 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0029_product_economics.sql",
     "0030_v13_submission_session_hardening.sql",
     "0031_public_source_registry_view.sql",
+    "0032_relay_model_catalog.sql",
+    "0033_provider_control_execution.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS

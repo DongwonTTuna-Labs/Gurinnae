@@ -65,6 +65,7 @@ machines:
       - {actor: execution-worker, from: RUNNING, to: RETRYABLE_FAILED, guard: definitive-not-accepted-and-safe-retry-proof-and-dispatch-attempt-count-below-3, event: action.execution_completed.v1}
       - {actor: execution-worker, from: RUNNING, to: PERMANENT_FAILED, guard: definitive-permanent-failure-or-definitive-not-accepted-at-dispatch-attempt-count-3, event: action.execution_completed.v1}
       - {actor: execution-worker, from: RUNNING, to: RECONCILIATION_REQUIRED, guard: any-possible-effect-without-definitive-proof, event: action.execution_completed.v1}
+      - {actor: analysis-worker, private_command: private.ExecuteProviderControl, from: RUNNING, to: SUCCEEDED|PERMANENT_FAILED|RECONCILIATION_REQUIRED, selector: action-kind-PROVIDER_CONTROL, guard: ops.claim_provider_control_execution_v1 committed the exact current authorization providerOperationId providerId expectedVersion target digest capability assurance generation and fencing token before egress and exactly one ops.complete_provider_control_execution_v1 or ops.fail_provider_control_execution_v1 consumes that fence with definitive connection-test proof, event: action.execution_completed.v1, effect_owner: analysis-worker.provider-control-executor, atomic_transition_group: gurine.private.ExecuteProviderControl.v1}
       - {operation: cancelActionExecution, from: QUEUED|RETRYABLE_FAILED|RUNNING, to: CANCELLED, selector: locked-current-attempt-has-no-dispatch-ordinal, guard: effect-then-authorization-then-attempt-lock-wins-before-dispatch, event: action.execution_cancel_requested.v1}
       - {operation: cancelActionExecution, from: RUNNING|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED, selector: locked-current-attempt-has-dispatch-ordinal-or-possible-effect, guard: dispatch-or-possible-effect-proof, event: action.execution_cancel_requested.v1}
       - {actor: reconciliation-worker, from: CANCEL_REQUESTED, to: CANCELLED|SUCCEEDED|PERMANENT_FAILED|RECONCILIATION_REQUIRED, selector: provider-proof-resolution, guard: authenticated-current-provider-observation-or-bounded-ambiguity, event: action.execution_completed.v1}
@@ -673,6 +674,7 @@ private_application_lifecycle_bindings:
     private.DecideCapabilityActivation: [capability_activation.APPEND_DECISION]
     private.CreateBusinessCalendarVersion: [business_calendar_version.APPEND_VERSION]
     private.ApplyCommercialControl: [commercial_control_projection.APPLY]
+    private.ExecuteProviderControl: [action_execution.PROVIDER_CONTROL]
     private.MaterializePaidEvidencePacket: [paid_evidence_packet.AWAITING_TERMINAL_BINDING]
 
 private_control_lifecycle_bindings:

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('providerId',p.id,'name',p.name,'currentModel',p.routing_policy->>'model','enabled',p.enabled,'version',p.version,'autoUpgrade',COALESCE((p.routing_policy->>'autoUpgrade')::boolean,false),'track',p.routing_policy->>'track','dataPolicyState',p.routing_policy#>>'{dataPolicy,state}','pricingVersion',p.routing_policy#>>'{pricing,pricingVersion}','unpriced',COALESCE((p.routing_policy#>>'{pricing,inputMicrosKrwPerUnit}')::numeric,0)=0 AND COALESCE((p.routing_policy#>>'{pricing,outputMicrosKrwPerUnit}')::numeric,0)=0) ORDER BY p.name,p.id),'[]'::jsonb) FROM ops.provider_configs p WHERE p.provider_type='relay'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4a03d8634055956340022ee30e65c7aa475ba8535e277b38ae046d6c6449c2ed"
+}

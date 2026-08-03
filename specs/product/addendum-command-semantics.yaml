@@ -370,6 +370,7 @@ external_commands:
       authorization: null
       assurance: conditional-by-action-and-decision
       reauthorized_in_transaction: true
+      provider_control_operation_binding: providerOperationId is required iff actionKind=PROVIDER_CONTROL, equals the immutable ProviderControlApprovalDetailV1 operationId, and selects jobs.operate plus ACTIVE_SESSION for testProviderConnection or kill_switch.execute plus STEP_UP for the other three operations
     effect_owner: control-api.submitActionDecision.final-approve
     atomic_transition_group: gurine.command.submitActionDecision.v1
     state_disposition: assignment terminalization plus proposal quorum transition plus atomic effect creation
@@ -392,6 +393,7 @@ external_commands:
       - 'INSERT_OR_READ ops.idempotency_keys [exactly-one-logical-result] :: claim or exact stored replay'
       - 'SELECT_FOR_UPDATE ops.action_proposals [exactly-one] :: exact pending proposal head'
       - 'SELECT_FOR_UPDATE ops.action_proposal_versions [exactly-one] :: PENDING_QUORUM and common ApprovalBindingV1 digest'
+      - 'VALIDATE_CONDITIONAL providerOperationId [exactly-one-result] :: absent for non-PROVIDER_CONTROL; otherwise equal immutable provider-control detail before capability and assurance selection'
       - 'SELECT_FOR_UPDATE ops.action_review_assignments [exactly-current-slot-count] :: total canonical slot order'
       - 'SELECT_FOR_UPDATE ops.action_decisions [zero-or-more] :: immutable decisions in decision order'
       - 'EVALUATE authorization-conflict-separation-quorum [exactly-one-result] :: reauthorize every counted human and choose one winner'
@@ -2983,7 +2985,33 @@ private_application_commands:
   private.DecideCapabilityActivation: {operation_id: private.DecideCapabilityActivation, contract: private_action_executor_semantics, operation_kind: COMMAND, trigger: current CAPABILITY_ACTIVATION ExecutionAuthorization, effect_owner: action-execution-worker.capability-activation-executor, atomic_transition_group: gurine.private.DecideCapabilityActivation.v1, target_relations: [ops.capability_activation_decisions, ops.capability_activation_evidence], state_disposition: append APPROVED|SUSPENDED activation decision and atomically update the bound capability head, outbox: {events: [governance.capability_activation_decided.v1, action.execution_completed.v1]}, receipt: CapabilityActivationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.CreateBusinessCalendarVersion: {operation_id: private.CreateBusinessCalendarVersion, contract: private_action_executor_semantics, operation_kind: COMMAND, trigger: current RESPONSE_POLICY_CALENDAR ExecutionAuthorization, effect_owner: action-execution-worker.business-calendar-executor, atomic_transition_group: gurine.private.CreateBusinessCalendarVersion.v1, target_relations: [ops.business_calendar_versions], state_disposition: append FUTURE|CURRENT calendar version under nonoverlapping effective interval, outbox: {events: [governance.business_calendar_revised.v1, action.execution_completed.v1]}, receipt: BusinessCalendarVersionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.ApplyCommercialControl: {operation_id: private.ApplyCommercialControl, contract: private_action_executor_semantics, operation_kind: COMMAND, trigger: current COMMERCIAL_CONTROL ExecutionAuthorization, effect_owner: action-execution-worker.commercial-control-executor, atomic_transition_group: gurine.private.ApplyCommercialControl.v1, target_relations: [ops.commercial_control_executions, ops.commercial_control_execution_items, ops.commercial_control_import_receipts, ops.commercial_control_acknowledgements], state_disposition: product fence commits before external import and acknowledgement; missing or mismatched acknowledgement remains RECONCILIATION_REQUIRED, outbox: {events: [commercial.control_execution_recorded.v1, commercial.control_reconciliation_required.v1, action.execution_completed.v1]}, receipt: CommercialControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ExecuteProviderControl:
+    operation_id: private.ExecuteProviderControl
+    contract: private_action_executor_semantics
+    operation_kind: COMMAND
+    trigger: current PROVIDER_CONTROL ExecutionAuthorization delivered as one jobs.operate provider-control job to analysis-worker
+    effect_owner: analysis-worker.provider-control-executor
+    atomic_transition_group: gurine.private.ExecuteProviderControl.v1
+    authorization: exact providerOperationId providerId expectedVersion targetRequestDigest capability and assurance policy from the immutable approval detail; testProviderConnection uses jobs.operate plus ACTIVE_SESSION and the other three use kill_switch.execute plus STEP_UP
+    target_relations: [ops.provider_configs, ops.provider_connection_tests, ops.provider_model_upgrade_attempts, ops.provider_model_upgrade_receipts, ops.jobs]
+    state_disposition: execute exactly disableProviderRouting testProviderConnection upgradeProviderModel or setModelAutoUpgrade under its existing version fence; a required connection test is observed before any final provider configuration update
+    external_effect: relay connection tests use the existing egress AI channel outside every database transaction; missing proof is fail-closed and never synthesizes a receipt
+    transaction_phases: ops.claim_provider_control_execution_v1 commits the current generation and fence before egress; ops.complete_provider_control_execution_v1 or ops.fail_provider_control_execution_v1 consumes that exact fence and terminalizes once after the observed result
+    outbox: {events: [action.execution_completed.v1]}
+    receipt: ProviderControlExecutionReceiptV1
+    errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_DENIED, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   private.MaterializePaidEvidencePacket: {operation_id: private.MaterializePaidEvidencePacket, operation_kind: COMMAND, trigger: claimed allowlisted paid outcome candidate event, effect_owner: workflow-worker.paid-evidence-packet-materializer, atomic_transition_group: gurine.private.MaterializePaidEvidencePacket.v1, authorization: service workload identity plus exact inbox event and organization qualification contract subject and ten typed member candidate digests, target_relations: [ops.paid_evidence_packets, ops.paid_evidence_packet_members], state_disposition: paid_evidence_packet.NONE->AWAITING_TERMINAL_BINDING, idempotency: inbox event plus server-recomputed packet subject digest; expectedPacketSubjectDigest is comparison input only; exact replay zero writes; changed replay conflict, outbox: {events: [product.paid_evidence_packet_subject_persisted.v1]}, receipt: PaidEvidencePacketMaterializationReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PAID_EVIDENCE_SUBJECT_INVALID, PAID_EVIDENCE_MEMBER_SET_INVALID, EVENT_REPLAY_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+
+provider_control_http_side_door_semantics:
+  operation_ids: [disableProviderRouting, testProviderConnection, upgradeProviderModel, setModelAutoUpgrade]
+  request_validation: Retain each existing closed request schema solely to construct the matching ProviderControlActionV1 proposal payload.
+  direct_http_result: {status: 409, error_code: ACTION_PROPOSAL_REQUIRED, state_effect: UNCHANGED}
+  exact_statements:
+    - 'RETURN_PROBLEM [exactly-one] :: 409 ACTION_PROPOSAL_REQUIRED'
+    - 'DATABASE_WRITE [zero] :: no proposal, authorization, job, receipt, audit or outbox mutation'
+    - 'EXTERNAL_EFFECT [zero] :: no connection test, relay call or provider state mutation'
+  authorized_effect_path: submitActionDecision creates the current PROVIDER_CONTROL ExecutionAuthorization; action.execution_authorized.v1 dispatches only that kind to analysis-worker; the worker claims, observes and completes or fails the exact private.ExecuteProviderControl fence.
+  forbidden_paths: [browser_to_control_command_effect, bff_to_control_command_effect, control_api_to_relay, workflow_worker_provider_control_executor]
 
 base_operation_atomic_extensions:
   submitResponse:

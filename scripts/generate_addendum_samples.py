@@ -1,40 +1,82 @@
 #!/usr/bin/env python3
-"""Fill deterministic success samples for owner-addendum OpenAPI operations."""
+"""Generate deterministic primary-response evidence and Rust operation registries."""
 
 from __future__ import annotations
 
+import argparse
 import json
 from pathlib import Path
 
-import yaml
-
-from materialize_application import operation_response_samples
+from materialize_application import (
+    operation_catalog,
+    operation_response_samples,
+    operation_sample_evidence,
+    operation_spec_sources,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
+RUST_MODULES = {
+    "public_api",
+    "submission_api",
+    "control_api",
+    "identity_provider",
+    "identity_service_internal",
+}
 
 
-def main() -> None:
-    path = ROOT / "verification/generated-operation-samples.json"
-    samples = json.loads(path.read_text())
-    generated = operation_response_samples()
-    addendum = yaml.safe_load((ROOT / "specs/product/addendum-operation-contracts.yaml").read_text())
-    ids = {row["operation_id"] for row in addendum["operations"]}
-    ids.add("estimateBackfill")
-    # Keep the generated sample for the control-plane budget projection bound
-    # to its current BudgetOverviewResponse schema after OPS-004 parity fixes.
-    ids.add("getBudgetOverview")
-    for operation_id in ids:
-        if operation_id in generated:
-            status, media_type, body = generated[operation_id]
-            samples[operation_id] = {
-                "api": "control-api" if operation_id in {"estimateBackfill", "getBudgetOverview"} or operation_id in {row["operation_id"] for row in addendum["operations"] if row["api"] == "control-api"} else "submission-api",
-                "status": status,
-                "mediaType": media_type,
-                "body": body,
-            }
-    path.write_text(json.dumps(samples, ensure_ascii=False, indent=2) + "\n")
-    print(f"updated {len(ids)} operation samples")
+def generated_outputs() -> tuple[dict[Path, str], int]:
+    samples = operation_response_samples()
+    sources = operation_spec_sources(operation_catalog(), samples)
+    if set(sources) != RUST_MODULES:
+        missing = sorted(RUST_MODULES - set(sources))
+        extras = sorted(set(sources) - RUST_MODULES)
+        raise ValueError(f"unexpected Rust operation modules: missing={missing}, extras={extras}")
+
+    outputs = {
+        ROOT / "verification/generated-operation-samples.json": json.dumps(
+            operation_sample_evidence(samples), ensure_ascii=False, indent=2
+        )
+        + "\n"
+    }
+    outputs.update(
+        {
+            ROOT / f"crates/api-contracts/src/{module}.rs": source
+            for module, source in sources.items()
+        }
+    )
+    return outputs, len(samples)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--check", action="store_true")
+    args = parser.parse_args()
+    outputs, sample_count = generated_outputs()
+
+    stale = [
+        path
+        for path, expected in outputs.items()
+        if not path.exists() or path.read_text(encoding="utf-8") != expected
+    ]
+    if args.check:
+        if stale:
+            for path in stale:
+                print(f"stale generated primary-response artifact: {path.relative_to(ROOT)}")
+            return 1
+        print(
+            f"generated primary-response artifacts: PASS "
+            f"operations={sample_count} files={len(outputs)}"
+        )
+        return 0
+
+    for path in stale:
+        path.write_text(outputs[path], encoding="utf-8")
+    print(
+        f"generated primary-response artifacts: updated={len(stale)} "
+        f"operations={sample_count} files={len(outputs)}"
+    )
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

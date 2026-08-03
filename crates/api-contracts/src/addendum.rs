@@ -367,6 +367,13 @@ const CONTROL_REQUIRED_FIELDS: &[(&str, &[&str])] = &[
     ("decideJourneyHandoff", &["schemaVersion", "handoffId", "expectedHandoffVersion", "expectedBindingDigest", "decision", "reasonCode", "reason"]),
 ];
 
+const PROVIDER_CONTROL_OPERATION_IDS: &[&str] = &[
+    "disableProviderRouting",
+    "testProviderConnection",
+    "upgradeProviderModel",
+    "setModelAutoUpgrade",
+];
+
 pub fn validate_control_command(id: &str, payload: &Map<String, Value>) -> bool {
     let Some((_, required)) = CONTROL_REQUIRED_FIELDS
         .iter()
@@ -374,10 +381,27 @@ pub fn validate_control_command(id: &str, payload: &Map<String, Value>) -> bool 
     else {
         return false;
     };
+    let provider_operation_allowed = id == "submitActionDecision";
+    let fields_closed = payload.keys().all(|field| {
+        required.contains(&field.as_str())
+            || (provider_operation_allowed && field == "providerOperationId")
+    });
     required.iter().all(|field| payload.contains_key(*field))
-        && payload
-            .keys()
-            .all(|field| required.contains(&field.as_str()))
+        && fields_closed
+        && (!provider_operation_allowed || provider_decision_discriminator_is_closed(payload))
+}
+
+fn provider_decision_discriminator_is_closed(payload: &Map<String, Value>) -> bool {
+    let action_kind = payload.get("actionKind").and_then(Value::as_str);
+    let provider_operation = payload.get("providerOperationId");
+    match (action_kind, provider_operation) {
+        (Some("PROVIDER_CONTROL"), Some(Value::String(operation_id))) => {
+            PROVIDER_CONTROL_OPERATION_IDS.contains(&operation_id.as_str())
+        }
+        (Some("PROVIDER_CONTROL"), _) => false,
+        (Some(_), None) => true,
+        _ => false,
+    }
 }
 
 /// Provider callbacks are private gateway operations, not public API routes.
@@ -395,3 +419,59 @@ pub const PRIVATE_CONTROL_OPERATIONS: &[OperationSpec] = &[operation!(
     200,
     COMMAND_RECEIPT
 )];
+
+#[cfg(test)]
+mod tests {
+    use super::validate_control_command;
+    use serde_json::{Map, Value, json};
+
+    fn decision_payload(action_kind: &str) -> Map<String, Value> {
+        json!({
+            "proposalId": "00000000-0000-4000-8000-000000000001",
+            "actionKind": action_kind,
+            "assignmentId": "00000000-0000-4000-8000-000000000002",
+            "expectedProposalVersion": 1,
+            "expectedAssignmentVersion": 1,
+            "expectedApprovalDigest": "0".repeat(64),
+            "decision": {"kind": "APPROVE"}
+        })
+        .as_object()
+        .cloned()
+        .unwrap_or_default()
+    }
+
+    #[test]
+    fn provider_decision_requires_one_closed_operation_discriminator() {
+        let mut valid = decision_payload("PROVIDER_CONTROL");
+        valid.insert(
+            "providerOperationId".into(),
+            Value::String("upgradeProviderModel".into()),
+        );
+        assert!(validate_control_command("submitActionDecision", &valid));
+
+        let missing = decision_payload("PROVIDER_CONTROL");
+        assert!(!validate_control_command("submitActionDecision", &missing));
+
+        valid.insert(
+            "providerOperationId".into(),
+            Value::String("unknownProviderEffect".into()),
+        );
+        assert!(!validate_control_command("submitActionDecision", &valid));
+    }
+
+    #[test]
+    fn non_provider_decision_forbids_provider_discriminator_and_extra_fields() {
+        let mut valid = decision_payload("TASK");
+        assert!(validate_control_command("submitActionDecision", &valid));
+
+        valid.insert(
+            "providerOperationId".into(),
+            Value::String("testProviderConnection".into()),
+        );
+        assert!(!validate_control_command("submitActionDecision", &valid));
+
+        valid.remove("providerOperationId");
+        valid.insert("undocumented".into(), Value::Bool(true));
+        assert!(!validate_control_command("submitActionDecision", &valid));
+    }
+}

@@ -255,10 +255,10 @@ services:
       AI_CASE_BUDGET_KRW: ${AI_CASE_BUDGET_KRW:-}
       AI_DAILY_BUDGET_KRW: ${AI_DAILY_BUDGET_KRW:-}
       AI_ENABLED: ${AI_ENABLED:-false}
-      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-}
+      AI_PROVIDER_ORDER: ${AI_PROVIDER_ORDER:-relay}
       ANALYSIS_DATABASE_URL: ${ANALYSIS_DATABASE_URL:-}
       DATABASE_MAX_CONNECTIONS: ${DATABASE_MAX_CONNECTIONS:-20}
-      EGRESS_AI_CHANNEL_URL: ${EGRESS_AI_CHANNEL_URL:-}
+      EGRESS_AI_CHANNEL_URL: ${EGRESS_AI_CHANNEL_URL:-http://egress-gateway:8090/ai}
       GURINE_ENV: ${GURINE_ENV:-development}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
@@ -430,7 +430,10 @@ services:
       target: egress-gateway
     environment:
       EGRESS_ALLOWLIST_PATH: /app/config/egress-allowlist.yaml
-      AI_PROVIDER_HOSTS: ${AI_PROVIDER_HOSTS:-}
+      EGRESS_DATABASE_URL: ${EGRESS_DATABASE_URL}
+      AI_PROVIDER_HOSTS: ${AI_PROVIDER_HOSTS:-relay-ai.dongwontuna.net}
+      AI_RELAY_API_KEY: ${AI_RELAY_API_KEY:-}
+      AI_RELAY_HOST: ${AI_RELAY_HOST:-relay-ai.dongwontuna.net}
       ALIO_HOST: ${ALIO_HOST:-}
       ALIO_OFFICIAL_MANIFEST_URL: ${ALIO_OFFICIAL_MANIFEST_URL:-}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
@@ -462,9 +465,13 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_URL: ${SMTP_URL:-}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
     networks:
     - internal
     - egress
+    - data
     read_only: true
     tmpfs:
     - /tmp

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_model_upgrade_attempts SET status='SUCCEEDED', gateway_receipt_sha256=CAST($2 AS char(64)), usage_evidence_sha256=CAST($3 AS char(64)),completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2e09445a00b1a96849872f29b0ca6de4f1e87cefe900cf5fbdda72edde885173"
+}

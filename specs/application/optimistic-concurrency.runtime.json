@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "specificationVersion": "13.0.0",
-  "contractCount": 64,
+  "contractCount": 66,
   "contracts": [
     {
       "operationId": "acceptAgentSuggestion",
@@ -241,7 +241,9 @@
       "guardColumns": ["id", "version"],
       "mutationColumns": ["id", "version"],
       "requestPlaceholders": ["expectedVersion", "providerId"],
-      "contextPlaceholders": []
+      "contextPlaceholders": [],
+      "directHttpEffect": "NONE",
+      "executionOwner": "private.ExecuteProviderControl"
     },
     {
       "operationId": "disableUser",
@@ -504,6 +506,18 @@
       "contextPlaceholders": []
     },
     {
+      "operationId": "setModelAutoUpgrade",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.provider_configs",
+      "mutationRelation": "ops.provider_configs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "routing_policy", "version"],
+      "requestPlaceholders": ["expectedVersion", "providerId"],
+      "contextPlaceholders": [],
+      "directHttpEffect": "NONE",
+      "executionOwner": "private.ExecuteProviderControl"
+    },
+    {
       "operationId": "startRuleShadow",
       "versionField": "expectedVersion",
       "guardRelation": "core.rule_versions",
@@ -622,6 +636,18 @@
       "mutationColumns": ["id", "version"],
       "requestPlaceholders": ["expectedVersion", "savedViewId"],
       "contextPlaceholders": []
+    },
+    {
+      "operationId": "upgradeProviderModel",
+      "versionField": "expectedVersion",
+      "guardRelation": "ops.provider_configs",
+      "mutationRelation": "ops.provider_configs",
+      "guardColumns": ["id", "version"],
+      "mutationColumns": ["id", "enabled", "routing_policy", "version"],
+      "requestPlaceholders": ["expectedVersion", "providerId"],
+      "contextPlaceholders": [],
+      "directHttpEffect": "NONE",
+      "executionOwner": "private.ExecuteProviderControl"
     },
     {
       "operationId": "validateClaims",

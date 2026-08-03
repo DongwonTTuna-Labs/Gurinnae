@@ -2,7 +2,7 @@ schema_version: 3
 specification_version: 13.0.0
 status: FINAL
 cardinality_rule: A command emits zero or more domain events and zero or more integration events according to explicit semantics; audit is independent.
-command_count: 105
+command_count: 107
 commands:
 - operation_id: acceptAgentSuggestion
   api: control-api
@@ -3222,85 +3222,30 @@ commands:
     assurance_level: STEP_UP
   preconditions:
   - request_schema_valid
-  - actor_assertion_and_capability_valid
-  - idempotency_key_valid
+  - provider_control_action_proposal_required
   transaction:
-    isolation: READ COMMITTED
-    statements:
-    - verb: SELECT_FOR_UPDATE
-      relation: ops.provider_configs
-      purpose: lock provider config
-      expected_rows: exactly-one
-      identity_predicate: id = :providerId
-      version_predicate: version = :expectedVersion
-    - verb: UPDATE
-      relation: ops.provider_configs
-      purpose: disable routing and increment version
-      expected_rows: exactly-one
-      version_predicate: version = :expectedVersion
-      identity_predicate: id = :providerId
-      version_mutation: version = version + 1
-    audit_action: command.disableProviderRouting
+    isolation: NONE
+    statements: []
+    audit_action: none
     outbox_atomic: false
-  repository_methods:
-  - ProviderRepository::disable_routing
-  domain_events:
-  - provider.routing_disabled.v1
+  repository_methods: []
+  domain_events: []
   integration_events: []
   errors:
-    transport:
-    - INVALID_PARAMETER
-    - INVALID_REQUEST
-    - UNSUPPORTED_MEDIA_TYPE
-    - PAYLOAD_TOO_LARGE
-    authorization:
-    - ACTOR_ASSERTION_REQUIRED
-    - ACTOR_ASSERTION_INVALID
-    - ACTOR_ASSERTION_EXPIRED
-    - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-    - ACTOR_ASSERTION_REQUEST_MISMATCH
-    - ACTOR_ASSERTION_REPLAYED
-    - CAPABILITY_DENIED
-    - STEP_UP_REQUIRED
-    concurrency:
-    - IDEMPOTENCY_CONFLICT
-    - VERSION_CONFLICT
+    transport: []
+    authorization: []
+    concurrency: []
     domain:
-    - RESOURCE_NOT_FOUND
-    - PRECONDITION_FAILED
-    - VALIDATION_FAILED
-    - INVALID_STATE_TRANSITION
-    provider:
-    - DEPENDENCY_UNAVAILABLE
-    - DEPENDENCY_RATE_LIMITED
-    internal:
-    - INTERNAL_ERROR
-  receipt: disableProviderRoutingReceipt
-  compensation: idempotent retry or exact conflict receipt
-  concurrency:
-    mode: OPTIMISTIC
-    version_field: expectedVersion
-    guard_relation: ops.provider_configs
-    guard_identity_predicate: id = :providerId
-    guard_version_predicate: version = :expectedVersion
-    mutation_relation: ops.provider_configs
-    mutation_identity_predicate: id = :providerId
-    success_effect: increment version by exactly one; DELETE commands delete exactly one current version
-    zero_rows_resolution:
-      probe: read identity without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - expectedVersion
-    - providerId
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+    - ACTION_PROPOSAL_REQUIRED
+    provider: []
+    internal: []
+  receipt: AddendumProblemDetailsV1
+  compensation: not-applicable-no-effect
+  concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   api: control-api
   method: POST
@@ -6752,6 +6697,47 @@ commands:
     mutation_columns:
     - id
     - row_version
+- operation_id: setModelAutoUpgrade
+  api: control-api
+  method: POST
+  aggregate: provider
+  target_fields:
+  - providerId
+  authorization:
+    capability: kill_switch.execute
+    step_up_required: true
+    assurance_policy:
+      mode: STATIC
+      default: STEP_UP
+      conditions: []
+      step_up_possible: true
+    assurance_level: STEP_UP
+  preconditions:
+  - request_schema_valid
+  - provider_control_action_proposal_required
+  transaction:
+    isolation: NONE
+    statements: []
+    audit_action: none
+    outbox_atomic: false
+  repository_methods: []
+  domain_events: []
+  integration_events: []
+  errors:
+    transport: []
+    authorization: []
+    concurrency: []
+    domain:
+    - ACTION_PROPOSAL_REQUIRED
+    provider: []
+    internal: []
+  receipt: AddendumProblemDetailsV1
+  compensation: not-applicable-no-effect
+  concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: startAccessReview
   api: control-api
   method: POST
@@ -7483,52 +7469,30 @@ commands:
     assurance_level: ACTIVE_SESSION
   preconditions:
   - request_schema_valid
-  - actor_assertion_and_capability_valid
-  - idempotency_key_valid
+  - provider_control_action_proposal_required
   transaction:
-    isolation: READ COMMITTED
-    statements:
-    - verb: INSERT
-      relation: ops.provider_connection_tests
-      purpose: create redacted connection test request
-      expected_rows: exactly-one
-    - verb: INSERT
-      relation: ops.jobs
-      purpose: enqueue provider test job
-      expected_rows: exactly-one
-    audit_action: provider.connection_test.requested
+    isolation: NONE
+    statements: []
+    audit_action: none
     outbox_atomic: false
-  repository_methods:
-  - ProviderRepository::request_test
+  repository_methods: []
   domain_events: []
   integration_events: []
   errors:
-    transport:
-    - INVALID_PARAMETER
-    - INVALID_REQUEST
-    - UNSUPPORTED_MEDIA_TYPE
-    - PAYLOAD_TOO_LARGE
-    authorization:
-    - ACTOR_ASSERTION_REQUIRED
-    - ACTOR_ASSERTION_INVALID
-    - ACTOR_ASSERTION_EXPIRED
-    - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-    - ACTOR_ASSERTION_REQUEST_MISMATCH
-    - ACTOR_ASSERTION_REPLAYED
-    - CAPABILITY_DENIED
-    concurrency:
-    - IDEMPOTENCY_CONFLICT
+    transport: []
+    authorization: []
+    concurrency: []
     domain:
-    - RESOURCE_NOT_FOUND
-    - PRECONDITION_FAILED
-    - VALIDATION_FAILED
-    provider:
-    - DEPENDENCY_UNAVAILABLE
-    - DEPENDENCY_RATE_LIMITED
-    internal:
-    - INTERNAL_ERROR
-  receipt: testProviderConnectionReceipt
-  compensation: idempotent retry or exact conflict receipt
+    - ACTION_PROPOSAL_REQUIRED
+    provider: []
+    internal: []
+  receipt: AddendumProblemDetailsV1
+  compensation: not-applicable-no-effect
+  concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: transitionCase
   api: control-api
   method: POST
@@ -8603,6 +8567,47 @@ commands:
     - INTERNAL_ERROR
   receipt: updateSubscriptionReceipt
   compensation: idempotent retry or explicit typed error receipt
+- operation_id: upgradeProviderModel
+  api: control-api
+  method: POST
+  aggregate: provider
+  target_fields:
+  - providerId
+  authorization:
+    capability: kill_switch.execute
+    step_up_required: true
+    assurance_policy:
+      mode: STATIC
+      default: STEP_UP
+      conditions: []
+      step_up_possible: true
+    assurance_level: STEP_UP
+  preconditions:
+  - request_schema_valid
+  - provider_control_action_proposal_required
+  transaction:
+    isolation: NONE
+    statements: []
+    audit_action: none
+    outbox_atomic: false
+  repository_methods: []
+  domain_events: []
+  integration_events: []
+  errors:
+    transport: []
+    authorization: []
+    concurrency: []
+    domain:
+    - ACTION_PROPOSAL_REQUIRED
+    provider: []
+    internal: []
+  receipt: AddendumProblemDetailsV1
+  compensation: not-applicable-no-effect
+  concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: validateClaims
   api: control-api
   method: POST

@@ -12,8 +12,8 @@ from .models import Validation
 
 TABLE_RE = re.compile(r'CREATE TABLE\s+([a-z_]+)\.([a-z_]+)\s*\(', re.I)
 DROP_TABLE_RE = re.compile(r'DROP TABLE(?: IF EXISTS)?\s+([a-z_]+)\.([a-z_]+)', re.I)
-DROP_FUNC_RE = re.compile(r'DROP FUNCTION(?: IF EXISTS)?\s+([a-z_]+)\.([a-z_]+)\s*\(', re.I)
-FUNC_RE = re.compile(r'CREATE(?: OR REPLACE)? FUNCTION\s+([a-z_]+)\.([a-z_]+)\s*\(', re.I)
+DROP_FUNC_RE = re.compile(r'DROP FUNCTION(?: IF EXISTS)?\s+([a-z_]+)\.([a-z_][a-z0-9_]*)\s*\(', re.I)
+FUNC_RE = re.compile(r'CREATE(?: OR REPLACE)? FUNCTION\s+([a-z_]+)\.([a-z_][a-z0-9_]*)\s*\(', re.I)
 POLICY_RE = re.compile(r'CREATE POLICY\s+([a-zA-Z0-9_]+)\s+ON\s+([a-z_]+)\.([a-z_]+)', re.I)
 TRIGGER_RE = re.compile(r'CREATE TRIGGER\s+([a-zA-Z0-9_]+).*?ON\s+([a-z_]+)\.([a-z_]+)', re.I | re.S)
 FUNCTION_DEFINITION_RE = re.compile(
@@ -31,6 +31,16 @@ def migration_digest(migrations: list[Path]) -> str:
         digest.update(migration.read_bytes())
         digest.update(b'\0')
     return digest.hexdigest()
+
+
+def created_runtime_relations(migrations: list[Path]) -> tuple[set[str], set[str]]:
+    tables: set[str] = set()
+    functions: set[str] = set()
+    for migration in migrations:
+        sql = migration.read_text(encoding='utf-8')
+        tables.update(f'{schema}.{table}' for schema, table in TABLE_RE.findall(sql))
+        functions.update(f'{schema}.{function}' for schema, function in FUNC_RE.findall(sql))
+    return tables, functions
 
 
 def validate(root: Path, result: Validation) -> None:
@@ -153,8 +163,24 @@ def validate(root: Path, result: Validation) -> None:
     result.require(re.search(r'(?<!NO)\bBYPASSRLS\b', combined, re.I) is None, 'runtime role must not receive BYPASSRLS')
 
     result.require(privilege['status'] == 'FINAL', 'privilege matrix must be FINAL')
-    result.require(matrix['operation_count'] == 212 and len(matrix['operations']) == 212, 'operation-table matrix must cover 205 operations')
-    valid_relations = set(tables) | set(functions) | {'content_repository', 'generated_openapi', 'oidc_provider_configuration', 'object_store'}
+    result.require(matrix['operation_count'] == 215 and len(matrix['operations']) == 215, 'operation-table matrix must cover 215 operations')
+    runtime_additive_migrations = [
+        path
+        for path in sorted((root / 'db/migrations').glob('*.sql'))
+        if path.name[:4].isdigit() and 25 <= int(path.name[:4]) <= 32
+    ]
+    for migration in runtime_additive_migrations:
+        try:
+            parse_sql(migration.read_text(encoding='utf-8'))
+        except Exception as exc:
+            result.error(f'{migration.name}: runtime additive PostgreSQL parser failed: {exc}')
+    runtime_tables, runtime_functions = created_runtime_relations(runtime_additive_migrations)
+    valid_relations = set(tables) | set(functions) | runtime_tables | runtime_functions | {
+        'content_repository',
+        'generated_openapi',
+        'oidc_provider_configuration',
+        'object_store',
+    }
     for operation in matrix['operations']:
         source = persistence[operation['operation_id']]
         result.require(operation.get('mode', operation.get('operation_kind')) == source['operation_kind'], f"{operation['operation_id']}: matrix mode mismatch")
@@ -170,7 +196,7 @@ def validate(root: Path, result: Validation) -> None:
     result.require(runtime_evidence.get('migrationCount') == catalog['migration_count'], 'runtime baseline migration count differs from catalog')
     active_counts = runtime_evidence.get('catalogCounts', {})
     result.require(active_counts == {'tables':catalog['table_count'],'functions':catalog['function_count'],'triggers':catalog['trigger_count'],'policies':catalog['policy_count']}, 'runtime baseline catalog counts differ')
-    result.require(runtime_evidence.get('concurrencyContractCount') == 64 and runtime_evidence.get('concurrencyCatalogResolved') == 64, 'runtime concurrency baseline differs')
+    result.require(runtime_evidence.get('concurrencyContractCount') == 66 and runtime_evidence.get('concurrencyCatalogResolved') == 66, 'runtime concurrency baseline differs')
     required_runtime_names = {'active-catalog-object-counts','actor-assertion-replay-rejected','audit-event-mutation-rejected','audit-export-role-lifecycle','audit-runtime-chain','clean-migration-apply','closed-response-request-rejected','concurrency-contract-catalog-resolution','control-api-step-up-authorization-claim-denied','correction-attachment-cross-session-idor-rejected','correction-draft-session-reuse-rejected','correction-session-atomic-submit-and-receipt','csrf-hash-rotation','default-privilege-denied:gurine_analysis_worker','default-privilege-denied:gurine_auditor','default-privilege-denied:gurine_control_api','default-privilege-denied:gurine_document_extractor','default-privilege-denied:gurine_identity_api','default-privilege-denied:gurine_ingest_worker','default-privilege-denied:gurine_notification_worker','default-privilege-denied:gurine_public_api','default-privilege-denied:gurine_public_projector','default-privilege-denied:gurine_scheduler','default-privilege-denied:gurine_submission_api','default-privilege-denied:gurine_workflow_worker','duplicate-response-submit-rejected','expired-response-request-rejected','extension-schema-isolation','identity-role-editorial-denied','legacy-step-up-proof-objects-removed','legal-hold-immutable-after-placement','legal-hold-place-concurrency','postgres-version','public-role-private-schema-denied','public-role-write-denied','queue-and-source-primary-key-concurrency','response-active-session-reuse-rejected','response-attachment-cross-session-idor-rejected','response-draft-create-from-zero','response-draft-nonzero-create-rejected','response-magic-token-exchange','response-magic-token-replay-rejected','response-pending-session-reuse-rejected','response-scoped-draft-and-attachment','response-session-promotion','response-session-submit-and-receipt','response-submission-unique-constraint','review-snapshot-mutation-rejected','routine-signature-resolution','rule-run-terminal-mutation-rejected','rule-run-valid-terminal-transition','runtime-roles-no-superuser-or-bypassrls','schema-mapping-approve-concurrency','schema-mapping-reject-concurrency','security-definer-search-path','security-definer-search-path-hijack-resistant','service-assertion-replay-rejected','single-response-submission','source-document-invalid-lifecycle-rejected','source-document-valid-lifecycle-transition','stale-csrf-rotation-rejected','step-up-authorization-closed','step-up-authorization-fourth-issue-rejected','step-up-authorization-three-assertion-issues','submission-direct-write-denied','submission-service-assertion-replay-rejected','submission-session-least-privilege','subscription-session-lifecycle','subscription-session-reuse-rejected'}
     result.require(required_runtime_names <= set(runtime_evidence.get('requiredTests', [])), 'runtime baseline mandatory canary set differs')
     result.require(

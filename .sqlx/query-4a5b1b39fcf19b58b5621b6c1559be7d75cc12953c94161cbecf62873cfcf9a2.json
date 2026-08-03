@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('status',status,'lastCompletedAt',completed_at,'lastErrorCode',error_code) FROM ops.relay_model_catalog_sync_runs ORDER BY scheduled_bucket DESC,id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4a5b1b39fcf19b58b5621b6c1559be7d75cc12953c94161cbecf62873cfcf9a2"
+}

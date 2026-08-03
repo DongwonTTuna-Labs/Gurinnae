@@ -21,6 +21,12 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 ADDENDUM = ROOT / "specs/product/addendum-operation-contracts.yaml"
 RESOURCES = ROOT / "specs/product/addendum-resource-error-contracts.yaml"
+PROVIDER_CONTROL_OPERATION_IDS = (
+    "disableProviderRouting",
+    "testProviderConnection",
+    "upgradeProviderModel",
+    "setModelAutoUpgrade",
+)
 
 
 def primitive(expression: str) -> dict:
@@ -52,11 +58,11 @@ def primitive(expression: str) -> dict:
             "RETRACTION", "RULE_ACTIVATION", "ROLE_GRANT", "KILL_SWITCH",
             "COMMUNICATION_AUTHORIZATION", "ASSET_RIGHTS_DECISION", "RETENTION_SCHEDULE",
             "FUNDING_DISCLOSURE", "CAPABILITY_ACTIVATION", "RESPONSE_POLICY_CALENDAR",
-            "COMMERCIAL_CONTROL",
+            "COMMERCIAL_CONTROL", "PROVIDER_CONTROL",
         ]}
     if raw_expression.startswith("optional<") and raw_expression.endswith(">"):
         inner = raw_expression[len("optional<"):-1]
-        return {"anyOf": [primitive(inner), {"type": "null"}]}
+        return primitive(inner)
     if raw_expression.startswith("nullable<") and raw_expression.endswith(">"):
         inner = raw_expression[len("nullable<"):-1]
         return {"anyOf": [primitive(inner), {"type": "null"}]}
@@ -112,18 +118,25 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
             return
         branches = []
         for variant, definition in contract.get("variants", {}).items():
+            variant_fields = definition.get("fields", {})
             fields = dict(common)
-            fields.update(definition.get("fields", {}))
+            fields.update(variant_fields)
             properties = {
                 field: contract_property(str(value), resource_doc, schemas)
                 for field, value in fields.items()
             }
             properties[discriminator] = {"type": "string", "const": variant}
+            selected_required = definition.get("required")
+            if selected_required is None:
+                selected_required = list(variant_fields)
+            required = list(dict.fromkeys([*common, *selected_required]))
+            if discriminator in fields and discriminator not in required:
+                required.append(discriminator)
             branches.append({
                 "type": "object",
                 "additionalProperties": bool(definition.get("additional_properties", False)),
                 "properties": properties,
-                "required": list(fields),
+                "required": required,
             })
         schemas[name] = {"oneOf": branches}
         for value in common.values():
@@ -158,7 +171,10 @@ def contract_property(expression: str, resource_doc: dict, schemas: dict) -> dic
     if wrapper and wrapper.group(2) in known:
         child = wrapper.group(2)
         add_contract_schema(child, resource_doc, schemas, set())
-        return {"anyOf": [{"$ref": f"#/components/schemas/{child}"}, {"type": "null"}]}
+        reference = {"$ref": f"#/components/schemas/{child}"}
+        if wrapper.group(1) == "optional":
+            return reference
+        return {"anyOf": [reference, {"type": "null"}]}
     shorthand = re.fullmatch(r"nullable-(.+)", direct)
     if shorthand:
         inner = shorthand.group(1)
@@ -177,7 +193,8 @@ def error_responses(codes: list[str]) -> dict:
         "INVALID_PARAMETER": "400", "INVALID_CURSOR": "400", "INVALID_REQUEST": "400",
         "ACTOR_ASSERTION_REQUIRED": "401", "ACTOR_ASSERTION_INVALID": "401", "SERVICE_ASSERTION_REQUIRED": "401",
         "CAPABILITY_DENIED": "403", "BFF_CALLER_DENIED": "403", "SUBMISSION_SESSION_REQUIRED": "401",
-        "IDEMPOTENCY_CONFLICT": "409", "ACTION_PROPOSAL_STALE": "409", "VERSION_CONFLICT": "409",
+        "IDEMPOTENCY_CONFLICT": "409", "ACTION_PROPOSAL_REQUIRED": "409",
+        "ACTION_PROPOSAL_STALE": "409", "VERSION_CONFLICT": "409",
         "RESOURCE_NOT_FOUND": "404", "TARGET_NOT_FOUND": "404", "INTERNAL_ERROR": "500",
     }
     for code in codes:
@@ -320,6 +337,60 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     return node
 
 
+def close_provider_control_side_doors(document: dict) -> None:
+    """Keep provider command schemas as form anchors without exposing effects.
+
+    Provider state can change only after a PROVIDER_CONTROL proposal becomes a
+    current ExecutionAuthorization.  The historical HTTP operations remain in
+    the document solely as closed request/discriminator types and therefore
+    have one possible authenticated application response: the no-effect 409.
+    """
+    expected = set(PROVIDER_CONTROL_OPERATION_IDS)
+    found: set[str] = set()
+    for path_item in document.get("paths", {}).values():
+        if not isinstance(path_item, dict):
+            continue
+        for node in path_item.values():
+            if not isinstance(node, dict):
+                continue
+            operation_id = node.get("operationId")
+            if operation_id not in expected:
+                continue
+            found.add(operation_id)
+            node["x-error-codes"] = ["ACTION_PROPOSAL_REQUIRED"]
+            node["x-provider-control-entrypoint"] = "ACTION_PROPOSAL"
+            node["x-state-effect"] = "UNCHANGED"
+            node["responses"] = {
+                "409": {
+                    "description": "Provider control requires an approved action proposal",
+                    "content": {
+                        "application/problem+json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AddendumProblemDetailsV1"
+                            }
+                        }
+                    },
+                    "x-error-codes": ["ACTION_PROPOSAL_REQUIRED"],
+                }
+            }
+    if found != expected:
+        missing = ", ".join(sorted(expected - found))
+        extra = ", ".join(sorted(found - expected))
+        raise ValueError(
+            f"provider control HTTP side-door catalog drifted; missing={missing}; extra={extra}"
+        )
+
+    schemas = document.setdefault("components", {}).setdefault("schemas", {})
+    connection_request = schemas.get("testProviderConnectionRequest")
+    if not isinstance(connection_request, dict):
+        raise ValueError("testProviderConnectionRequest schema is missing")
+    properties = connection_request.setdefault("properties", {})
+    properties["expectedVersion"] = {"type": "integer", "format": "int64", "minimum": 1}
+    required = connection_request.setdefault("required", [])
+    if "expectedVersion" not in required:
+        required.append("expectedVersion")
+
+
 def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
     yaml_path = ROOT / f"specs/api/{api}.openapi.yaml"
     json_path = ROOT / f"specs/api/{api}.openapi.json"
@@ -390,6 +461,7 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
             legacy_budget["responses"]["200"]["content"]["application/json"]["schema"] = {
                 "$ref": "#/components/schemas/BudgetOverviewResponse"
             }
+        close_provider_control_side_doors(document)
     # JSON is the generated source consumed by Rust and BFF imports. YAML and
     # JSON are written from the same object so semantic equality is guaranteed.
     json_bytes = json.dumps(document, ensure_ascii=False, indent=2, sort_keys=False) + "\n"

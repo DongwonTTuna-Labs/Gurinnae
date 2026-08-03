@@ -11,8 +11,8 @@
   `screen-catalog.yaml`/`screen-build-manifest.yaml`에서 계산한 UI 집합은
   496 authored sections와 720 state occurrences이며, UI operation/action은
   ref와 unique를 구분해 보존한다(각각 data-operation refs 226/unique 203,
-  action refs 250/unique 196). 전체 제품 계약의 212 external operations,
-  105 commands, 5 read-only agents와 9 typed tools는 UI 집합과 별도로
+  action refs 250/unique 196). 전체 제품 계약의 215 external operations,
+  107 commands, 5 read-only agents와 9 typed tools는 UI 집합과 별도로
   검증한다. 현재 branch addendum가 제시하는 129 journey edges와 11
   delivery milestones는 Git tag `authority-v13-frozen`의 canonical artifact가 확인되기
   전까지 비권위 제안으로 취급한다.

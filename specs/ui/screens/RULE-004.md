@@ -31,10 +31,10 @@ Test prefix: `rule_004`
 | 순서 | Section ID | 제목 | 구현 Component | 목적 |
 |---:|---|---|---|---|
 | 1 | `target` | 활성화 대상 | `StructuredContentSection` | version/hash. |
-| 2 | `gates` | quality gate | `DecisionReviewPanel` | eval/shadow/review. |
+| 2 | `gates` | 품질 검증 | `DecisionReviewPanel` | eval/shadow/review. |
 | 3 | `impact` | 영향 | `SignalTriagePanel` | signals/cases/cost/source. |
 | 4 | `schedule` | 일정 | `StructuredContentSection` | effective time. |
-| 5 | `rollback` | rollback | `StructuredContentSection` | target/version. |
+| 5 | `rollback` | 되돌리기 | `StructuredContentSection` | target/version. |
 | 6 | `approval` | 승인 | `DecisionReviewPanel` | SoD·reauth. |
 | 7 | `receipt` | 결과 | `DataCollection` | activation event. |
 

@@ -38,6 +38,9 @@ export type RuntimeField = {
   options?: readonly string[];
   value?: string | number | boolean;
   readonly?: boolean;
+  /** One-level request-object binding. The browser field keeps its leaf name,
+   * while formPayload reconstructs the declared OpenAPI object. */
+  payloadPath?: readonly [string, string];
 };
 
 export type IndexedOperation = {
@@ -94,6 +97,7 @@ export function operationFields(
   indexed: IndexedOperation,
   params: RouteParams,
   preset: Record<string, unknown> = {},
+  expandedObjects: readonly string[] = [],
 ): RuntimeField[] {
   const fields: RuntimeField[] = [];
   for (const parameter of indexed.operation.parameters ?? []) {
@@ -120,10 +124,44 @@ export function operationFields(
   const resolved = resolveSchema(indexed.document, schema);
   const object = chooseObject(indexed.document, resolved);
   const required = new Set(object.required ?? []);
+  const expanded = new Set(expandedObjects);
   for (const [name, propertySchema] of Object.entries(
     object.properties ?? {},
   )) {
-    if (fields.some((field) => field.name === name)) continue;
+    const existing = fields.find((field) => field.name === name);
+    if (existing?.payloadPath)
+      throw new Error(
+        `expanded request field ${existing.payloadPath.join(".")} collides`,
+      );
+    if (existing) continue;
+    if (expanded.has(name)) {
+      expanded.delete(name);
+      const nested = chooseObject(indexed.document, propertySchema);
+      const nestedProperties = Object.entries(nested.properties ?? {});
+      if (nestedProperties.length === 0)
+        throw new Error(`expanded request object ${name} has no properties`);
+      const nestedRequired = new Set(nested.required ?? []);
+      const presetValue = preset[name] ?? preset[snakeCase(name)];
+      const nestedPreset = isRecord(presetValue) ? presetValue : {};
+      for (const [childName, childSchema] of nestedProperties) {
+        if (fields.some((field) => field.name === childName))
+          throw new Error(
+            `expanded request field ${name}.${childName} collides`,
+          );
+        fields.push({
+          ...runtimeField(
+            indexed.document,
+            childName,
+            childSchema,
+            required.has(name) && nestedRequired.has(childName),
+            {},
+            nestedPreset,
+          ),
+          payloadPath: [name, childName],
+        });
+      }
+      continue;
+    }
     fields.push(
       runtimeField(
         indexed.document,
@@ -135,6 +173,10 @@ export function operationFields(
       ),
     );
   }
+  if (expanded.size > 0)
+    throw new Error(
+      `expanded request objects are missing: ${[...expanded].join(", ")}`,
+    );
   return fields;
 }
 
@@ -183,9 +225,10 @@ export function formPayload(
   preset: Record<string, unknown> = {},
 ): Record<string, unknown> {
   const value: Record<string, unknown> = { ...preset };
+  const nestedValues = new Map<string, Record<string, unknown>>();
   for (const field of fields) {
     const raw = form.get(field.name);
-    const fixed = preset[field.name] ?? preset[snakeCase(field.name)];
+    const fixed = fixedFieldValue(preset, field);
     if (fixed !== undefined) {
       if (raw !== null && String(raw).trim() !== "") {
         const submitted = parseFormValue(field, raw);
@@ -196,24 +239,63 @@ export function formPayload(
     }
     if (field.type === "boolean") {
       if (raw === null || String(raw).trim() === "") {
-        if (field.required) value[field.name] = false;
+        if (field.required) setFieldValue(value, nestedValues, field, false);
         continue;
       }
-      if (raw === "true" || raw === "on") value[field.name] = true;
-      else if (raw === "false" || raw === "off") value[field.name] = false;
+      if (raw === "true" || raw === "on")
+        setFieldValue(value, nestedValues, field, true);
+      else if (raw === "false" || raw === "off")
+        setFieldValue(value, nestedValues, field, false);
       else throw new Error(`${field.label} 값이 올바르지 않습니다.`);
     } else if (raw !== null && String(raw).trim() !== "") {
       const text = String(raw);
-      if (field.type === "number") value[field.name] = Number(text);
-      else if (field.type === "json") value[field.name] = JSON.parse(text);
+      if (field.type === "number")
+        setFieldValue(value, nestedValues, field, Number(text));
+      else if (field.type === "json")
+        setFieldValue(value, nestedValues, field, JSON.parse(text));
       else if (field.type === "datetime-local")
-        value[field.name] = new Date(text).toISOString();
-      else value[field.name] = text;
+        setFieldValue(value, nestedValues, field, new Date(text).toISOString());
+      else setFieldValue(value, nestedValues, field, text);
     } else if (field.required) {
       throw new Error(`${field.label} 값이 필요합니다.`);
     }
   }
+  for (const [parent, nested] of nestedValues) {
+    const current = value[parent];
+    value[parent] = {
+      ...(isRecord(current) ? current : {}),
+      ...nested,
+    };
+  }
   return value;
+}
+
+function fixedFieldValue(
+  preset: Record<string, unknown>,
+  field: RuntimeField,
+): unknown {
+  if (!field.payloadPath)
+    return preset[field.name] ?? preset[snakeCase(field.name)];
+  const [parent, child] = field.payloadPath;
+  const parentValue = preset[parent] ?? preset[snakeCase(parent)];
+  if (!isRecord(parentValue)) return undefined;
+  return parentValue[child] ?? parentValue[snakeCase(child)];
+}
+
+function setFieldValue(
+  value: Record<string, unknown>,
+  nestedValues: Map<string, Record<string, unknown>>,
+  field: RuntimeField,
+  item: unknown,
+): void {
+  if (!field.payloadPath) {
+    value[field.name] = item;
+    return;
+  }
+  const [parent, child] = field.payloadPath;
+  const nested = nestedValues.get(parent) ?? {};
+  nested[child] = item;
+  nestedValues.set(parent, nested);
 }
 
 function parseFormValue(field: RuntimeField, raw: FormDataEntryValue): unknown {
@@ -242,6 +324,10 @@ function sameCanonicalValue(left: unknown, right: unknown): boolean {
   )
     return left === Number(right);
   return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function bindPath(path: string, params: RouteParams): string {

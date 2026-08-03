@@ -462,7 +462,7 @@ screens:
   - 원문과 계산을 검증할 수 있는가?
   sections:
   - id: status
-    title: 상태·revision·freshness
+    title: 상태·개정·최신성
     purpose: 정정·철회와 최신성을 가장 먼저 표시한다.
     priority: primary
     order: 1
@@ -526,7 +526,7 @@ screens:
     anchor: timeline
     responsive_order: 8
   - id: revision
-    title: 정정·revision
+    title: 정정·개정 이력
     purpose: 불변 revision과 변경 이유.
     priority: primary
     order: 9
@@ -669,7 +669,7 @@ screens:
   - 정정 또는 철회됐는가?
   sections:
   - id: revision-banner
-    title: revision 안내
+    title: 개정본 안내
     purpose: 과거본 여부와 최신본 링크.
     priority: primary
     order: 1
@@ -809,7 +809,7 @@ screens:
     anchor: summary
     responsive_order: 1
   - id: inputs
-    title: 입력과 digest
+    title: 입력·무결성 요약값
     purpose: 공개 가능한 normalized input.
     priority: primary
     order: 2
@@ -1059,7 +1059,7 @@ screens:
   - 설명·정정된 기록은 무엇인가?
   sections:
   - id: identity
-    title: 기관 identity
+    title: 기관 식별 정보
     purpose: 공식명·유형·관할·변경 이력.
     priority: primary
     order: 1
@@ -1067,7 +1067,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: coverage
-    title: coverage
+    title: 수집 범위
     purpose: source·기간·누락.
     priority: primary
     order: 2
@@ -1075,7 +1075,7 @@ screens:
     anchor: coverage
     responsive_order: 2
   - id: metrics
-    title: 설명 통계
+    title: 계약 현황 통계
     purpose: 계약 수·금액·상태 분포와 denominator.
     priority: primary
     order: 3
@@ -1347,7 +1347,7 @@ screens:
   - 관련 공개 기록은 어떤 상태인가?
   sections:
   - id: identity
-    title: 업체 identity
+    title: 업체 식별 정보
     purpose: 공식명·식별·변경 이력·확인 한계.
     priority: primary
     order: 1
@@ -1355,7 +1355,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: coverage
-    title: coverage
+    title: 수집 범위
     purpose: source·기간.
     priority: primary
     order: 2
@@ -1363,7 +1363,7 @@ screens:
     anchor: coverage
     responsive_order: 2
   - id: metrics
-    title: 설명 통계
+    title: 계약 현황 통계
     purpose: 계약·기관 분포와 denominator.
     priority: primary
     order: 3
@@ -1523,7 +1523,7 @@ screens:
   - 검색 범위는 어디까지인가?
   sections:
   - id: scope
-    title: 계약 coverage
+    title: 계약 관측 범위
     purpose: 사건 여부와 무관한 관측 범위.
     priority: primary
     order: 1
@@ -1655,7 +1655,7 @@ screens:
   - 관련 공개 사건이 있는가?
   sections:
   - id: identity
-    title: 계약 identity
+    title: 계약 식별 정보
     purpose: source ID·기관·업체·상태.
     priority: primary
     order: 1
@@ -1671,7 +1671,7 @@ screens:
     anchor: terms
     responsive_order: 2
   - id: changes
-    title: 변경 계약
+    title: 계약 변경
     purpose: 금액·기간 변경.
     priority: primary
     order: 3
@@ -1687,7 +1687,7 @@ screens:
     anchor: procurement
     responsive_order: 4
   - id: provenance
-    title: 필드 provenance
+    title: 필드 출처 이력
     purpose: raw locator·parser version.
     priority: primary
     order: 5
@@ -1837,7 +1837,7 @@ screens:
     anchor: rules
     responsive_order: 3
   - id: ai
-    title: AI 역할
+    title: 인공지능 역할
     purpose: 보조·금지 권한.
     priority: primary
     order: 4
@@ -1997,7 +1997,7 @@ screens:
     anchor: evaluation
     responsive_order: 6
   - id: versions
-    title: version history
+    title: 버전 이력
     purpose: 변경·retired.
     priority: primary
     order: 7
@@ -2094,7 +2094,7 @@ screens:
   - 숫자를 비교해도 되는 범위인가?
   sections:
   - id: summary
-    title: coverage 요약
+    title: 수집 범위 요약
     purpose: 전체 범위와 current status.
     priority: primary
     order: 1
@@ -2102,7 +2102,7 @@ screens:
     anchor: summary
     responsive_order: 1
   - id: sources
-    title: source별 범위
+    title: 출처별 범위
     purpose: 기간·기관·갱신.
     priority: primary
     order: 2
@@ -2110,7 +2110,7 @@ screens:
     anchor: sources
     responsive_order: 2
   - id: gaps
-    title: known gaps
+    title: 알려진 누락
     purpose: 미수집·누락·license.
     priority: primary
     order: 3
@@ -2223,7 +2223,7 @@ screens:
   - 현재 수집 상태와 품질 문제는 무엇인가?
   sections:
   - id: status
-    title: source 상태 요약
+    title: 출처 상태 요약
     purpose: healthy/stale/incident.
     priority: primary
     order: 1
@@ -2231,7 +2231,7 @@ screens:
     anchor: status
     responsive_order: 1
   - id: list
-    title: source 목록
+    title: 출처 목록
     purpose: owner·type·coverage·last sync.
     priority: primary
     order: 2
@@ -2326,7 +2326,7 @@ screens:
   - 어떤 한계가 사건에 영향을 주는가?
   sections:
   - id: identity
-    title: source 설명
+    title: 출처 설명
     purpose: owner·접근 방식.
     priority: primary
     order: 1
@@ -2350,7 +2350,7 @@ screens:
     anchor: coverage
     responsive_order: 3
   - id: schema
-    title: schema
+    title: 데이터 구조
     purpose: 현재 version·변경 이력.
     priority: primary
     order: 4
@@ -2358,7 +2358,7 @@ screens:
     anchor: schema
     responsive_order: 4
   - id: quality
-    title: known quality
+    title: 알려진 품질 이슈
     purpose: 누락·중복·형식.
     priority: primary
     order: 5
@@ -2485,7 +2485,7 @@ screens:
     anchor: records
     responsive_order: 3
   - id: feed
-    title: 구독·feed
+    title: 구독·정정 알림
     purpose: 정정 알림.
     priority: primary
     order: 4
@@ -2730,7 +2730,7 @@ screens:
     anchor: datasets
     responsive_order: 1
   - id: snapshots
-    title: snapshot
+    title: 시점별 자료
     purpose: 생성 시각·version·checksum.
     priority: primary
     order: 2
@@ -2738,7 +2738,7 @@ screens:
     anchor: snapshots
     responsive_order: 2
   - id: schemas
-    title: schema
+    title: 데이터 구조
     purpose: field dictionary.
     priority: primary
     order: 3
@@ -2762,7 +2762,7 @@ screens:
     anchor: corrections
     responsive_order: 5
   - id: limits
-    title: rate/size
+    title: 요청량·크기 제한
     purpose: API와 bulk export.
     priority: primary
     order: 6
@@ -2876,7 +2876,7 @@ screens:
     anchor: getting-started
     responsive_order: 1
   - id: resources
-    title: resource
+    title: 제공 자원
     purpose: case/contract/entity/method/correction.
     priority: primary
     order: 2
@@ -2884,7 +2884,7 @@ screens:
     anchor: resources
     responsive_order: 2
   - id: pagination
-    title: pagination
+    title: 페이지 조회
     purpose: cursor·sort.
     priority: primary
     order: 3
@@ -2900,7 +2900,7 @@ screens:
     anchor: errors
     responsive_order: 4
   - id: versioning
-    title: versioning
+    title: 버전 관리
     purpose: OpenAPI와 deprecation.
     priority: primary
     order: 5
@@ -2908,7 +2908,7 @@ screens:
     anchor: versioning
     responsive_order: 5
   - id: download
-    title: OpenAPI
+    title: 공개 인터페이스 명세
     purpose: JSON 다운로드.
     priority: primary
     order: 6
@@ -3005,7 +3005,7 @@ screens:
   - 문의할 곳은 어디인가?
   sections:
   - id: mission
-    title: 미션
+    title: 운영 목적
     purpose: 제품 정의.
     priority: primary
     order: 1
@@ -3963,7 +3963,7 @@ screens:
     anchor: topic
     responsive_order: 1
   - id: events
-    title: event
+    title: 알림 유형
     purpose: 공개·소명·정정·공식확인.
     priority: primary
     order: 2
@@ -4102,7 +4102,7 @@ screens:
     anchor: preferences
     responsive_order: 3
   - id: delivery
-    title: delivery 상태
+    title: 전송 상태
     purpose: bounce/suppression.
     priority: primary
     order: 4
@@ -4383,7 +4383,7 @@ screens:
     anchor: content
     responsive_order: 2
   - id: data
-    title: 데이터/API
+    title: 데이터·공개 인터페이스
     purpose: license·rate.
     priority: primary
     order: 3
@@ -4727,7 +4727,7 @@ screens:
   - 언제까지 무엇을 해야 하는가?
   sections:
   - id: identity
-    title: 요청 identity
+    title: 요청 식별 정보
     purpose: 요청 ID·조직·사건 공개 범위.
     priority: primary
     order: 1
@@ -5796,7 +5796,7 @@ screens:
     anchor: environment
     responsive_order: 1
   - id: signin
-    title: SSO 로그인
+    title: 조직 계정 로그인
     purpose: OIDC 시작.
     priority: primary
     order: 2
@@ -6092,7 +6092,7 @@ screens:
     anchor: status
     responsive_order: 1
   - id: draft
-    title: draft 상태
+    title: 초안 상태
     purpose: server/local 안전 보존.
     priority: primary
     order: 2
@@ -6200,7 +6200,7 @@ screens:
   - 내 역할의 backlog는 무엇인가?
   sections:
   - id: critical
-    title: 긴급 blocker
+    title: 긴급 차단 요인
     purpose: publication/correction/security.
     priority: primary
     order: 1
@@ -6216,7 +6216,7 @@ screens:
     anchor: my-work
     responsive_order: 2
   - id: incidents
-    title: source/ops incident
+    title: 출처·운영 장애
     purpose: 영향.
     priority: primary
     order: 3
@@ -6224,7 +6224,7 @@ screens:
     anchor: incidents
     responsive_order: 3
   - id: queues
-    title: queue health
+    title: 대기열 상태
     purpose: review/response/job.
     priority: primary
     order: 4
@@ -6687,7 +6687,7 @@ screens:
   - 누가 담당하는가?
   sections:
   - id: scope
-    title: queue 상태
+    title: 대기열 상태
     purpose: SLA·count.
     priority: primary
     order: 1
@@ -6711,7 +6711,7 @@ screens:
     anchor: table
     responsive_order: 3
   - id: bulk
-    title: 제한된 bulk
+    title: 제한된 일괄 처리
     purpose: assign/label.
     priority: primary
     order: 4
@@ -6820,7 +6820,7 @@ screens:
   - 다음 조치는 무엇인가?
   sections:
   - id: identity
-    title: source·rule·freshness
+    title: 출처·규칙·최신성
     purpose: 입력 version.
     priority: primary
     order: 1
@@ -6836,7 +6836,7 @@ screens:
     anchor: calculation
     responsive_order: 2
   - id: quality
-    title: blocker·품질
+    title: 차단 요인·품질
     purpose: unit/VAT/bundle.
     priority: primary
     order: 3
@@ -6860,7 +6860,7 @@ screens:
     anchor: provenance
     responsive_order: 5
   - id: related
-    title: 관련 signal/case
+    title: 관련 신호·사건
     purpose: duplicate.
     priority: primary
     order: 6
@@ -6868,7 +6868,7 @@ screens:
     anchor: related
     responsive_order: 6
   - id: ai
-    title: AI 제안
+    title: 인공지능 제안
     purpose: 보조.
     priority: primary
     order: 7
@@ -6876,7 +6876,7 @@ screens:
     anchor: ai
     responsive_order: 7
   - id: decision
-    title: triage 결정
+    title: 분류 결정
     purpose: reason code.
     priority: primary
     order: 8
@@ -6995,7 +6995,7 @@ screens:
   - 누가 담당하고 다음 작업은 무엇인가?
   sections:
   - id: views
-    title: queue 보기
+    title: 업무 대기열
     purpose: investigation/editorial/review/publish.
     priority: primary
     order: 1
@@ -7128,7 +7128,7 @@ screens:
   - 다음 필수 작업은 무엇인가?
   sections:
   - id: header
-    title: identity·state·version
+    title: 식별 정보·상태·버전
     purpose: assignment·due.
     priority: primary
     order: 1
@@ -7136,7 +7136,7 @@ screens:
     anchor: header
     responsive_order: 1
   - id: known-unknown
-    title: Known/Unknown/Response
+    title: 확인·미확인·소명
     purpose: 핵심 요약.
     priority: primary
     order: 2
@@ -7144,7 +7144,7 @@ screens:
     anchor: known-unknown
     responsive_order: 2
   - id: readiness
-    title: 진행과 gate
+    title: 진행·통과 조건
     purpose: blocking task.
     priority: primary
     order: 3
@@ -7293,7 +7293,7 @@ screens:
     anchor: summary
     responsive_order: 1
   - id: signals
-    title: signal 목록
+    title: 탐지 신호 목록
     purpose: metric·state·link reason.
     priority: primary
     order: 2
@@ -7417,7 +7417,7 @@ screens:
   - 누락된 근거는 무엇인가?
   sections:
   - id: matrix
-    title: evidence matrix
+    title: 근거 관계표
     purpose: hypothesis/claim 관계.
     priority: primary
     order: 1
@@ -7441,7 +7441,7 @@ screens:
     anchor: list
     responsive_order: 3
   - id: gaps
-    title: 근거 gap
+    title: 근거 부족
     purpose: unresolved questions.
     priority: primary
     order: 4
@@ -7567,7 +7567,7 @@ screens:
     anchor: source
     responsive_order: 1
   - id: locator
-    title: locator
+    title: 정확한 위치
     purpose: page/row/field.
     priority: primary
     order: 2
@@ -7726,7 +7726,7 @@ screens:
   - 표현 정책을 지키는가?
   sections:
   - id: summary
-    title: claim readiness
+    title: 주장 준비도
     purpose: invalid/blocking.
     priority: primary
     order: 1
@@ -7734,7 +7734,7 @@ screens:
     anchor: summary
     responsive_order: 1
   - id: claims
-    title: claim 목록
+    title: 주장 목록
     purpose: type·visibility·review.
     priority: primary
     order: 2
@@ -7884,7 +7884,7 @@ screens:
   - 다음 조사 질문은 무엇인가?
   sections:
   - id: board
-    title: 가설 board
+    title: 가설 현황판
     purpose: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
     priority: primary
     order: 1
@@ -8048,7 +8048,7 @@ screens:
     anchor: verification
     responsive_order: 3
   - id: public-copy
-    title: 공개 excerpt
+    title: 공개 발췌문
     purpose: 원문/요약·redaction.
     priority: primary
     order: 4
@@ -8056,7 +8056,7 @@ screens:
     anchor: public-copy
     responsive_order: 4
   - id: timeline
-    title: 소명 timeline
+    title: 소명 이력
     purpose: reminder·extension.
     priority: primary
     order: 5
@@ -8166,7 +8166,7 @@ screens:
   - 중복 요청은 없는가?
   sections:
   - id: target
-    title: 대상·contact
+    title: 대상·연락처
     purpose: source·latest verification.
     priority: primary
     order: 1
@@ -8190,7 +8190,7 @@ screens:
     anchor: deadline
     responsive_order: 3
   - id: disclosure
-    title: 공개·privacy 안내
+    title: 공개·개인정보 안내
     purpose: template.
     priority: primary
     order: 4
@@ -8198,7 +8198,7 @@ screens:
     anchor: disclosure
     responsive_order: 4
   - id: preview
-    title: 이메일·portal preview
+    title: 이메일·포털 미리보기
     purpose: phishing guidance.
     priority: primary
     order: 5
@@ -8206,7 +8206,7 @@ screens:
     anchor: preview
     responsive_order: 5
   - id: gate
-    title: 발송 gate
+    title: 발송 조건
     purpose: duplicate/legal.
     priority: primary
     order: 6
@@ -8443,7 +8443,7 @@ screens:
   - 어떤 제안이 사람이 채택됐는가?
   sections:
   - id: identity
-    title: 실행 identity
+    title: 실행 식별 정보
     purpose: purpose·version·timestamps.
     priority: primary
     order: 1
@@ -8459,7 +8459,7 @@ screens:
     anchor: inputs
     responsive_order: 2
   - id: model
-    title: 모델·policy
+    title: 모델·정책
     purpose: provider·prompt version.
     priority: primary
     order: 3
@@ -8467,7 +8467,7 @@ screens:
     anchor: model
     responsive_order: 3
   - id: output
-    title: structured output
+    title: 구조화 출력
     purpose: validation.
     priority: primary
     order: 4
@@ -8475,7 +8475,7 @@ screens:
     anchor: output
     responsive_order: 4
   - id: citations
-    title: citation
+    title: 인용 근거
     purpose: source 존재.
     priority: primary
     order: 5
@@ -8483,7 +8483,7 @@ screens:
     anchor: citations
     responsive_order: 5
   - id: safety
-    title: safety
+    title: 안전성 검사
     purpose: injection/PII.
     priority: primary
     order: 6
@@ -8642,7 +8642,7 @@ screens:
     anchor: timeline
     responsive_order: 2
   - id: public-view
-    title: 공개 timeline preview
+    title: 공개 이력 미리보기
     purpose: 승인된 항목.
     priority: primary
     order: 3
@@ -8650,7 +8650,7 @@ screens:
     anchor: public-view
     responsive_order: 3
   - id: related
-    title: 관련 receipt
+    title: 관련 확인서
     purpose: event link.
     priority: primary
     order: 4
@@ -8749,7 +8749,7 @@ screens:
   - snapshot을 만들 준비가 됐는가?
   sections:
   - id: summary
-    title: readiness
+    title: 준비도
     purpose: complete/blocking.
     priority: primary
     order: 1
@@ -8757,7 +8757,7 @@ screens:
     anchor: summary
     responsive_order: 1
   - id: gates
-    title: gate checklist
+    title: 통과 조건 점검표
     purpose: evidence/response/privacy/language.
     priority: primary
     order: 2
@@ -8773,7 +8773,7 @@ screens:
     anchor: tasks
     responsive_order: 3
   - id: reviews
-    title: 기존 review
+    title: 기존 검토
     purpose: stale/valid.
     priority: primary
     order: 4
@@ -8781,7 +8781,7 @@ screens:
     anchor: reviews
     responsive_order: 4
   - id: snapshot
-    title: snapshot 생성
+    title: 스냅샷 생성
     purpose: included version.
     priority: primary
     order: 5
@@ -8883,7 +8883,7 @@ screens:
   - 모바일·정정·citation이 올바른가?
   sections:
   - id: watermark
-    title: preview 상태
+    title: 미리보기 상태
     purpose: DRAFT·snapshot hash.
     priority: primary
     order: 1
@@ -8907,7 +8907,7 @@ screens:
     anchor: checks
     responsive_order: 3
   - id: variants
-    title: viewport/print
+    title: 화면 유형·인쇄
     purpose: compact/wide/print.
     priority: primary
     order: 4
@@ -9025,7 +9025,7 @@ screens:
   - 긴급 제한이 필요한가?
   sections:
   - id: history
-    title: revision·정정 이력
+    title: 개정·정정 이력
     purpose: immutable.
     priority: primary
     order: 1
@@ -9173,7 +9173,7 @@ screens:
   - 고위험 행동의 reason과 receipt는 무엇인가?
   sections:
   - id: scope
-    title: audit scope
+    title: 감사 범위
     purpose: case-linked.
     priority: primary
     order: 1
@@ -9197,7 +9197,7 @@ screens:
     anchor: events
     responsive_order: 3
   - id: exports
-    title: export
+    title: 내보내기
     purpose: watermark·audit.
     priority: primary
     order: 4
@@ -9321,7 +9321,7 @@ screens:
     anchor: filters
     responsive_order: 2
   - id: queue
-    title: snapshot 목록
+    title: 스냅샷 목록
     purpose: hash·case·response·changes.
     priority: primary
     order: 3
@@ -9429,7 +9429,7 @@ screens:
   - 변경 요청 또는 승인 이유는 무엇인가?
   sections:
   - id: identity
-    title: snapshot
+    title: 스냅샷 정보
     purpose: hash·version·author·stale.
     priority: primary
     order: 1
@@ -9437,7 +9437,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: preview
-    title: 공개 preview
+    title: 공개 미리보기
     purpose: exact content.
     priority: primary
     order: 2
@@ -9445,7 +9445,7 @@ screens:
     anchor: preview
     responsive_order: 2
   - id: matrix
-    title: claim/evidence/response
+    title: 주장·증거·답변
     purpose: coverage.
     priority: primary
     order: 3
@@ -9461,7 +9461,7 @@ screens:
     anchor: diff
     responsive_order: 4
   - id: risks
-    title: risk·blocker
+    title: 위험·차단 요인
     purpose: legal/privacy/source.
     priority: primary
     order: 5
@@ -9622,7 +9622,7 @@ screens:
     anchor: target
     responsive_order: 1
   - id: gates
-    title: 최종 gate
+    title: 최종 검증
     purpose: review·response·privacy·source.
     priority: primary
     order: 2
@@ -9766,7 +9766,7 @@ screens:
   - 누가 처리하는가?
   sections:
   - id: urgent
-    title: 긴급 queue
+    title: 긴급 대기열
     purpose: privacy/identity/legal.
     priority: primary
     order: 1
@@ -10121,7 +10121,7 @@ screens:
     anchor: filters
     responsive_order: 2
   - id: registry
-    title: source 목록
+    title: 출처 목록
     purpose: sync·schema·lag·quarantine.
     priority: primary
     order: 3
@@ -10137,7 +10137,7 @@ screens:
     anchor: impact
     responsive_order: 4
   - id: ownership
-    title: owner/runbook
+    title: 담당자·대응 절차
     purpose: 연락·SLA.
     priority: primary
     order: 5
@@ -10256,7 +10256,7 @@ screens:
   - 안전한 다음 조치는 무엇인가?
   sections:
   - id: identity
-    title: source identity
+    title: 출처 식별 정보
     purpose: owner·access·terms.
     priority: primary
     order: 1
@@ -10264,7 +10264,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: status
-    title: health·SLA
+    title: 상태·서비스 수준 목표
     purpose: last success·lag.
     priority: primary
     order: 2
@@ -10272,7 +10272,7 @@ screens:
     anchor: status
     responsive_order: 2
   - id: checkpoint
-    title: checkpoint
+    title: 처리 기준점
     purpose: pagination cursor·watermark.
     priority: primary
     order: 3
@@ -10280,7 +10280,7 @@ screens:
     anchor: checkpoint
     responsive_order: 3
   - id: quality
-    title: quality metrics
+    title: 품질 지표
     purpose: duplicate/missing/parser.
     priority: primary
     order: 4
@@ -10288,7 +10288,7 @@ screens:
     anchor: quality
     responsive_order: 4
   - id: schema
-    title: schema version
+    title: 스키마 버전
     purpose: drift.
     priority: primary
     order: 5
@@ -10304,7 +10304,7 @@ screens:
     anchor: downstream
     responsive_order: 6
   - id: runbook
-    title: runbook
+    title: 대응 절차
     purpose: safe action.
     priority: primary
     order: 7
@@ -10412,7 +10412,7 @@ screens:
   - 재실행이나 영향 분석이 필요한가?
   sections:
   - id: summary
-    title: run health
+    title: 실행 상태
     purpose: success/failure/lag.
     priority: primary
     order: 1
@@ -10428,7 +10428,7 @@ screens:
     anchor: filters
     responsive_order: 2
   - id: runs
-    title: run 목록
+    title: 실행 목록
     purpose: records·checkpoint·duration·error.
     priority: primary
     order: 3
@@ -10436,7 +10436,7 @@ screens:
     anchor: runs
     responsive_order: 3
   - id: schedule
-    title: schedule
+    title: 실행 일정
     purpose: next run.
     priority: primary
     order: 4
@@ -10537,7 +10537,7 @@ screens:
   - 실패가 downstream에 어떤 영향을 주는가?
   sections:
   - id: identity
-    title: run identity
+    title: 실행 식별 정보
     purpose: trigger·version·time.
     priority: primary
     order: 1
@@ -10545,7 +10545,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: scope
-    title: scope
+    title: 실행 범위
     purpose: page/time/checkpoint.
     priority: primary
     order: 2
@@ -10553,7 +10553,7 @@ screens:
     anchor: scope
     responsive_order: 2
   - id: counts
-    title: record flow
+    title: 처리 건수
     purpose: fetched/new/duplicate/quarantined.
     priority: primary
     order: 3
@@ -10569,7 +10569,7 @@ screens:
     anchor: errors
     responsive_order: 4
   - id: artifacts
-    title: artifacts
+    title: 산출물
     purpose: log·schema sample·checksum.
     priority: primary
     order: 5
@@ -10577,7 +10577,7 @@ screens:
     anchor: artifacts
     responsive_order: 5
   - id: impact
-    title: downstream
+    title: 후속 영향
     purpose: jobs/rules/public.
     priority: primary
     order: 6
@@ -10701,7 +10701,7 @@ screens:
   - shadow parse가 안전한가?
   sections:
   - id: alert
-    title: drift identity
+    title: 변경 감지 정보
     purpose: detected version/time.
     priority: primary
     order: 1
@@ -10709,7 +10709,7 @@ screens:
     anchor: alert
     responsive_order: 1
   - id: diff
-    title: schema diff
+    title: 스키마 차이
     purpose: add/remove/type.
     priority: primary
     order: 2
@@ -10717,7 +10717,7 @@ screens:
     anchor: diff
     responsive_order: 2
   - id: samples
-    title: redacted samples
+    title: 가림 처리 표본
     purpose: frequency.
     priority: primary
     order: 3
@@ -10725,7 +10725,7 @@ screens:
     anchor: samples
     responsive_order: 3
   - id: impact
-    title: dependency impact
+    title: 의존 관계 영향
     purpose: parser/field/rule/public.
     priority: primary
     order: 4
@@ -10733,7 +10733,7 @@ screens:
     anchor: impact
     responsive_order: 4
   - id: mapping
-    title: proposed mapping
+    title: 제안 매핑
     purpose: code/task.
     priority: primary
     order: 5
@@ -10741,7 +10741,7 @@ screens:
     anchor: mapping
     responsive_order: 5
   - id: shadow
-    title: shadow result
+    title: 병행 검증 결과
     purpose: fixture/records.
     priority: primary
     order: 6
@@ -10908,7 +10908,7 @@ screens:
     anchor: downstream
     responsive_order: 4
   - id: safety
-    title: safety
+    title: 안전 장치
     purpose: rate/budget/kill.
     priority: primary
     order: 5
@@ -11158,7 +11158,7 @@ screens:
   - 어떤 결과에 사용됐는가?
   sections:
   - id: identity
-    title: version identity
+    title: 버전 식별 정보
     purpose: status·owner·hash.
     priority: primary
     order: 1
@@ -11174,7 +11174,7 @@ screens:
     anchor: definition
     responsive_order: 2
   - id: cohort
-    title: cohort
+    title: 비교 집단
     purpose: include/exclude.
     priority: primary
     order: 3
@@ -11182,7 +11182,7 @@ screens:
     anchor: cohort
     responsive_order: 3
   - id: blockers
-    title: blocker
+    title: 차단 요인
     purpose: quality guard.
     priority: primary
     order: 4
@@ -11190,7 +11190,7 @@ screens:
     anchor: blockers
     responsive_order: 4
   - id: diff
-    title: version diff
+    title: 버전 차이
     purpose: previous.
     priority: primary
     order: 5
@@ -11313,7 +11313,7 @@ screens:
   - shadow가 production과 어떻게 다른가?
   sections:
   - id: dataset
-    title: 평가 dataset
+    title: 평가 자료
     purpose: version·coverage.
     priority: primary
     order: 1
@@ -11321,7 +11321,7 @@ screens:
     anchor: dataset
     responsive_order: 1
   - id: metrics
-    title: 품질 metric
+    title: 품질 지표
     purpose: precision/recall where valid.
     priority: primary
     order: 2
@@ -11345,7 +11345,7 @@ screens:
     anchor: threshold
     responsive_order: 4
   - id: shadow
-    title: shadow
+    title: 병행 평가
     purpose: count·cost·diff.
     priority: primary
     order: 5
@@ -11487,7 +11487,7 @@ screens:
     anchor: target
     responsive_order: 1
   - id: gates
-    title: quality gate
+    title: 품질 검증
     purpose: eval/shadow/review.
     priority: primary
     order: 2
@@ -11511,7 +11511,7 @@ screens:
     anchor: schedule
     responsive_order: 4
   - id: rollback
-    title: rollback
+    title: 되돌리기
     purpose: target/version.
     priority: primary
     order: 5
@@ -11657,7 +11657,7 @@ screens:
   - 어떤 runbook action이 필요한가?
   sections:
   - id: incidents
-    title: active incident
+    title: 진행 중 장애
     purpose: 영향·owner·started.
     priority: primary
     order: 1
@@ -11665,7 +11665,7 @@ screens:
     anchor: incidents
     responsive_order: 1
   - id: services
-    title: 서비스 health
+    title: 서비스 상태
     purpose: API/web/worker.
     priority: primary
     order: 2
@@ -11673,7 +11673,7 @@ screens:
     anchor: services
     responsive_order: 2
   - id: pipelines
-    title: pipeline
+    title: 처리 흐름
     purpose: ingest/analysis/projection.
     priority: primary
     order: 3
@@ -11681,7 +11681,7 @@ screens:
     anchor: pipelines
     responsive_order: 3
   - id: queues
-    title: queue·DLQ
+    title: 작업 대기열·실패 격리함
     purpose: age/backlog.
     priority: primary
     order: 4
@@ -11705,7 +11705,7 @@ screens:
     anchor: security
     responsive_order: 6
   - id: slo
-    title: SLO
+    title: 서비스 수준 목표
     purpose: trend·error budget.
     priority: primary
     order: 7
@@ -11802,7 +11802,7 @@ screens:
   - DLQ에서 어떤 조치가 필요한가?
   sections:
   - id: summary
-    title: queue health
+    title: 대기열 상태
     purpose: backlog/oldest/DLQ.
     priority: primary
     order: 1
@@ -11818,7 +11818,7 @@ screens:
     anchor: filters
     responsive_order: 2
   - id: jobs
-    title: job 목록
+    title: 작업 목록
     purpose: attempt/lease/next retry.
     priority: primary
     order: 3
@@ -11826,7 +11826,7 @@ screens:
     anchor: jobs
     responsive_order: 3
   - id: bulk
-    title: 제한 bulk
+    title: 제한된 일괄 처리
     purpose: pause/assign category.
     priority: primary
     order: 4
@@ -11954,7 +11954,7 @@ screens:
   - 재시도가 안전한가?
   sections:
   - id: identity
-    title: job identity
+    title: 작업 식별 정보
     purpose: type·aggregate·created.
     priority: primary
     order: 1
@@ -11962,7 +11962,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: state
-    title: 상태·lease
+    title: 상태·실행 소유권
     purpose: owner/fencing/heartbeat.
     priority: primary
     order: 2
@@ -11970,7 +11970,7 @@ screens:
     anchor: state
     responsive_order: 2
   - id: attempts
-    title: attempt history
+    title: 시도 이력
     purpose: error/fingerprint/backoff.
     priority: primary
     order: 3
@@ -11978,7 +11978,7 @@ screens:
     anchor: attempts
     responsive_order: 3
   - id: payload
-    title: payload reference
+    title: 입력 자료 참조
     purpose: redacted.
     priority: primary
     order: 4
@@ -11986,7 +11986,7 @@ screens:
     anchor: payload
     responsive_order: 4
   - id: effects
-    title: side effects
+    title: 후속 반영
     purpose: outbox/inbox/projection.
     priority: primary
     order: 5
@@ -12002,7 +12002,7 @@ screens:
     anchor: recovery
     responsive_order: 6
   - id: audit
-    title: event
+    title: 이벤트
     purpose: commands.
     priority: primary
     order: 7
@@ -12133,7 +12133,7 @@ screens:
   - 한도 초과 시 무엇이 중단되는가?
   sections:
   - id: envelope
-    title: 예산 envelope
+    title: 예산 범위
     purpose: daily/monthly.
     priority: primary
     order: 1
@@ -12149,7 +12149,7 @@ screens:
     anchor: spend
     responsive_order: 2
   - id: forecast
-    title: forecast
+    title: 지출 전망
     purpose: confidence/assumption.
     priority: primary
     order: 3
@@ -12290,7 +12290,7 @@ screens:
   - fallback과 데이터 전송 정책은 무엇인가?
   sections:
   - id: status
-    title: provider health
+    title: 공급자 상태
     purpose: service/status/last checked.
     priority: primary
     order: 1
@@ -12298,7 +12298,7 @@ screens:
     anchor: status
     responsive_order: 1
   - id: quotas
-    title: quota
+    title: 사용 한도
     purpose: usage/reset.
     priority: primary
     order: 2
@@ -12306,7 +12306,7 @@ screens:
     anchor: quotas
     responsive_order: 2
   - id: latency
-    title: latency/error
+    title: 지연·오류
     purpose: SLO.
     priority: primary
     order: 3
@@ -12322,7 +12322,7 @@ screens:
     anchor: privacy
     responsive_order: 4
   - id: fallback
-    title: fallback
+    title: 대체 경로
     purpose: allowed routing.
     priority: primary
     order: 5
@@ -12330,13 +12330,21 @@ screens:
     anchor: fallback
     responsive_order: 5
   - id: incidents
-    title: incident
+    title: 장애 이력
     purpose: impact/history.
     priority: primary
     order: 6
     component: OperationsStatusPanel
     anchor: incidents
     responsive_order: 6
+  - id: model-catalog
+    title: 모델 카탈로그
+    purpose: 'track prefix 내 relay created 최대. 단가 미설정: 비용 0으로 기록.'
+    priority: primary
+    order: 7
+    component: EvidenceLedger
+    anchor: model-catalog
+    responsive_order: 7
   actions:
   - id: open-provider
     label: 공급자 상세
@@ -12347,18 +12355,38 @@ screens:
     confirmation_required: false
     local_only: true
   - id: disable-routing
-    label: 라우팅 중지
-    capability: kill_switch.execute
+    label: 라우팅 중지 제안
+    capability: actions.propose
     operation_id: disableProviderRouting
     guard: scope + reason
-    interaction_kind: DESTRUCTIVE_CONFIRMATION
-    assurance_level: STEP_UP
-    step_up_required: true
-    confirmation_required: true
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
   - id: test
-    label: 연결 테스트
-    capability: jobs.operate
+    label: 연결 테스트 제안
+    capability: actions.propose
     operation_id: testProviderConnection
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+  - id: upgrade-model
+    label: 모델 업그레이드 제안
+    capability: actions.propose
+    operation_id: upgradeProviderModel
+    expand_request_objects:
+    - dataPolicy
+    guard: connection test + expected version + data policy
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+  - id: auto-upgrade
+    label: 자동 업그레이드 설정 제안
+    capability: actions.propose
+    operation_id: setModelAutoUpgrade
+    guard: expected version + track
     interaction_kind: COMMAND
     assurance_level: ACTIVE_SESSION
     step_up_required: false
@@ -12373,24 +12401,25 @@ screens:
     path: /v1/internal/queries/list-providers
     request_schema: listProvidersQuery
     response_schema: ProvidersPage
-  - operation_id: disableProviderRouting
+  - operation_id: createActionProposal
     status: READY
     api: control-api
-    purpose: provider route disable
+    purpose: provider control proposal creation
     blocking: false
     method: POST
-    path: /v1/internal/commands/disable-provider-routing
-    request_schema: disableProviderRoutingRequest
-    response_schema: disableProviderRoutingReceipt
-  - operation_id: testProviderConnection
+    path: /v1/internal/action-proposals
+    request_schema: CreateActionProposalRequestV1
+    response_schema: ActionProposalReceiptV1
+    success_status: 201
+  - operation_id: listRelayModels
     status: READY
     api: control-api
-    purpose: safe connectivity test
-    blocking: false
-    method: POST
-    path: /v1/internal/commands/test-provider-connection
-    request_schema: testProviderConnectionRequest
-    response_schema: testProviderConnectionReceipt
+    purpose: relay model catalog
+    blocking: true
+    method: GET
+    path: /v1/internal/queries/list-relay-models
+    request_schema: listRelayModelsQuery
+    response_schema: RelayModelsPage
   state_profile: internal-data
   special_states:
   - provider-outage
@@ -12449,7 +12478,7 @@ screens:
   - 누가 승인했는가?
   sections:
   - id: active
-    title: 활성 switch
+    title: 활성 비상 중지
     purpose: scope·reason·expiry.
     priority: primary
     order: 1
@@ -12457,7 +12486,7 @@ screens:
     anchor: active
     responsive_order: 1
   - id: catalog
-    title: switch 목록
+    title: 비상 중지 목록
     purpose: safe fallback.
     priority: primary
     order: 2
@@ -12489,7 +12518,7 @@ screens:
     anchor: history
     responsive_order: 5
   - id: runbook
-    title: runbook
+    title: 대응 절차
     purpose: verification.
     priority: primary
     order: 6
@@ -12626,7 +12655,7 @@ screens:
     anchor: query
     responsive_order: 1
   - id: filters
-    title: risk·surface·result
+    title: 위험·영역·결과
     purpose: high impact.
     priority: primary
     order: 2
@@ -12650,7 +12679,7 @@ screens:
     anchor: integrity
     responsive_order: 4
   - id: export
-    title: export
+    title: 내보내기
     purpose: scope·watermark.
     priority: primary
     order: 5
@@ -12927,7 +12956,7 @@ screens:
   - 변경 영향은 무엇인가?
   sections:
   - id: identity
-    title: identity
+    title: 신원 정보
     purpose: IdP·status.
     priority: primary
     order: 1
@@ -12935,7 +12964,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: roles
-    title: role·scope
+    title: 역할·권한 범위
     purpose: grant/expiry.
     priority: primary
     order: 2
@@ -12943,7 +12972,7 @@ screens:
     anchor: roles
     responsive_order: 2
   - id: conflicts
-    title: SoD
+    title: 직무 분리
     purpose: conflicting roles.
     priority: primary
     order: 3
@@ -12951,7 +12980,7 @@ screens:
     anchor: conflicts
     responsive_order: 3
   - id: sessions
-    title: session
+    title: 세션
     purpose: active/revoke.
     priority: primary
     order: 4
@@ -12959,7 +12988,7 @@ screens:
     anchor: sessions
     responsive_order: 4
   - id: requests
-    title: pending
+    title: 대기 요청
     purpose: reason/approver.
     priority: primary
     order: 5
@@ -12967,7 +12996,7 @@ screens:
     anchor: requests
     responsive_order: 5
   - id: activity
-    title: 고위험 audit
+    title: 고위험 감사
     purpose: 최소 범위.
     priority: primary
     order: 6
@@ -12975,7 +13004,7 @@ screens:
     anchor: activity
     responsive_order: 6
   - id: offboarding
-    title: offboarding
+    title: 접근 해제 계획
     purpose: revoke plan.
     priority: primary
     order: 7
@@ -13122,7 +13151,7 @@ screens:
   - 누가 얼마나 오래 갖고 있는가?
   sections:
   - id: catalog
-    title: role catalog
+    title: 역할 목록
     purpose: description/status.
     priority: primary
     order: 1
@@ -13130,7 +13159,7 @@ screens:
     anchor: catalog
     responsive_order: 1
   - id: capabilities
-    title: capability matrix
+    title: 권한 행렬
     purpose: read/write/high impact.
     priority: primary
     order: 2
@@ -13138,7 +13167,7 @@ screens:
     anchor: capabilities
     responsive_order: 2
   - id: conflicts
-    title: SoD
+    title: 직무 분리
     purpose: conflicting roles.
     priority: primary
     order: 3
@@ -13146,7 +13175,7 @@ screens:
     anchor: conflicts
     responsive_order: 3
   - id: grants
-    title: grant stats
+    title: 권한 부여 현황
     purpose: count/expiry.
     priority: primary
     order: 4
@@ -13267,7 +13296,7 @@ screens:
   - 권한 문제를 어디에 요청하는가?
   sections:
   - id: identity
-    title: 내 identity
+    title: 신원 정보
     purpose: IdP·조직.
     priority: primary
     order: 1
@@ -13275,7 +13304,7 @@ screens:
     anchor: identity
     responsive_order: 1
   - id: roles
-    title: 역할·scope
+    title: 역할·권한 범위
     purpose: read-only.
     priority: primary
     order: 2

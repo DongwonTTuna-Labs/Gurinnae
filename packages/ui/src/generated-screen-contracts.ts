@@ -3993,7 +3993,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "외부 공급자 상태",
     persona: "조사 담당자",
     primaryActionId: "test",
-    primaryActionLabel: "연결 테스트",
+    primaryActionLabel: "연결 테스트 제안",
     sections: [
       {
         id: "status",
@@ -4036,6 +4036,13 @@ export const ROUTE_SCREEN_CONTRACTS = {
         testId: "ops_005__section__incidents",
         component: "OperationsStatusPanel",
         fields: ["incidents", "status"],
+      },
+      {
+        id: "model-catalog",
+        region: "model-catalog",
+        testId: "ops_005__section__model-catalog",
+        component: "EvidenceLedger",
+        fields: ["items", "currentProviders", "syncStatus", "asOf"],
       },
     ],
   },

@@ -25,6 +25,8 @@ pub struct Config {
     pub data_go_kr_service_key: Option<String>,
     pub open_dart_api_key: Option<String>,
     pub brave_search_api_key: Option<String>,
+    pub ai_relay_host: String,
+    pub ai_relay_api_key: Option<String>,
     pub openai_api_key: Option<String>,
     pub anthropic_api_key: Option<String>,
     pub google_api_key: Option<String>,
@@ -58,6 +60,11 @@ impl Config {
         let (environment, bind, oidc_issuer_host) = base_environment()?;
         let (source_hosts, source_host_bindings, public_research_hosts) = source_config()?;
         let ai_hosts = host_list("AI_PROVIDER_HOSTS")?;
+        let ai_relay_host = normalize_host(
+            optional("AI_RELAY_HOST")
+                .as_deref()
+                .unwrap_or("relay-ai.dongwontuna.net"),
+        )?;
         let challenge_hosts = challenge_config(&environment)?;
         let communication_hosts = communication_config()?;
         let object_store = object_store_config(&environment)?;
@@ -81,6 +88,8 @@ impl Config {
             data_go_kr_service_key: optional("DATA_GO_KR_SERVICE_KEY"),
             open_dart_api_key: optional("OPEN_DART_API_KEY"),
             brave_search_api_key: optional("BRAVE_SEARCH_API_KEY"),
+            ai_relay_host,
+            ai_relay_api_key: optional("AI_RELAY_API_KEY"),
             openai_api_key: optional("OPENAI_API_KEY"),
             anthropic_api_key: optional("ANTHROPIC_API_KEY"),
             google_api_key: optional("GOOGLE_GENERATIVE_AI_API_KEY"),

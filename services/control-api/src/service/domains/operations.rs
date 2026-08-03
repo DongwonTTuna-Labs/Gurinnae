@@ -1,6 +1,8 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+mod provider_models;
+
 fn unexpected_null() -> ServiceError {
     db(sqlx::Error::Decode(Box::new(
         sqlx::error::UnexpectedNullError,
@@ -15,7 +17,9 @@ pub(in crate::service) enum Command {
     QuarantineJob,
     RetryJob,
     RetryJobs,
+    SetModelAutoUpgrade,
     TestProviderConnection,
+    UpgradeProviderModel,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -24,6 +28,7 @@ pub(in crate::service) enum Query {
     GetOperationsOverview,
     ListJobs,
     ListProviders,
+    ListRelayModels,
 }
 
 pub(super) const OPERATIONS: &[(&str, Handler)] = &[
@@ -52,6 +57,10 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
         Handler::Query(QueryHandler::Operations(Query::ListProviders)),
     ),
     (
+        "listRelayModels",
+        Handler::Query(QueryHandler::Operations(Query::ListRelayModels)),
+    ),
+    (
         "pauseJobQueue",
         Handler::Command(CommandHandler::Operations(Command::PauseJobQueue)),
     ),
@@ -68,8 +77,16 @@ pub(super) const OPERATIONS: &[(&str, Handler)] = &[
         Handler::Command(CommandHandler::Operations(Command::RetryJobs)),
     ),
     (
+        "setModelAutoUpgrade",
+        Handler::Command(CommandHandler::Operations(Command::SetModelAutoUpgrade)),
+    ),
+    (
         "testProviderConnection",
         Handler::Command(CommandHandler::Operations(Command::TestProviderConnection)),
+    ),
+    (
+        "upgradeProviderModel",
+        Handler::Command(CommandHandler::Operations(Command::UpgradeProviderModel)),
     ),
 ];
 
@@ -81,20 +98,35 @@ pub(super) async fn apply(
     command: Command,
     operation: &str,
     payload: &Map<String, Value>,
-    id: Uuid,
+    _id: Uuid,
     actor: Uuid,
     tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
+) -> Result<Map<String, Value>, ServiceError> {
+    if direct_provider_control_command(command) {
+        return Err(ServiceError::ProposalRequired);
+    }
     match command {
         Command::CancelJob | Command::QuarantineJob => {
-            arm_canceljob_quarantinejob(operation, payload, tx).await
+            no_effect(arm_canceljob_quarantinejob(operation, payload, tx).await)
         }
-        Command::DisableProviderRouting => arm_disableproviderrouting(id, tx).await,
-        Command::PauseJobQueue => arm_pausejobqueue(payload, actor, tx).await,
-        Command::RetryJob => arm_retryjob(payload, tx).await,
-        Command::RetryJobs => arm_retryjobs(payload, actor, tx).await,
-        Command::TestProviderConnection => arm_testproviderconnection(payload, id, actor, tx).await,
+        Command::DisableProviderRouting
+        | Command::SetModelAutoUpgrade
+        | Command::TestProviderConnection
+        | Command::UpgradeProviderModel => Err(ServiceError::ProposalRequired),
+        Command::PauseJobQueue => no_effect(arm_pausejobqueue(payload, actor, tx).await),
+        Command::RetryJob => no_effect(arm_retryjob(payload, tx).await),
+        Command::RetryJobs => no_effect(arm_retryjobs(payload, actor, tx).await),
     }
+}
+
+fn direct_provider_control_command(command: Command) -> bool {
+    matches!(
+        command,
+        Command::DisableProviderRouting
+            | Command::SetModelAutoUpgrade
+            | Command::TestProviderConnection
+            | Command::UpgradeProviderModel
+    )
 }
 
 pub(super) async fn query(
@@ -109,7 +141,13 @@ pub(super) async fn query(
         Query::GetOperationsOverview => operations_query(pool).await,
         Query::ListJobs => list_jobs_query(parameters, pool).await,
         Query::ListProviders => list_providers_query(parameters, pool).await,
+        Query::ListRelayModels => provider_models::list_relay_models(pool).await,
     }
+}
+
+fn no_effect(result: Result<(), ServiceError>) -> Result<Map<String, Value>, ServiceError> {
+    result?;
+    Ok(Map::new())
 }
 
 async fn arm_canceljob_quarantinejob(
@@ -124,26 +162,6 @@ async fn arm_canceljob_quarantinejob(
             "QUARANTINED"
         };
         sqlx::query!("UPDATE ops.jobs SET status=$2::ops.job_status,lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,run_after=CASE WHEN $2='QUEUED' THEN clock_timestamp() ELSE run_after END WHERE id=$1", job, status as _).execute(&mut **tx).await.map_err(db)?;
-    }
-
-    Ok(())
-}
-
-async fn arm_disableproviderrouting(
-    id: Uuid,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let changed = sqlx::query!(
-        "UPDATE ops.provider_configs SET enabled=false,last_connection_test_status='DISABLED' \
-         WHERE id=$1",
-        id,
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?
-    .rows_affected();
-    if changed != 1 {
-        return Err(ServiceError::NotFound);
     }
 
     Ok(())
@@ -250,72 +268,6 @@ async fn arm_retryjobs(
     Ok(())
 }
 
-async fn arm_testproviderconnection(
-    payload: &Map<String, Value>,
-    id: Uuid,
-    actor: Uuid,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let provider = uuid_value(payload, &["providerId"]).ok_or(ServiceError::InvalidRequest)?;
-    let enabled: bool = sqlx::query_scalar!(
-        "SELECT enabled FROM ops.provider_configs WHERE id=$1 FOR UPDATE",
-        provider,
-    )
-    .fetch_optional(&mut **tx)
-    .await
-    .map_err(db)?
-    .ok_or(ServiceError::NotFound)?;
-    if !enabled {
-        return Err(ServiceError::InvalidRequest);
-    }
-    sqlx::query!(
-        "INSERT INTO ops.provider_connection_tests(id,provider_id,test_model,status, \
-         requested_by,reason) VALUES($1,$2,$3,'QUEUED',$4,$5)",
-        id,
-        provider,
-        string_value(payload, "testModel").ok_or(ServiceError::InvalidRequest)?,
-        actor,
-        payload.get("reason").and_then(Value::as_str),
-    )
-    .execute(&mut **tx)
-    .await
-    .map_err(db)?;
-    let communication_config_id: Option<Uuid> = sqlx::query_scalar!(
-        "SELECT communication_provider_config_id \
-           FROM ops.communication_provider_bindings \
-          WHERE generic_provider_id=$1",
-        provider,
-    )
-    .fetch_optional(&mut **tx)
-    .await
-    .map_err(db)?;
-    let (job_type, worker, job_payload) = match communication_config_id {
-        Some(config_id) => (
-            "COMMUNICATION_PROVIDER_PREFLIGHT",
-            "notification-worker",
-            json!({
-                "providerConnectionTestId": id,
-                "providerConfigId": config_id,
-            }),
-        ),
-        None => (
-            "PROVIDER_CONNECTION_TEST",
-            "analysis-worker",
-            json!({"providerConnectionTestId":id}),
-        ),
-    };
-    enqueue_runtime_job(
-        tx,
-        job_type,
-        worker,
-        job_payload,
-        format!("provider-connection-test:{id}"),
-    )
-    .await?;
-
-    Ok(())
-}
-
 async fn job_query(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
@@ -397,4 +349,28 @@ fn list_response(
     let response = json!({"items":items,"appliedFilters":parameters,
         "asOf":format_time(OffsetDateTime::now_utc())?});
     Ok(response)
+}
+
+#[cfg(test)]
+mod proposal_fence_tests {
+    use super::*;
+
+    #[test]
+    fn only_provider_control_commands_are_fenced_to_proposals() {
+        for command in [
+            Command::DisableProviderRouting,
+            Command::SetModelAutoUpgrade,
+            Command::TestProviderConnection,
+            Command::UpgradeProviderModel,
+        ] {
+            assert!(direct_provider_control_command(command));
+        }
+        for command in [
+            Command::CancelJob,
+            Command::RetryJob,
+            Command::PauseJobQueue,
+        ] {
+            assert!(!direct_provider_control_command(command));
+        }
+    }
 }

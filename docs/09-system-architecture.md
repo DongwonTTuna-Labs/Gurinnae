@@ -103,11 +103,11 @@ Rust DTO + Actix handler + Utoipa
 → SvelteKit server-only wrapper
 ```
 
-- 전체 operation: 212
-- Query: 107
-- Command: 105
-- HTTP non-GET command: 102
-- Public/Submission/Control/Identity: 41/34/131/6
+- 전체 operation: 215
+- Query: 108
+- Command: 107
+- HTTP non-GET command: 104
+- Public/Submission/Control/Identity: 41/34/134/6
 
 Generated artifact는 직접 수정하지 않는다. OpenAPI와 client는 clean regeneration 후 diff가 0이어야 한다.
 
@@ -221,7 +221,7 @@ Gateway는 DNS/IP 재검증, private/link-local/metadata IP 차단, redirect 재
 - PostgreSQL 18.4 migration/privilege/RLS/runtime security test
 - SQLx live prepare + offline build
 - 다섯 OpenAPI의 공식 validation과 네 client generation/strict compile
-- 94개 화면·212개 operation E2E
+- 94개 화면·215개 operation E2E
 - 258개 acceptance scenario executable receipt
 - 300개 detection oracle + 50개 agent eval
 - live connector recorded contract test와 production preflight

@@ -20,6 +20,20 @@ LAYERS = {
 }
 CAMEL = re.compile(r'^[a-z][A-Za-z0-9]*$')
 HTTP_STATUS = re.compile(r'^[1-5][0-9]{2}$')
+PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS = frozenset({
+    'disableProviderRouting',
+    'setModelAutoUpgrade',
+    'testProviderConnection',
+    'upgradeProviderModel',
+})
+PROVIDER_CONTROL_DIRECT_HTTP_EFFECT = {
+    'entrypoint': 'ACTION_PROPOSAL',
+    'state_effect': 'UNCHANGED',
+    'writes': [],
+    'outbox_events': [],
+    'external_effects': [],
+    'authorized_effect_owner': 'private.ExecuteProviderControl',
+}
 
 
 def _ops(doc):
@@ -52,19 +66,24 @@ def validate(root: Path, result: Validation) -> None:
     addendum_bindings = addendum_resources.get('operation_bindings', {})
     errors = load_yaml(root / 'specs/api/error-code-catalog.yaml')['errors']
     error_by = {error['code']: error for error in errors}
+    additive_error_by = addendum_resources['error_catalog_additions']
 
     result.require(contract['status'] == 'FINAL', 'operation contract must be FINAL')
     result.require(contract['specification_version'] == '13.0.0', 'operation contract version mismatch')
-    result.require(len(operations) == 212, f'expected 212 operations, found {len(operations)}')
+    result.require(len(operations) == 215, f'expected 215 operations, found {len(operations)}')
     result.require(len(by_id) == len(operations), 'operation IDs are not globally unique')
     counts = collections.Counter(op['api'] for op in operations)
     result.require(
-        counts == {'public-api': 41, 'submission-api': 34, 'control-api': 131, 'identity-provider': 6},
+        counts == {'public-api': 41, 'submission-api': 34, 'control-api': 134, 'identity-provider': 6},
         f'wrong API counts: {dict(counts)}',
     )
     kinds = collections.Counter(op['operation_kind'] for op in operations)
-    result.require(kinds == {'QUERY': 107, 'COMMAND': 105}, f'wrong operation kinds: {dict(kinds)}')
-    result.require(sum(op['method'] != 'GET' for op in operations) == 102, 'expected 102 non-GET HTTP commands')
+    result.require(kinds == {'QUERY': 108, 'COMMAND': 107}, f'wrong operation kinds: {dict(kinds)}')
+    result.require(sum(op['method'] != 'GET' for op in operations) == 104, 'expected 104 non-GET HTTP commands')
+    result.require(
+        PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS <= set(by_id),
+        'provider-control side-door operation set is incomplete',
+    )
 
     actor_codes = {
         'ACTOR_ASSERTION_REQUIRED',
@@ -76,16 +95,33 @@ def validate(root: Path, result: Validation) -> None:
     }
     for op in operations:
         oid = op['operation_id']
+        provider_control_side_door = oid in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS
+        operation_error_by = error_by | additive_error_by if provider_control_side_door else error_by
         union = []
         result.require(op['status'] == 'READY', f'{oid}: not READY')
-        result.require(op['mutates_state'] == (op['operation_kind'] == 'COMMAND'), f'{oid}: mutates_state mismatch')
+        if provider_control_side_door:
+            result.require(
+                op['operation_kind'] == 'COMMAND'
+                and op['mutates_state'] is False
+                and op.get('optimistic_concurrency') == 'proposal-execution-fence-only'
+                and op.get('success_status') == 409
+                and op.get('response_schema') == 'AddendumProblemDetailsV1'
+                and op.get('error_codes') == ['ACTION_PROPOSAL_REQUIRED']
+                and op.get('direct_http_effect') == PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,
+                f'{oid}: provider-control direct HTTP contract differs',
+            )
+        else:
+            result.require(op['mutates_state'] == (op['operation_kind'] == 'COMMAND'), f'{oid}: mutates_state mismatch')
         if op['api'] == 'public-api':
             result.require(op['operation_kind'] == 'QUERY' and op['method'] == 'GET', f'{oid}: Public API must be read-only')
         if op['method'] != 'GET':
             result.require(op['idempotency'] == 'required', f'{oid}: write missing idempotency')
         if op['api'] == 'control-api':
             result.require(op['auth'] == 'actor-assertion-and-capability', f'{oid}: Control API auth must be actor assertion')
-            result.require(actor_codes <= set(op['authorization_errors']), f'{oid}: actor assertion errors incomplete')
+            if provider_control_side_door:
+                result.require(op['authorization_errors'] == [], f'{oid}: direct side-door authorization errors must be empty')
+            else:
+                result.require(actor_codes <= set(op['authorization_errors']), f'{oid}: actor assertion errors incomplete')
             result.require('CSRF_FAILED' not in op['authorization_errors'], f'{oid}: browser CSRF must not be a Control API concern')
             result.require('SESSION_EXPIRED' not in op['authorization_errors'], f'{oid}: browser session errors must not be a Control API concern')
         for field in op.get('request_fields', []) + op.get('response_fields', []):
@@ -96,7 +132,7 @@ def validate(root: Path, result: Validation) -> None:
             result.require(field in op, f'{oid}: missing {field}')
             union.extend(op.get(field, []))
             for code in op.get(field, []):
-                result.require(code in error_by and error_by[code]['layer'] == layer, f'{oid}: {code} wrong/missing layer')
+                result.require(code in operation_error_by and operation_error_by[code]['layer'] == layer, f'{oid}: {code} wrong/missing layer')
         result.require(union == op['error_codes'], f'{oid}: layered error order/set differs from error_codes')
 
         result.require(
@@ -108,7 +144,7 @@ def validate(root: Path, result: Validation) -> None:
             result.require(isinstance(status, str) and HTTP_STATUS.fullmatch(status), f'{oid}: HTTP mapping key must be a three-digit string')
             mapped.extend(codes)
             for code in codes:
-                result.require(code in error_by and str(error_by[code]['http_status']) == status, f'{oid}: {code} HTTP mapping mismatch')
+                result.require(code in operation_error_by and str(operation_error_by[code]['http_status']) == status, f'{oid}: {code} HTTP mapping mismatch')
         result.require(len(mapped) == len(set(mapped)) and set(mapped) == set(op['error_codes']), f'{oid}: http_error_mapping differs from error_codes')
         result.require(sorted(op['errors']) == sorted(op['http_error_mapping']), f'{oid}: errors status list differs from mapping')
         result.require(bool(op.get('implementation_files')), f'{oid}: missing implementation file mapping')
@@ -126,11 +162,15 @@ def validate(root: Path, result: Validation) -> None:
     for operation in operations:
         if operation['operation_kind'] != 'COMMAND':
             continue
+        provider_control_side_door = operation['operation_id'] in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS
         names = {field['name'] for field in operation.get('request_fields', [])}
         result.require('reauthProof' not in names, f"{operation['operation_id']}: raw step-up proof must not cross the Control API boundary")
         policy = operation['assurance_policy']
         possible = policy.get('step_up_possible') is True or any(condition.get('required_level') == 'STEP_UP' for condition in policy.get('conditions', []))
-        result.require(('STEP_UP_REQUIRED' in operation['authorization_errors']) == possible, f"{operation['operation_id']}: step-up error differs from assurance policy")
+        if provider_control_side_door:
+            result.require(operation['authorization_errors'] == [], f"{operation['operation_id']}: side-door must expose only ACTION_PROPOSAL_REQUIRED")
+        else:
+            result.require(('STEP_UP_REQUIRED' in operation['authorization_errors']) == possible, f"{operation['operation_id']}: step-up error differs from assurance policy")
         if possible:
             result.require(operation.get('step_up_policy', {}).get('identity_api_authorization_required') is True, f"{operation['operation_id']}: step-up policy is not Identity-API-owned")
 
@@ -211,6 +251,21 @@ def validate(root: Path, result: Validation) -> None:
             result.require(success in node['responses'], f'{api}:{oid}: missing success status {success}')
             for status, codes in op['http_error_mapping'].items():
                 result.require(node['responses'].get(status, {}).get('x-error-codes') == codes, f'{api}:{oid}: OpenAPI error response mismatch {status}')
+            if oid in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS:
+                problem_schema = (
+                    node.get('responses', {})
+                    .get('409', {})
+                    .get('content', {})
+                    .get('application/problem+json', {})
+                    .get('schema')
+                )
+                result.require(
+                    set(node.get('responses', {})) == {'409'}
+                    and problem_schema == {'$ref': '#/components/schemas/AddendumProblemDetailsV1'}
+                    and node.get('x-provider-control-entrypoint') == 'ACTION_PROPOSAL'
+                    and node.get('x-state-effect') == 'UNCHANGED',
+                    f'{api}:{oid}: provider-control OpenAPI side-door projection differs',
+                )
         for ref in _refs(yaml_doc):
             if ref.startswith('#/components/schemas/'):
                 result.require(ref.rsplit('/', 1)[-1] in schemas, f'{api}: unresolved ref {ref}')
@@ -261,13 +316,13 @@ def validate(root: Path, result: Validation) -> None:
                 result.require(counts_schema == {'$ref': '#/components/schemas/CaseStateCounts'}, f'{api}:{name}: caseCounts must use CaseStateCounts')
 
     result.stats.update({
-        'operations': 212,
-        'query_operations': 107,
-        'command_operations': 105,
-        'http_write_operations': 102,
+        'operations': 215,
+        'query_operations': 108,
+        'command_operations': 107,
+        'http_write_operations': 104,
         'public_operations': 41,
         'submission_operations': 34,
-        'control_operations': 131,
+        'control_operations': 134,
         'identity_operations': 6,
         'openapi_schemas_total': schema_total,
         'error_codes': len(error_by),

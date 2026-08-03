@@ -156,7 +156,7 @@ operation_authorization:
   previewActionDraft: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, actor_has_object_scope], assurance: ACTIVE_SESSION}
   submitActionForReview: {asserted_required_capability: actions.propose, persisted_predicates: [actor_has_variant_proposer_capability, current_quorum_policy_exists], assurance: ACTIVE_SESSION}
   claimActionReview: {asserted_required_capability: actions.review, persisted_predicates: [actor_has_assignment_required_capability, assignment_reviewer_equals_actor, actor_has_object_scope, actor_not_excluded], assurance: ACTIVE_SESSION}
-  submitActionDecision: {asserted_required_capability: actions.review, persisted_predicates: [actor_has_assignment_required_capability, assignment_reviewer_equals_actor, actor_has_object_scope, actor_passes_separation_of_duty], assurance: MAX_OF_ASSIGNMENT_TARGET_AND_DECISION}
+  submitActionDecision: {asserted_required_capability: actions.review, persisted_predicates: [actor_has_assignment_required_capability, assignment_reviewer_equals_actor, actor_has_object_scope, actor_passes_separation_of_duty, providerOperationId_required_iff_PROVIDER_CONTROL_and_equals_immutable_action_detail], assurance: MAX_OF_ASSIGNMENT_TARGET_DECISION_AND_PROVIDER_CONTROL_OPERATION}
   getActionExecutionReceipt: {asserted_required_capability: actions.read, persisted_predicates: [actor_has_object_scope], assurance: ACTIVE_SESSION}
   cancelActionExecution: {asserted_required_capability: actions.operate, persisted_predicates: [actor_has_target_operate_capability, current_generation], assurance: MAX_OF_ACTIVE_AND_TARGET}
   retryActionExecution: {asserted_required_capability: actions.operate, persisted_predicates: [actor_has_target_operate_capability, current_generation, stored_action_kind_matches_request], assurance: MAX_OF_TARGET_AND_ACTION_KIND}
@@ -300,6 +300,26 @@ quorum_policies:
             - {slot_id: sre_control, capability: commercial.controls.review, allowed_roles: [OPERATIONS, SECURITY_ADMIN]}
             - {slot_id: trust_control, capability: commercial.controls.review, allowed_roles: [LEGAL_REVIEWER]}
             - {slot_id: executive_control, capability: commercial.controls.review, allowed_roles: [EXECUTIVE_APPROVER]}
+    PROVIDER_CONTROL:
+      proposer_capability: selected by providerControl.operationId
+      classifier: provider_control_operation
+      classes:
+        disableProviderRouting:
+          proposer_capability: kill_switch.execute
+          assurance: STEP_UP
+          slots: [{slot_id: provider_control_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+        testProviderConnection:
+          proposer_capability: jobs.operate
+          assurance: ACTIVE_SESSION
+          slots: [{slot_id: provider_connection_reviewer, capability: jobs.operate, allowed_roles: [OPERATIONS]}]
+        upgradeProviderModel:
+          proposer_capability: kill_switch.execute
+          assurance: STEP_UP
+          slots: [{slot_id: provider_model_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+        setModelAutoUpgrade:
+          proposer_capability: kill_switch.execute
+          assurance: STEP_UP
+          slots: [{slot_id: provider_auto_upgrade_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
 
 executor_catalog:
   HYPOTHESIS: {executor_id: createHypothesis, transport: BASE_APPLICATION_COMMAND, capability: cases.investigate, assurance: ACTIVE_SESSION, transaction: optimistic_command, repository: hypotheses}
@@ -319,6 +339,19 @@ executor_catalog:
   CAPABILITY_ACTIVATION: {executor_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, capability: providers.activate, assurance: STEP_UP, transaction: serializable_decision, repository: capability_activation}
   RESPONSE_POLICY_CALENDAR: {executor_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, capability: responses.policy.manage, assurance: STEP_UP, transaction: serializable_decision, repository: response_clock}
   COMMERCIAL_CONTROL: {executor_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, capability: commercial.controls.review, assurance: STEP_UP, transaction: external_effect_request, repository: commercial_control}
+  PROVIDER_CONTROL:
+    executor_id: private.ExecuteProviderControl
+    transport: PRIVATE_APPLICATION_COMMAND
+    owner: analysis-worker.provider-control-executor
+    capability: jobs.operate
+    assurance: BY_PROVIDER_CONTROL_OPERATION
+    transaction: version_fenced_job_command
+    repository: provider_control
+    operation_policies:
+      disableProviderRouting: {capability: kill_switch.execute, assurance: STEP_UP}
+      testProviderConnection: {capability: jobs.operate, assurance: ACTIVE_SESSION}
+      upgradeProviderModel: {capability: kill_switch.execute, assurance: STEP_UP}
+      setModelAutoUpgrade: {capability: kill_switch.execute, assurance: STEP_UP}
 
 safe_retry_proof:
   schema: SafeRetryProofV1
@@ -393,6 +426,11 @@ private_application_command_authorization:
     required_proof: exact current COMMERCIAL_CONTROL ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, commercial trigger snapshot, product fence receipt, external import receipt and distinct acknowledgement receipt
     assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
     forbidden: [metric-only auto-effect, inferred acknowledgement, elapsed-time resume, import receipt reused as acknowledgement, commercial stage mutation, paid-value inference]
+  private.ExecuteProviderControl:
+    caller: analysis-worker.provider-control-executor
+    required_proof: exact current PROVIDER_CONTROL ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, providerOperationId, providerId, expectedVersion and targetRequestDigest; providerOperationId selects the exact capability and assurance policy and is equality-checked against the immutable approval detail
+    assurance: testProviderConnection uses BOUND_ACTIVE_SESSION_EXECUTION_AUTHORIZATION; disableProviderRouting upgradeProviderModel and setModelAutoUpgrade use BOUND_STEP_UP_EXECUTION_AUTHORIZATION
+    forbidden: [browser command side door, workflow-worker communication executor, missing or mismatched providerOperationId, unversioned provider mutation, open JSON payload, changed target request, second effect for one proposal version]
 
 base_operation_guards:
   activateKillSwitch:

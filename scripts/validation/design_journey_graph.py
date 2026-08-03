@@ -218,7 +218,7 @@ def _validate_action_union(documents: DesignDocuments, ui_edges: dict[str, dict[
         # decision/detail placements to the command overlay.  Keep this
         # assertion source-derived while retaining the exact cardinality
         # receipt for the current canonical registry.
-        and (len(base), len(command), len(journey)) == (250, 82, 17),
+        and (len(base), len(command), len(journey)) == (252, 82, 17),
         "base, command, and journey action registries are not an exact disjoint union",
     )
     counts = actions.get("counts", {})
@@ -226,7 +226,7 @@ def _validate_action_union(documents: DesignDocuments, ui_edges: dict[str, dict[
         counts.get("base_actions") == len(base)
         and counts.get("visible_placements") == len(command)
         and counts.get("journey_visible_actions") == len(journey)
-        and counts.get("effective_actions") == len(base | command | journey) == 349,
+        and counts.get("effective_actions") == len(base | command | journey) == 351,
         "effective action count is not source-derived from all three registries",
     )
     visible = base | command | journey

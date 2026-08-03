@@ -7098,6 +7098,213 @@ END $$;
 ALTER FUNCTION ops.capability_activation_review_detail_v1(jsonb) OWNER TO gurine_migrator;
 REVOKE ALL ON FUNCTION ops.capability_activation_review_detail_v1(jsonb) FROM PUBLIC;
 
+-- Provider controls enter the same proposal/review/authorization path as every
+-- other governed action.  The plaintext draft is available only at this owner
+-- boundary, so derive the non-secret typed review detail before the caller's
+-- sealed payload becomes the sole execution envelope.
+CREATE OR REPLACE FUNCTION ops.provider_control_review_detail_v1(
+  p_draft jsonb, p_actor uuid
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = pg_catalog, ops, extensions, pg_temp
+AS $$
+DECLARE
+  v_control jsonb;
+  v_operation text;
+  v_provider_reference text;
+  v_provider_id uuid;
+  v_provider ops.provider_configs%ROWTYPE;
+  v_expected_version bigint;
+  v_required_capability text;
+  v_reason text;
+  v_reason_digest char(64);
+  v_snapshot jsonb;
+  v_configuration_digest char(64);
+  v_detail jsonb;
+  v_track text;
+  v_data_policy jsonb;
+  v_policy_canonical jsonb;
+  v_policy_digest char(64);
+  v_match_count bigint;
+BEGIN
+  IF p_actor IS NULL OR p_draft IS NULL OR jsonb_typeof(p_draft)<>'object'
+     OR p_draft->>'kind'<>'PROVIDER_CONTROL'
+     OR jsonb_typeof(p_draft->'providerControl')<>'object'
+     OR jsonb_typeof(p_draft->'target')<>'object' THEN
+    RAISE EXCEPTION 'provider_control_payload_invalid' USING ERRCODE='22023';
+  END IF;
+  v_control:=p_draft->'providerControl';
+  v_operation:=v_control->>'operationId';
+  v_provider_reference:=v_control->>'providerId';
+  BEGIN
+    v_expected_version:=NULLIF(v_control->>'expectedVersion','')::bigint;
+  EXCEPTION WHEN invalid_text_representation OR numeric_value_out_of_range THEN
+    RAISE EXCEPTION 'provider_control_expected_version_invalid' USING ERRCODE='22023';
+  END;
+  IF v_operation NOT IN (
+       'disableProviderRouting','testProviderConnection',
+       'upgradeProviderModel','setModelAutoUpgrade'
+     ) OR length(btrim(COALESCE(v_provider_reference,''))) NOT BETWEEN 1 AND 100
+     OR v_expected_version IS NULL OR v_expected_version<1 THEN
+    RAISE EXCEPTION 'provider_control_payload_invalid' USING ERRCODE='22023';
+  END IF;
+
+  IF v_operation='disableProviderRouting' THEN
+    IF v_control - ARRAY['operationId','providerId','reason','expectedVersion'] <> '{}'::jsonb
+       OR length(btrim(COALESCE(v_control->>'reason',''))) NOT BETWEEN 1 AND 2000 THEN
+      RAISE EXCEPTION 'provider_control_disable_invalid' USING ERRCODE='22023';
+    END IF;
+  ELSIF v_operation='testProviderConnection' THEN
+    IF v_control - ARRAY['operationId','providerId','testModel','reason','expectedVersion'] <> '{}'::jsonb
+       OR length(btrim(COALESCE(v_control->>'testModel',''))) NOT BETWEEN 1 AND 255
+       OR (v_control ? 'reason' AND length(btrim(COALESCE(v_control->>'reason',''))) NOT BETWEEN 1 AND 2000) THEN
+      RAISE EXCEPTION 'provider_control_test_invalid' USING ERRCODE='22023';
+    END IF;
+  ELSIF v_operation='upgradeProviderModel' THEN
+    IF v_control - ARRAY['operationId','providerId','modelId','expectedVersion','reason','dataPolicy'] <> '{}'::jsonb
+       OR length(btrim(COALESCE(v_control->>'modelId',''))) NOT BETWEEN 1 AND 255
+       OR length(btrim(COALESCE(v_control->>'reason',''))) NOT BETWEEN 1 AND 2000
+       OR (v_control ? 'dataPolicy' AND jsonb_typeof(v_control->'dataPolicy')<>'object') THEN
+      RAISE EXCEPTION 'provider_control_upgrade_invalid' USING ERRCODE='22023';
+    END IF;
+  ELSE
+    IF v_control - ARRAY['operationId','providerId','expectedVersion','enabled','track','reason'] <> '{}'::jsonb
+       OR jsonb_typeof(v_control->'enabled')<>'boolean'
+       OR length(btrim(COALESCE(v_control->>'reason',''))) NOT BETWEEN 1 AND 2000
+       OR (v_control ? 'track' AND length(btrim(COALESCE(v_control->>'track',''))) NOT BETWEEN 1 AND 128) THEN
+      RAISE EXCEPTION 'provider_control_auto_upgrade_invalid' USING ERRCODE='22023';
+    END IF;
+  END IF;
+
+  SELECT count(*) INTO v_match_count
+    FROM ops.provider_configs p
+   WHERE p.id::text=v_provider_reference
+      OR (v_provider_reference !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          AND p.provider_type=v_provider_reference);
+  IF v_match_count<>1 THEN
+    RAISE EXCEPTION 'provider_control_provider_not_found_or_ambiguous' USING ERRCODE='P0002';
+  END IF;
+  SELECT p.* INTO STRICT v_provider
+    FROM ops.provider_configs p
+   WHERE p.id::text=v_provider_reference
+      OR (v_provider_reference !~ '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          AND p.provider_type=v_provider_reference)
+   FOR SHARE;
+  v_provider_id:=v_provider.id;
+  IF v_provider.version<>v_expected_version
+     OR p_draft->'target'->>'type'<>'CAPABILITY'
+     OR p_draft->'target'->>'id' NOT IN (v_provider_reference,v_provider_id::text)
+     OR NULLIF(p_draft->'target'->>'version','')::bigint IS DISTINCT FROM v_expected_version THEN
+    RAISE EXCEPTION 'provider_control_target_version_mismatch' USING ERRCODE='40001';
+  END IF;
+
+  v_required_capability:=CASE v_operation
+    WHEN 'testProviderConnection' THEN 'jobs.operate'
+    ELSE 'kill_switch.execute' END;
+  IF NOT EXISTS (
+    SELECT 1 FROM ops.users u
+    JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL
+      AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp())
+    JOIN ops.role_capabilities rc ON rc.role_id=ur.role_id
+      AND rc.capability_code=v_required_capability
+    WHERE u.id=p_actor AND u.status='ACTIVE'
+  ) THEN
+    RAISE EXCEPTION 'provider_control_creator_capability_denied' USING ERRCODE='42501';
+  END IF;
+
+  IF v_operation IN (
+       'testProviderConnection','upgradeProviderModel','setModelAutoUpgrade'
+     )
+     AND v_provider.provider_type<>'relay' THEN
+    RAISE EXCEPTION 'provider_control_relay_required' USING ERRCODE='22023';
+  END IF;
+  IF v_operation='upgradeProviderModel' AND NOT EXISTS (
+    SELECT 1 FROM ops.relay_model_catalog m
+     WHERE m.model_id=v_control->>'modelId' AND m.active
+  ) THEN
+    RAISE EXCEPTION 'provider_control_model_unavailable' USING ERRCODE='22023';
+  END IF;
+
+  v_data_policy:=v_control->'dataPolicy';
+  IF v_operation='upgradeProviderModel' THEN
+    IF v_provider.routing_policy#>>'{dataPolicy,state}'='UNCONFIGURED' AND v_data_policy IS NULL THEN
+      RAISE EXCEPTION 'provider_control_data_policy_required' USING ERRCODE='22023';
+    ELSIF v_provider.routing_policy#>>'{dataPolicy,state}'='CONFIGURED' AND v_data_policy IS NOT NULL THEN
+      RAISE EXCEPTION 'provider_control_data_policy_must_be_reused' USING ERRCODE='22023';
+    ELSIF v_provider.routing_policy#>>'{dataPolicy,state}' NOT IN ('UNCONFIGURED','CONFIGURED') THEN
+      RAISE EXCEPTION 'provider_control_data_policy_state_invalid' USING ERRCODE='22023';
+    END IF;
+    IF v_data_policy IS NOT NULL THEN
+      IF v_data_policy - ARRAY['processingRegion','retentionMode','policyVersion'] <> '{}'::jsonb
+         OR v_data_policy->>'processingRegion' !~ '^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$'
+         OR v_data_policy->>'retentionMode' NOT IN ('ZERO_RETENTION','BOUNDED_PROVIDER_RETENTION','LOCAL_ONLY')
+         OR length(btrim(COALESCE(v_data_policy->>'policyVersion',''))) NOT BETWEEN 1 AND 64 THEN
+        RAISE EXCEPTION 'provider_control_data_policy_invalid' USING ERRCODE='22023';
+      END IF;
+      v_policy_canonical:=jsonb_build_object(
+        'policyVersion',v_data_policy->>'policyVersion',
+        'processingRegion',v_data_policy->>'processingRegion',
+        'retentionMode',v_data_policy->>'retentionMode');
+      v_policy_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(v_policy_canonical),'sha256'),'hex');
+    END IF;
+  END IF;
+
+  IF v_operation='setModelAutoUpgrade' AND (v_control->>'enabled')::boolean THEN
+    IF v_provider.enabled IS NOT TRUE
+       OR v_provider.routing_policy#>>'{dataPolicy,state}'<>'CONFIGURED'
+       OR v_provider.routing_policy->>'model' IS NULL THEN
+      RAISE EXCEPTION 'provider_control_auto_upgrade_unconfigured' USING ERRCODE='22023';
+    END IF;
+    v_track:=COALESCE(NULLIF(v_control->>'track',''),NULLIF(v_provider.routing_policy->>'track',''),
+      (SELECT m.track FROM ops.relay_model_catalog m
+        WHERE m.model_id=v_provider.routing_policy->>'model' AND m.active));
+    IF length(btrim(COALESCE(v_track,''))) NOT BETWEEN 1 AND 128 THEN
+      RAISE EXCEPTION 'provider_control_auto_upgrade_track_required' USING ERRCODE='22023';
+    END IF;
+  ELSE
+    v_track:=NULLIF(v_control->>'track','');
+  END IF;
+
+  v_reason:=NULLIF(btrim(v_control->>'reason'),'');
+  IF v_operation<>'testProviderConnection' AND v_reason IS NULL THEN
+    RAISE EXCEPTION 'provider_control_reason_required' USING ERRCODE='22023';
+  END IF;
+  IF v_reason IS NOT NULL THEN
+    v_reason_digest:=encode(extensions.digest(convert_to(v_reason,'UTF8'),'sha256'),'hex');
+  END IF;
+  v_snapshot:=jsonb_build_object(
+    'providerType',v_provider.provider_type,'enabled',v_provider.enabled,
+    'routingPolicy',v_provider.routing_policy,
+    'dataRetentionPolicy',v_provider.data_retention_policy,'version',v_provider.version);
+  v_configuration_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(v_snapshot),'sha256'),'hex');
+  v_detail:=jsonb_build_object(
+    'kind','PROVIDER_CONTROL','operationId',v_operation,
+    'providerReference',v_provider_reference,'providerId',v_provider_id,
+    'expectedProviderVersion',v_expected_version,'creatorActorId',p_actor,
+    'requiredCapability',v_required_capability,
+    'providerConfigurationDigest',v_configuration_digest);
+  IF v_reason_digest IS NOT NULL THEN
+    v_detail:=v_detail||jsonb_build_object('reasonDigest',v_reason_digest);
+  END IF;
+  IF v_operation='testProviderConnection' THEN
+    v_detail:=v_detail||jsonb_build_object('testModel',v_control->>'testModel');
+  ELSIF v_operation='upgradeProviderModel' THEN
+    v_detail:=v_detail||jsonb_build_object('targetModelId',v_control->>'modelId');
+    IF v_policy_canonical IS NOT NULL THEN
+      v_detail:=v_detail||jsonb_build_object('requestedDataPolicy',v_policy_canonical||
+        jsonb_build_object('policySha256',v_policy_digest));
+    END IF;
+  ELSIF v_operation='setModelAutoUpgrade' THEN
+    v_detail:=v_detail||jsonb_build_object('autoUpgradeEnabled',(v_control->>'enabled')::boolean);
+    IF v_track IS NOT NULL THEN
+      v_detail:=v_detail||jsonb_build_object('autoUpgradeTrack',v_track);
+    END IF;
+  END IF;
+  RETURN v_detail;
+END $$;
+ALTER FUNCTION ops.provider_control_review_detail_v1(jsonb,uuid) OWNER TO gurine_migrator;
+REVOKE ALL ON FUNCTION ops.provider_control_review_detail_v1(jsonb,uuid) FROM PUBLIC;
+
 -- SECURITY DEFINER executes as gurine_migrator; these base identity tables
 -- are intentionally read-only inputs to reviewer selection and reauthorization.
 GRANT SELECT ON ops.users,ops.roles,ops.user_roles,ops.role_capabilities TO gurine_migrator;
@@ -7181,6 +7388,14 @@ DECLARE
   v_executor_id text;
   v_executor_transport text;
   v_executor_capability text;
+  v_provider_operation_id text;
+  v_provider_config_id uuid;
+  v_provider_config_version bigint;
+  v_provider_configuration_digest char(64) :=
+    '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde';
+  v_provider_idempotency_key_sha256 char(64) :=
+    '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74';
+  v_effect_boundary text := 'DATABASE_ONLY';
   v_target_request_encrypted bytea;
   v_target_request_sha256 char(64);
   v_counted_decision_set_digest char(64);
@@ -7277,6 +7492,10 @@ BEGIN
       v_review_detail:=ops.capability_activation_review_detail_v1(p_request->'draft');
       v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
       v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
+    ELSIF v_action_kind='PROVIDER_CONTROL' THEN
+      v_review_detail:=ops.provider_control_review_detail_v1(p_request->'draft',p_actor);
+      v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
+      v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
     END IF;
     v_expires_at := COALESCE(NULLIF(p_request->>'expiresAt','')::timestamptz,v_now+interval '7 days');
     v_receipt := jsonb_build_object('proposalId',v_id,'proposalVersion',1,'state','DRAFT','actionKind',v_action_kind,'targetType',v_target_type,'targetId',v_target_id,'targetVersion',v_target_version,'contentDigest',v_content_digest,'acceptedAt',v_now);
@@ -7335,6 +7554,10 @@ BEGIN
       v_review_detail:=ops.capability_activation_review_detail_v1(p_request->'draft');
       v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
       v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
+    ELSIF v_action_kind='PROVIDER_CONTROL' THEN
+      v_review_detail:=ops.provider_control_review_detail_v1(p_request->'draft',p_actor);
+      v_review_detail_canonical:=ops.canonical_jsonb_v1(v_review_detail);
+      v_review_detail_digest:=encode(extensions.digest(v_review_detail_canonical,'sha256'),'hex');
     END IF;
     v_expires_at := COALESCE(NULLIF(p_request->>'expiresAt','')::timestamptz, v_expires_at);
     INSERT INTO ops.action_proposal_versions(
@@ -7364,8 +7587,9 @@ BEGIN
     -- DEFINER function.  Build the digest-only ActionApprovalDetailV1 branch
     -- from the persisted proposal identity/version and content digest; the
     -- reviewer-facing readable detail is projected by the HTTP adapter.
-    IF v_action_kind='CAPABILITY_ACTIVATION' AND v_review_detail IS NULL THEN
-      RAISE EXCEPTION 'capability_activation_detail_missing' USING ERRCODE='55000';
+    IF v_action_kind IN ('CAPABILITY_ACTIVATION','PROVIDER_CONTROL')
+       AND v_review_detail IS NULL THEN
+      RAISE EXCEPTION 'typed_action_review_detail_missing' USING ERRCODE='55000';
     END IF;
     v_detail := CASE v_action_kind
       WHEN 'HYPOTHESIS' THEN jsonb_build_object(
@@ -7376,6 +7600,7 @@ BEGIN
         'recipientBindingDigest',v_target_digest,'exactContentDigest',v_content_digest,
         'authorizationDigest',v_approval_digest,'terminalReceiptPolicyDigest',v_policy_digest)
       WHEN 'CAPABILITY_ACTIVATION' THEN v_review_detail
+      WHEN 'PROVIDER_CONTROL' THEN v_review_detail
       ELSE jsonb_build_object(
         'kind','TASK','objectType','ACTION_PROPOSAL','objectId',v_proposal,
         'expectedObjectVersion',v_version,'taskType','REVIEW','titleDigest',v_content_digest,
@@ -7417,6 +7642,39 @@ BEGIN
         (v_detail->>'effectiveAt')::timestamptz,v_detail->'expiry'->>'kind',
         CASE WHEN v_detail->'expiry'->>'kind'='AT'
           THEN (v_detail->'expiry'->>'at')::timestamptz ELSE NULL END);
+    ELSIF v_action_kind='PROVIDER_CONTROL' THEN
+      v_provider_idempotency_key_sha256:=encode(extensions.digest(
+        ops.canonical_jsonb_v1(jsonb_build_object(
+          'approvalDigest',v_approval_digest,'operationId',v_detail->>'operationId',
+          'providerId',v_detail->>'providerId',
+          'expectedProviderVersion',(v_detail->>'expectedProviderVersion')::bigint)),
+        'sha256'),'hex');
+      INSERT INTO ops.action_approval_provider_control_details(
+        proposal_id,proposal_version,detail_kind,detail_binding_canonical,
+        action_detail_digest,approval_digest,content_digest,operation_id,
+        provider_reference,provider_id,expected_provider_version,reason_digest,
+        creator_actor_id,required_creator_capability,provider_configuration_digest,
+        provider_idempotency_key_sha256,test_model,target_model_id,
+        requested_processing_region,requested_retention_mode,
+        requested_policy_version,requested_policy_sha256,
+        auto_upgrade_enabled,auto_upgrade_track)
+      VALUES(
+        v_proposal,v_version,'PROVIDER_CONTROL',v_detail_canonical,
+        v_detail_digest,v_approval_digest,v_content_digest,v_detail->>'operationId',
+        v_detail->>'providerReference',(v_detail->>'providerId')::uuid,
+        (v_detail->>'expectedProviderVersion')::bigint,
+        NULLIF(v_detail->>'reasonDigest','')::char(64),
+        (v_detail->>'creatorActorId')::uuid,v_detail->>'requiredCapability',
+        (v_detail->>'providerConfigurationDigest')::char(64),
+        v_provider_idempotency_key_sha256,v_detail->>'testModel',
+        v_detail->>'targetModelId',
+        v_detail#>>'{requestedDataPolicy,processingRegion}',
+        v_detail#>>'{requestedDataPolicy,retentionMode}',
+        v_detail#>>'{requestedDataPolicy,policyVersion}',
+        NULLIF(v_detail#>>'{requestedDataPolicy,policySha256}','')::char(64),
+        CASE WHEN v_detail ? 'autoUpgradeEnabled'
+          THEN (v_detail->>'autoUpgradeEnabled')::boolean ELSE NULL END,
+        v_detail->>'autoUpgradeTrack');
     END IF;
     UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_receipt_digest,last_audit_event_id=v_event_id,updated_at=clock_timestamp() WHERE id=v_proposal;
     RETURN v_receipt || jsonb_build_object(
@@ -7540,17 +7798,36 @@ BEGIN
       v_receipt_digest:=encode(extensions.digest(convert_to(v_receipt::text,'UTF8'),'sha256'),'hex');
       RETURN v_receipt||jsonb_build_object('receiptDigest',v_receipt_digest,'outboxEventIds','[]'::jsonb);
     END IF;
-    v_reviewer := (SELECT id FROM ops.users WHERE status='ACTIVE' AND id<>p_actor ORDER BY id LIMIT 1);
+    IF v_action_kind='PROVIDER_CONTROL' THEN
+      v_provider_operation_id:=v_review_detail->>'operationId';
+      SELECT u.id,ARRAY[r.code]::text[] INTO v_reviewer,v_allowed_role_codes
+        FROM ops.users u
+        JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL
+          AND (ur.expires_at IS NULL OR ur.expires_at>v_now)
+        JOIN ops.roles r ON r.id=ur.role_id
+        JOIN ops.role_capabilities review_cap ON review_cap.role_id=r.id
+          AND review_cap.capability_code='actions.review'
+        JOIN ops.role_capabilities provider_cap ON provider_cap.role_id=r.id
+          AND provider_cap.capability_code=v_review_detail->>'requiredCapability'
+       WHERE u.status='ACTIVE' AND u.id<>p_actor
+       ORDER BY u.id,r.code LIMIT 1;
+    ELSE
+      v_reviewer := (SELECT id FROM ops.users WHERE status='ACTIVE' AND id<>p_actor ORDER BY id LIMIT 1);
+      v_allowed_role_codes:=ARRAY['APPROVER']::text[];
+    END IF;
     IF v_reviewer IS NULL THEN RAISE EXCEPTION 'action_quorum_unavailable' USING ERRCODE='55000'; END IF;
     v_assignment := gen_random_uuid();
     v_conflict_id := gen_random_uuid();
     v_due_at := LEAST(v_now + interval '6 days', v_expires_at - interval '1 second');
     INSERT INTO editorial.conflict_snapshots(id,subject_actor_id,target_type,target_id,target_version,target_digest,operation_id,action_kind,candidate_role,declaration_set_digest,finding_set,finding_set_digest,authorship_digest,party_recipient_digest,role_digest,relationship_digest,funding_customer_digest,policy_digest,evaluation_state,valid_until,evaluated_at,evaluated_by_type,evaluated_by_id,snapshot_sha256,receipt_digest)
-      VALUES(v_conflict_id,v_reviewer,'ACTION_PROPOSAL',v_proposal::text,v_version,v_approval_digest,'submitActionDecision',CASE WHEN v_action_kind='COMMERCIAL_CONTROL' THEN NULL ELSE v_action_kind END,'APPROVER',v_zero_digest,'{}'::jsonb,v_zero_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,'CLEAR',v_due_at,v_now,'SERVICE','action-approval',encode(extensions.digest(convert_to(v_conflict_id::text,'UTF8'),'sha256'),'hex'),encode(extensions.digest(convert_to((v_conflict_id::text||':receipt'),'UTF8'),'sha256'),'hex'));
+      VALUES(v_conflict_id,v_reviewer,'ACTION_PROPOSAL',v_proposal::text,v_version,v_approval_digest,'submitActionDecision',CASE WHEN v_action_kind='COMMERCIAL_CONTROL' THEN NULL ELSE v_action_kind END,v_allowed_role_codes[1],v_zero_digest,'{}'::jsonb,v_zero_digest,v_digest,v_digest,v_digest,v_digest,v_digest,v_digest,'CLEAR',v_due_at,v_now,'SERVICE','action-approval',encode(extensions.digest(convert_to(v_conflict_id::text,'UTF8'),'sha256'),'hex'),encode(extensions.digest(convert_to((v_conflict_id::text||':receipt'),'UTF8'),'sha256'),'hex'));
     INSERT INTO ops.action_review_assignments(id,proposal_id,proposal_version,approval_digest,assignment_generation,slot_id,slot_ordinal,required_capability,approve_assurance,allowed_role_codes,reviewer_id,reviewer_role_snapshot_digest,eligibility_snapshot_digest,conflict_snapshot_id,conflict_snapshot_digest,conflict_target_id,conflict_target_version,conflict_target_digest,conflict_evaluation_state,conflict_valid_until,excluded_actor_ids,exclusion_set_digest,quorum_plan_digest,assignment_digest,state,version,assigned_by,due_at,last_receipt_digest,last_audit_event_id)
       VALUES(v_assignment,v_proposal,v_version,v_approval_digest,1,'primary',1,'actions.review',
-        CASE WHEN v_action_kind IN ('HYPOTHESIS','COMMERCIAL_CONTROL') THEN 'STEP_UP' ELSE 'ACTIVE_SESSION' END,
-        ARRAY['APPROVER'],v_reviewer,v_digest,v_digest,v_conflict_id,v_digest,v_proposal,v_version,v_approval_digest,'CLEAR',v_due_at,ARRAY[p_actor],v_digest,v_digest,v_digest,'ASSIGNED',1,p_actor,v_due_at,v_digest,v_event_id);
+        CASE WHEN v_action_kind IN ('HYPOTHESIS','COMMERCIAL_CONTROL')
+                  OR (v_action_kind='PROVIDER_CONTROL'
+                      AND v_provider_operation_id<>'testProviderConnection')
+          THEN 'STEP_UP' ELSE 'ACTIVE_SESSION' END,
+        v_allowed_role_codes,v_reviewer,v_digest,v_digest,v_conflict_id,v_digest,v_proposal,v_version,v_approval_digest,'CLEAR',v_due_at,ARRAY[p_actor],v_digest,v_digest,v_digest,'ASSIGNED',1,p_actor,v_due_at,v_digest,v_event_id);
     UPDATE ops.action_proposal_versions SET state='PENDING_QUORUM',state_version=state_version+1,updated_at=clock_timestamp() WHERE proposal_id=v_proposal AND version=v_version;
     UPDATE ops.action_proposals SET aggregate_version=aggregate_version+1,last_receipt_digest=v_approval_digest,last_audit_event_id=v_event_id,updated_at=clock_timestamp() WHERE id=v_proposal;
     v_receipt := jsonb_build_object(
@@ -7647,6 +7924,14 @@ BEGIN
        OR btrim(NULLIF(p_request->>'expectedApprovalDigest','')) IS DISTINCT FROM btrim(v_approval_digest::text)
        OR NULLIF(p_request->>'actionKind','') IS DISTINCT FROM v_action_kind THEN
       RAISE EXCEPTION 'action_assignment_stale' USING ERRCODE='40001';
+    END IF;
+    IF (v_action_kind='PROVIDER_CONTROL' AND (
+          NULLIF(p_request->>'providerOperationId','') IS NULL
+          OR NULLIF(p_request->>'providerOperationId','')
+             IS DISTINCT FROM v_review_detail->>'operationId'))
+       OR (v_action_kind<>'PROVIDER_CONTROL'
+           AND p_request ? 'providerOperationId') THEN
+      RAISE EXCEPTION 'provider_control_operation_binding_invalid' USING ERRCODE='40001';
     END IF;
     IF NOT EXISTS (
       SELECT 1 FROM ops.user_roles ur JOIN ops.roles r ON r.id=ur.role_id
@@ -7864,7 +8149,8 @@ BEGIN
           ('FUNDING_DISCLOSURE','private.PublishFundingDisclosureRevision','PRIVATE_APPLICATION_COMMAND','funding.publish'),
           ('CAPABILITY_ACTIVATION','private.DecideCapabilityActivation','PRIVATE_APPLICATION_COMMAND','providers.activate'),
           ('RESPONSE_POLICY_CALENDAR','private.CreateBusinessCalendarVersion','PRIVATE_APPLICATION_COMMAND','responses.policy.manage'),
-          ('COMMERCIAL_CONTROL','private.ApplyCommercialControl','PRIVATE_APPLICATION_COMMAND','commercial.controls.review')
+          ('COMMERCIAL_CONTROL','private.ApplyCommercialControl','PRIVATE_APPLICATION_COMMAND','commercial.controls.review'),
+          ('PROVIDER_CONTROL','private.ExecuteProviderControl','PRIVATE_APPLICATION_COMMAND','jobs.operate')
         ) AS executor(action_kind,executor_id,transport,capability)
        WHERE action_kind=v_action_kind;
       IF v_executor_id IS NULL OR v_target_request_encrypted IS NULL THEN
@@ -7873,6 +8159,23 @@ BEGIN
       -- The authorization binds the exact encrypted ActionPayload bytes, not
       -- the preview command request that happened to materialize the detail.
       v_target_request_sha256 := v_content_digest;
+      IF v_action_kind='PROVIDER_CONTROL' THEN
+        v_provider_operation_id:=v_review_detail->>'operationId';
+        v_executor_capability:=v_review_detail->>'requiredCapability';
+        v_provider_config_id:=(v_review_detail->>'providerId')::uuid;
+        v_provider_config_version:=(v_review_detail->>'expectedProviderVersion')::bigint;
+        IF v_provider_operation_id IN ('testProviderConnection','upgradeProviderModel') THEN
+          v_effect_boundary:='PROVIDER';
+          v_provider_configuration_digest:=
+            (v_review_detail->>'providerConfigurationDigest')::char(64);
+          v_provider_idempotency_key_sha256:=encode(extensions.digest(
+            ops.canonical_jsonb_v1(jsonb_build_object(
+              'approvalDigest',v_approval_digest,'operationId',v_provider_operation_id,
+              'providerId',v_provider_config_id,
+              'expectedProviderVersion',v_provider_config_version)),
+            'sha256'),'hex');
+        END IF;
+      END IF;
     END IF;
     v_quorum_snapshot_digest:=encode(extensions.digest(ops.canonical_jsonb_v1(
       jsonb_build_object(
@@ -7946,6 +8249,14 @@ BEGIN
         'actionKind',v_action_kind,'targetCommand',v_executor_id,
         'targetRequestSha256',v_target_request_sha256,
         'effectIdempotencyKeySha256',v_actor_request_key_sha256);
+      IF v_action_kind='PROVIDER_CONTROL' THEN
+        v_execution_binding:=v_execution_binding||jsonb_build_object(
+          'providerOperationId',v_provider_operation_id,
+          'providerId',v_provider_config_id,
+          'providerConfigVersion',v_provider_config_version,
+          'providerConfigurationDigest',v_provider_configuration_digest,
+          'providerIdempotencyKeySha256',v_provider_idempotency_key_sha256);
+      END IF;
       v_execution_binding_canonical := convert_to(v_execution_binding::text,'UTF8');
       v_execution_digest := encode(extensions.digest(v_execution_binding_canonical,'sha256'),'hex');
       v_response_receipt:=v_receipt||jsonb_build_object(
@@ -7973,15 +8284,17 @@ BEGIN
       INSERT INTO ops.in_flight_effects(
         id,effect_type,effect_key_digest,action_kind,action_proposal_id,
         action_proposal_version,approval_digest,predecessor_relationship,state,
-        provider_configuration_digest,provider_idempotency_key_sha256,policy_digest,
+        provider_config_id,provider_config_version,provider_configuration_digest,
+        provider_idempotency_key_sha256,policy_digest,
         kill_switch_digest,budget_digest,rights_digest,consent_digest,suppression_digest,
         conflict_digest,activation_digest,quorum_plan_digest,rendered_bytes_digest,
         run_after,last_receipt_sequence,last_receipt_digest)
       VALUES(v_execution_id,'ACTION_EXECUTION',encode(extensions.digest(convert_to(
           v_proposal::text||':'||v_version::text||':'||v_approval_digest,'UTF8'),'sha256'),'hex'),
         v_action_kind,v_proposal,v_version,v_approval_digest,'NONE','QUEUED',
-        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
-        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_id ELSE NULL END,
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_version ELSE NULL END,
+        v_provider_configuration_digest,v_provider_idempotency_key_sha256,
         v_approval_digest,v_approval_digest,
         'cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',
         v_approval_digest,v_approval_digest,v_approval_digest,v_approval_digest,
@@ -8041,29 +8354,33 @@ BEGIN
         counted_decision_set_digest,terminal_decision_id,terminal_decision_receipt_digest,
         executor_id,transport,required_capability,target_request_schema_version,
         target_request_encrypted,target_request_sha256,rendered_bytes_digest,effect_boundary,
-        provider_configuration_digest,provider_idempotency_key_sha256,cost_class,
+        provider_config_id,provider_config_version,provider_configuration_digest,
+        provider_idempotency_key_sha256,cost_class,
         budget_reservation_digest,command_idempotency_key_sha256,execution_binding,
         execution_binding_canonical,execution_digest,request_id,audit_event_id,outbox_id,expires_at)
       VALUES(v_execution_id,1,'INITIAL_APPROVAL',v_proposal,v_version,v_action_kind,
         v_approval_digest,v_counted_decision_ids,v_counted_decision_receipt_digests,v_counted_decision_set_digest,
         v_id,v_receipt_digest,v_executor_id,v_executor_transport,v_executor_capability,
         'action-payload.v1',v_target_request_encrypted,v_target_request_sha256,
-        v_target_request_sha256,'DATABASE_ONLY',
-        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
-        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        v_target_request_sha256,v_effect_boundary,
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_id ELSE NULL END,
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_version ELSE NULL END,
+        v_provider_configuration_digest,v_provider_idempotency_key_sha256,
         'NO_PAID_EGRESS','cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',
         v_actor_request_key_sha256,v_execution_binding,
         v_execution_binding_canonical,v_execution_digest,NULLIF(p_request->>'requestId','')::uuid,
         v_audit_id,v_execution_outbox_id,v_expires_at);
       INSERT INTO ops.execution_attempts(
         id,execution_id,generation,attempt_state,state_version,run_after,fencing_token,
-        target_request_sha256,rendered_bytes_digest,provider_configuration_digest,
+        target_request_sha256,rendered_bytes_digest,provider_config_id,
+        provider_config_version,provider_configuration_digest,
         provider_idempotency_key_sha256,budget_reservation_digest,last_receipt_sequence,
         last_receipt_digest,created_at,updated_at)
       VALUES(v_execution_attempt_id,v_execution_id,1,'QUEUED',1,v_now+interval '1 second',0,
         v_target_request_sha256,v_target_request_sha256,
-        '8682eb9449f61b9d8c9e36d481638e3ffafcd9e66b490d42afde6fc847560fde',
-        '36e6cda205ff7692fef24261d22e17e282ecc3bba7f5d04f41310839d90e3e74',
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_id ELSE NULL END,
+        CASE WHEN v_effect_boundary='PROVIDER' THEN v_provider_config_version ELSE NULL END,
+        v_provider_configuration_digest,v_provider_idempotency_key_sha256,
         'cd12c434cfd58a9f3a3e0222f236dcc3ea4f1f24f78ea74224dd110bebf61bde',1,
         v_execution_receipt_digest,v_now,v_now);
       INSERT INTO ops.execution_receipts(
@@ -11881,7 +12198,7 @@ WITH effective_event_types(
     ('action.execution_cancel_requested.v1','DOMAIN',1,true,'payloads/action_execution_cancel_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"cancellationGeneration":{"minimum":0,"type":"integer"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"stateVersion":{"minimum":0,"type":"integer"}},"required":["executionId","generation","stateVersion","cancellationGeneration","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
     ('action.execution_completed.v1','DOMAIN',1,true,'payloads/action_execution_completed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"costFactIds":{"items":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"type":"array","uniqueItems":true},"executionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptSequence":{"minimum":0,"type":"integer"},"stateVersion":{"minimum":0,"type":"integer"},"terminalOrReconciliationState":{"enum":["SUCCEEDED","RETRYABLE_FAILED","PERMANENT_FAILED","CANCELLED","EXPIRED","RECONCILIATION_REQUIRED"],"type":"string"}},"required":["executionId","generation","stateVersion","terminalOrReconciliationState","executionDigest","receiptSequence","receiptDigest","costFactIds"],"type":"object"}$event_schema$::jsonb),
     ('action.execution_retry_requested.v1','DOMAIN',1,true,'payloads/action_execution_retry_requested_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"executionId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"generation":{"minimum":0,"type":"integer"},"priorGeneration":{"minimum":0,"type":"integer"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"safeRetryProofDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"stateVersion":{"minimum":0,"type":"integer"}},"required":["executionId","priorGeneration","generation","stateVersion","safeRetryProofDigest","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
-    ('action.proposal_created.v1','DOMAIN',1,true,'payloads/action_proposal_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"enum":["HYPOTHESIS","CLAIM","TASK","COMPARABLE","COMMUNICATION","PUBLICATION","RETRACTION","RULE_ACTIVATION","ROLE_GRANT","KILL_SWITCH","COMMUNICATION_AUTHORIZATION","ASSET_RIGHTS_DECISION","RETENTION_SCHEDULE","FUNDING_DISCLOSURE","CAPABILITY_ACTIVATION","RESPONSE_POLICY_CALENDAR"],"type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetVersion":{"minimum":0,"type":"integer"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","version","actionKind","contentDigest","targetId","targetVersion","expiresAt"],"type":"object"}$event_schema$::jsonb),
+    ('action.proposal_created.v1','DOMAIN',1,true,'payloads/action_proposal_created_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"enum":["HYPOTHESIS","CLAIM","TASK","COMPARABLE","COMMUNICATION","PUBLICATION","RETRACTION","RULE_ACTIVATION","ROLE_GRANT","KILL_SWITCH","COMMUNICATION_AUTHORIZATION","ASSET_RIGHTS_DECISION","RETENTION_SCHEDULE","FUNDING_DISCLOSURE","CAPABILITY_ACTIVATION","RESPONSE_POLICY_CALENDAR","COMMERCIAL_CONTROL","PROVIDER_CONTROL"],"type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"expiresAt":{"format":"date-time","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"targetId":{"maxLength":10000,"minLength":1,"type":"string"},"targetVersion":{"minimum":0,"type":"integer"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","version","actionKind","contentDigest","targetId","targetVersion","expiresAt"],"type":"object"}$event_schema$::jsonb),
     ('action.proposal_updated.v1','DOMAIN',1,true,'payloads/action_proposal_updated_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"actionKind":{"maxLength":10000,"minLength":1,"type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorContentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"priorState":{"enum":["DRAFT","PENDING_QUORUM"],"type":"string"},"priorVersion":{"minimum":0,"type":"integer"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"reasonCode":{"maxLength":10000,"minLength":1,"type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"enum":["DRAFT","PENDING_QUORUM","EXPIRED","SUPERSEDED"],"type":"string"},"supersededVersion":{"anyOf":[{"minimum":0,"type":"integer"},{"type":"null"}]},"updateKind":{"enum":["DRAFT_SUPERSEDED","PREVIEW_RECORDED","EXPIRED","ORIGIN_SUPERSEDED","TARGET_SUPERSEDED"],"type":"string"},"version":{"minimum":0,"type":"integer"}},"required":["proposalId","priorVersion","version","actionKind","updateKind","priorState","state","priorContentDigest","contentDigest","supersededVersion","reasonCode","receiptDigest"],"type":"object"}$event_schema$::jsonb),
     ('action.proposal_withdrawn.v1','DOMAIN',1,true,'payloads/action_proposal_withdrawn_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"auditEventId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"cancelledAssignmentIds":{"items":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"maxItems":16,"type":"array","uniqueItems":true},"cancelledAssignmentSetDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"contentDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"occurredAt":{"format":"date-time","type":"string"},"priorState":{"enum":["DRAFT","PENDING_QUORUM"],"type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":1,"type":"integer"},"reasonCode":{"enum":["OBJECTIVE_CHANGED","SOURCE_INVALIDATED","DUPLICATE","CREATED_IN_ERROR","OTHER"],"type":"string"},"reasonDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"receiptDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"state":{"const":"WITHDRAWN","type":"string"},"withdrawnByActorId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"}},"required":["proposalId","proposalVersion","priorState","state","contentDigest","withdrawnByActorId","cancelledAssignmentIds","cancelledAssignmentSetDigest","reasonCode","reasonDigest","auditEventId","occurredAt","receiptDigest"],"type":"object"}$event_schema$::jsonb),
     ('action.review_claimed.v1','DOMAIN',1,true,'payloads/action_review_claimed_v1.schema.json',$event_schema${"additionalProperties":false,"properties":{"assignmentId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"assignmentVersion":{"minimum":0,"type":"integer"},"claimedAt":{"format":"date-time","type":"string"},"decisionDigest":{"pattern":"^[0-9a-f]{64}$","type":"string"},"proposalId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"proposalVersion":{"minimum":0,"type":"integer"},"reviewerId":{"pattern":"^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$","type":"string"},"slotKind":{"maxLength":10000,"minLength":1,"type":"string"}},"required":["proposalId","proposalVersion","assignmentId","assignmentVersion","slotKind","reviewerId","decisionDigest","claimedAt"],"type":"object"}$event_schema$::jsonb),

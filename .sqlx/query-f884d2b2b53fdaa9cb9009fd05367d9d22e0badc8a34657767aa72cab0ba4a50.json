@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.record_relay_model_upgrade_success_audit_v1( $1,CAST($2 AS char(64)),CAST($3 AS char(64)),CAST($4 AS char(64)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_relay_model_upgrade_success_audit_v1",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f884d2b2b53fdaa9cb9009fd05367d9d22e0badc8a34657767aa72cab0ba4a50"
+}

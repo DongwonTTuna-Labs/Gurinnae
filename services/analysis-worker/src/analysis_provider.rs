@@ -1,3 +1,8 @@
+#[path = "analysis_provider_response.rs"]
+mod analysis_provider_response;
+
+use analysis_provider_response::provider_response_body;
+
 #[expect(
     clippy::too_many_arguments,
     reason = "provider selection binds job, case, routing, budget, and immutable evidence context"
@@ -118,6 +123,11 @@ async fn request_provider(
     routing_policy: &Value,
 ) -> Result<Option<(Value, i64)>, Failure> {
     let pricing = LocalPricing::from_routing_policy(routing_policy)?;
+    let relay_data_policy = if provider == RELAY_PROVIDER {
+        Some(RelayDataPolicy::from_routing_policy(routing_policy)?)
+    } else {
+        None
+    };
     let mut prior_transcript_sha256 = sha256(b"{\"calls\":[]}");
     let mut prior_tool_result: Option<Value> = None;
     let mut total_cost = 0_i64;
@@ -144,17 +154,6 @@ async fn request_provider(
             prior_tool_result.as_ref(),
         )
         .await?;
-        // Bind the selected evidence to this provider turn before any bytes
-        // leave the process.  A pre-dispatch receipt identity is allocated
-        // for the immutable MODEL_INPUT row; completion may add a second
-        // receipt-bound projection, but there is never an unbound input row.
-        {
-            let mut lineage_tx = state.pool.begin().await.map_err(database)?;
-            let pre_receipt_id = stable_uuid(format!("pre-dispatch:{}", turn.turn_id).as_bytes());
-            let pre_receipt_sha = sha256(format!("pre-dispatch-receipt:{}", turn.turn_id).as_bytes());
-            insert_model_input_source_uses(&mut lineage_tx, &turn, Some(pre_receipt_id), Some(&pre_receipt_sha)).await?;
-            lineage_tx.commit().await.map_err(database)?;
-        }
         let response = send_provider_request(
             state, gateway, &turn, evidence, run_id, provider_config_id, provider,
             model, target, agent_type, objective, prior_tool_result.as_ref(), semantic_request_sha256,
@@ -170,6 +169,7 @@ async fn request_provider(
             semantic_request_sha256,
             maximum_cost_krw.saturating_sub(total_cost),
             &pricing,
+            relay_data_policy.as_ref(),
             evidence,
             agent_type,
         )
@@ -214,7 +214,7 @@ async fn send_provider_request(
     objective: &str,
     prior_tool_result: Option<&Value>,
     semantic_request_sha256: &str,
-) -> Result<reqwest::Response, Failure> {
+) -> Result<ProviderDispatchResponse, Failure> {
     // `insert_provider_turn` already persisted and hashed the exact semantic
     // request, including the selected authorized bytes.  Sending that value
     // verbatim preserves the request_sha256/wire equality contract.
@@ -242,6 +242,22 @@ async fn send_provider_request(
     // provider receives the UUID alongside the already persisted hash so it
     // can emit a closed request without guessing database state.
     let input_snapshot_id = resolve_snapshot_id_for_dispatch(state, turn).await?;
+    let (wire_request, request_sha256) = if provider == RELAY_PROVIDER {
+        validate_relay_target(target, RELAY_CHAT_PATH)?;
+        let request = relay_chat_request(
+            agent_type,
+            model,
+            &wire_request,
+            turn,
+            input_snapshot_id,
+            run_id,
+            provider_config_id,
+            semantic_request_sha256,
+        )?;
+        (request.body, request.request_sha256)
+    } else {
+        (wire_request, turn.request_sha256.clone())
+    };
     let response = state.client.post(gateway.clone())
         .header("x-gurine-egress-caller", "analysis-worker")
         .header("x-gurine-ai-provider", provider)
@@ -255,18 +271,17 @@ async fn send_provider_request(
         .header("x-gurine-ai-model-id", model)
         .header("x-gurine-ai-model-configuration-sha256", sha256(model.as_bytes()))
         .header("x-gurine-ai-idempotency-key-sha256", turn.idempotency_hash.as_str())
-        .header("x-gurine-source-fetch-request-sha256", turn.request_sha256.as_str())
+        .header("x-gurine-source-fetch-request-sha256", request_sha256.as_str())
         .header("x-gurine-idempotency-key", turn.idempotency_hash.as_str())
         .json(&wire_request).send().await;
     match response {
-        Ok(response) => Ok(response),
+        Ok(response) => Ok(ProviderDispatchResponse {
+            response,
+            request_sha256,
+        }),
         Err(error) => {
             let detail = error.to_string();
-            mark_provider_turn_outcome_unknown(
-                state, turn, run_id, provider_config_id, provider, model,
-                semantic_request_sha256, &detail,
-            ).await?;
-            Err(Failure::Retryable("PROVIDER_OUTCOME_UNKNOWN", detail))
+            Err(unresolved_provider_outcome(detail))
         }
     }
 }
@@ -277,7 +292,7 @@ async fn send_provider_request(
 )]
 async fn finalize_provider_response(
     state: &State,
-    response: reqwest::Response,
+    response: ProviderDispatchResponse,
     turn: &ProviderTurnIdentity,
     run_id: Uuid,
     provider_config_id: Uuid,
@@ -286,6 +301,7 @@ async fn finalize_provider_response(
     semantic_request_sha256: &str,
     maximum_cost_krw: i64,
     pricing: &LocalPricing,
+    relay_data_policy: Option<&RelayDataPolicy>,
     evidence: &Value,
     agent_type: &str,
 ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
@@ -298,17 +314,23 @@ async fn finalize_provider_response(
         model,
         semantic_request_sha256,
     };
-    let body: Value = match response.json().await {
-        Ok(body) => body,
-        Err(error) => return context.retry_shape("provider response is not JSON", error.to_string()).await,
-    };
+    let body = provider_response_body(
+        &context,
+        response,
+        relay_data_policy,
+        pricing,
+        evidence,
+        maximum_cost_krw,
+        agent_type,
+    )
+    .await?;
     let Some(receipt) = body.get("providerReceipt").or_else(|| body.get("receipt")).cloned() else {
         let provider_code = body
             .get("code")
             .and_then(Value::as_str)
             .unwrap_or("UNKNOWN_PROVIDER_ERROR");
         return context
-            .retry_shape(
+            .unresolved_shape(
                 "provider receipt missing",
                 format!("{}:{}", turn.turn_id, provider_code),
             )
@@ -320,12 +342,12 @@ async fn finalize_provider_response(
         let code = match provider_failure_code(outcome) {
             Ok(code) => code,
             Err(_) => {
-                return context.retry_shape("provider outcome unrecognized", turn.turn_id.to_string()).await;
+                return context.unresolved_shape("provider outcome unrecognized", turn.turn_id.to_string()).await;
             }
         };
         complete_provider_turn_failure(state, turn, &receipt, receipt_id, code).await?;
         return if code == "PROVIDER_OUTCOME_UNKNOWN" {
-            context.retry_shape(code, turn.turn_id.to_string()).await
+            context.unresolved_shape(code, turn.turn_id.to_string()).await
         } else {
             Err(Failure::Terminal(code, turn.turn_id.to_string()))
         };
@@ -334,11 +356,11 @@ async fn finalize_provider_response(
     let actual_cost = match receipt_cost_krw(&receipt, pricing) {
         Ok(cost) => cost,
         Err(_) => {
-            return context.retry_shape("provider pricing invalid", turn.turn_id.to_string()).await;
+            return context.unresolved_shape("provider pricing invalid", turn.turn_id.to_string()).await;
         }
     };
     if actual_cost < 0 || actual_cost > maximum_cost_krw {
-        return context.retry_shape("provider cost exceeds budget", provider.to_owned()).await;
+        return context.unresolved_shape("provider cost exceeds budget", provider.to_owned()).await;
     }
     if outcome == "ACCEPTED_TOOL_CALL" {
         return persist_tool_turn(state, turn, agent_type, &body, evidence, &receipt, receipt_id, actual_cost).await;
@@ -456,14 +478,10 @@ async fn bound_receipt_id(
     ) {
         Ok(id) => Ok(id),
         Err(_) => context
-            .retry_unknown("provider receipt binding invalid", context.turn.turn_id.to_string())
+            .unresolved_binding("provider receipt binding invalid", context.turn.turn_id.to_string())
             .await
             .map(|_| Uuid::nil()),
     }
-}
-
-fn retry_result_shape() -> (Option<Value>, i64, Option<String>, Option<Value>) {
-    (None, 0, None, None)
 }
 
 struct ProviderResponseContext<'a> {
@@ -477,37 +495,29 @@ struct ProviderResponseContext<'a> {
 }
 
 impl ProviderResponseContext<'_> {
-    async fn retry_shape(
+    async fn reject_unresolved<T>(
+        &self,
+        reason: &str,
+        detail: impl Into<String>,
+    ) -> Result<T, Failure> {
+        let detail_text = detail.into();
+        tracing::warn!(provider_turn_id=%self.turn.turn_id, reason, detail=%detail_text, "provider response rejected");
+        Err(unresolved_provider_outcome(detail_text))
+    }
+
+    async fn unresolved_shape(
         &self,
         reason: &str,
         detail: impl Into<String>,
     ) -> Result<(Option<Value>, i64, Option<String>, Option<Value>), Failure> {
-        self.retry_unknown(reason, detail)
-            .await
-            .map(|_| retry_result_shape())
+        self.reject_unresolved(reason, detail).await
     }
 
-    async fn retry_unknown(
+    async fn unresolved_binding(
         &self,
         reason: &str,
         detail: impl Into<String>,
     ) -> Result<Option<(Value, i64)>, Failure> {
-        let detail_text = detail.into();
-        tracing::warn!(provider_turn_id=%self.turn.turn_id, reason, detail=%detail_text, "provider response rejected");
-        mark_provider_turn_outcome_unknown(
-            self.state,
-            self.turn,
-            self.run_id,
-            self.provider_config_id,
-            self.provider,
-            self.model,
-            self.semantic_request_sha256,
-            reason,
-        )
-        .await?;
-        Err(Failure::Retryable(
-            "PROVIDER_OUTCOME_UNKNOWN",
-            detail_text,
-        ))
+        self.reject_unresolved(reason, detail).await
     }
 }

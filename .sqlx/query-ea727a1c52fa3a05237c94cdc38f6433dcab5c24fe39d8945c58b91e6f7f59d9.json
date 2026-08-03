@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.provider_connection_tests( id,provider_id,test_model,status,requested_by,reason) VALUES($1,$2,$3,'QUEUED',$4,'relay auto-upgrade gate')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ea727a1c52fa3a05237c94cdc38f6433dcab5c24fe39d8945c58b91e6f7f59d9"
+}

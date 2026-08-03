@@ -11,8 +11,8 @@ use analysis_provider_output_validation::insert_output_validation;
 async fn insert_model_input_source_uses(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
-    receipt_id: Option<Uuid>,
-    receipt_sha256: Option<&str>,
+    receipt_id: Uuid,
+    receipt_sha256: &str,
 ) -> Result<(), Failure>
 where
 {

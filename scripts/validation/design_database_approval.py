@@ -10,6 +10,7 @@ from .design_database_support import (
     _check_expressions,
     _column_names,
     _foreign_keys,
+    _key_columns,
     _parse_reference,
 )
 from .loaders import load_yaml
@@ -54,7 +55,7 @@ def _validate_approval_option_b(
         and set(detail_binding.get("fields", {}))
         == {"actionDetailKind", "actionDetail"}
         and set(database_binding.get("action_detail_kinds", [])) == expected_kinds,
-        "ActionApprovalDetailBindingV1 is not the closed exact seventeen-branch wrapper",
+        "ActionApprovalDetailBindingV1 is not the closed exact eighteen-branch wrapper",
     )
     detail_rows = {
         row.get("detail_kind"): relation
@@ -63,7 +64,7 @@ def _validate_approval_option_b(
         and relation.endswith("_details")
     }
     result.require(
-        len(detail_rows) == len(APPROVAL_DETAIL_RELATIONS) == 17
+        len(detail_rows) == len(APPROVAL_DETAIL_RELATIONS) == 18
         and detail_rows == APPROVAL_DETAIL_RELATIONS,
         "Option B action-kind to typed approval-detail relation registry is not exact",
     )
@@ -114,7 +115,8 @@ def _validate_approval_option_b(
         result.require(
             common_child_columns <= columns
             and row.get("detail_kind") == kind
-            and row.get("primary_key") == ["proposal_id", "proposal_version"]
+            and _key_columns(row.get("primary_key"))
+            == ("proposal_id", "proposal_version")
             and (
                 "ops.action_proposal_versions",
                 parent_key,
@@ -127,4 +129,3 @@ def _validate_approval_option_b(
         )
     result.stats["approval_binding_common_fields"] = len(expected_fields)
     result.stats["approval_detail_relations"] = len(detail_rows)
-

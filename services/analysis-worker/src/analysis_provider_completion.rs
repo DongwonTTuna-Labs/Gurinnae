@@ -149,7 +149,7 @@ async fn complete_provider_turn_tool_call(
         None,
     )
     .await?;
-    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(&receipt_sha256)).await?;
+    insert_model_input_source_uses(&mut tx, turn, receipt_id, &receipt_sha256).await?;
     tx.commit().await.map_err(database)
 }
 
@@ -183,7 +183,7 @@ async fn persist_completed_provider_turn(
         &sha256(provider_turn_canonical), Some(turn_transcript_sha256),
         input_units, output_units, Some(provider_request_hash), Some(actual_cost), None, None,
     ).await?;
-    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(receipt_sha256)).await?;
+    insert_model_input_source_uses(&mut tx, turn, receipt_id, receipt_sha256).await?;
     insert_model_output_derivation_source_uses(
         &mut tx,
         turn,

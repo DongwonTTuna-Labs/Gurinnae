@@ -3,8 +3,8 @@ use super::*;
 pub(super) async fn insert_research_artifact_model_inputs(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
-    receipt_id: Option<Uuid>,
-    receipt_sha256: Option<&str>,
+    receipt_id: Uuid,
+    receipt_sha256: &str,
 ) -> Result<(), Failure> {
     // This projection is receipt-bound even when the source artifact was
     // selected by an earlier tool turn.  Digest bytes are produced by the

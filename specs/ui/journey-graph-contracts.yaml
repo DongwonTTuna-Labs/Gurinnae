@@ -5909,6 +5909,11 @@ compiled_registry_decisions:
       COMMERCIAL_CONTROL:
         executor_id: private.ApplyCommercialControl
         transport: PRIVATE_APPLICATION_COMMAND
+      PROVIDER_CONTROL:
+        executor_id: private.ExecuteProviderControl
+        transport: PRIVATE_APPLICATION_COMMAND
+        owner: analysis-worker.provider-control-executor
+        selector: providerControl.operationId selects one of the four closed provider-control operation policies
     invariant: The worker invokes the typed application routine under the immutable ExecutionAuthorization; a BASE_APPLICATION_COMMAND
       is never re-exposed as a browser side door or called with a browser assertion.
   J11_COMMUNICATION_EXECUTOR_REGISTRY_V1:

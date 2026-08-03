@@ -30,11 +30,14 @@ export async function controlRequest(
   actionContext?: Record<string, unknown>,
   elevated?: ElevatedAuthorization,
   pathParams: Record<string, string> = definedParams(event.params),
+  requiredAssuranceLevel?: "ACTIVE_SESSION" | "STEP_UP",
 ) {
   const session = sessionToken(event);
   if (!session) throw new Error("SESSION_NOT_ACTIVE");
   const assurance =
-    stringExtension(indexed, "x-assurance-level") ?? "ACTIVE_SESSION";
+    requiredAssuranceLevel ??
+    stringExtension(indexed, "x-assurance-level") ??
+    "ACTIVE_SESSION";
   const authenticatedFetch: typeof globalThis.fetch = async (
     resource,
     init,

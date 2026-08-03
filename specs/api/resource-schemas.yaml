@@ -6803,6 +6803,186 @@ resources:
       - deadLetterCount
     apis:
     - control-api
+  RelayDataPolicyInput:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        processingRegion:
+          type: string
+          minLength: 1
+          maxLength: 15
+          pattern: ^[A-Z]{2}(?:-[A-Z0-9]{1,12})?$
+        retentionMode:
+          type: string
+          enum:
+          - ZERO_RETENTION
+          - BOUNDED_PROVIDER_RETENTION
+          - LOCAL_ONLY
+        policyVersion:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - processingRegion
+      - retentionMode
+      - policyVersion
+    apis:
+    - control-api
+  RelayModelCatalogItem:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        modelId:
+          type: string
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+        family:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        track:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        createdAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        firstSeenAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+        new:
+          type: boolean
+      required:
+      - modelId
+      - family
+      - track
+      - createdAt
+      - firstSeenAt
+      - lastSeenAt
+      - active
+      - new
+    apis:
+    - control-api
+  RelayModelCurrentProvider:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        currentModel:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+          - type: 'null'
+        enabled:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+        autoUpgrade:
+          type: boolean
+        autoUpgradeConflict:
+          type: boolean
+          description: >-
+            true when automatic upgrade is enabled and two or more active models
+            with created timestamps share the latest created timestamp in the
+            provider track; no model is selected automatically.
+        track:
+          anyOf:
+          - type: string
+            pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+          - type: 'null'
+        dataPolicyState:
+          type: string
+          enum:
+          - UNCONFIGURED
+          - CONFIGURED
+        pricingVersion:
+          type: string
+        unpriced:
+          type: boolean
+      required:
+      - providerId
+      - name
+      - currentModel
+      - enabled
+      - version
+      - autoUpgrade
+      - autoUpgradeConflict
+      - track
+      - dataPolicyState
+      - pricingVersion
+      - unpriced
+    apis:
+    - control-api
+  RelayModelSyncStatus:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        status:
+          type: string
+          enum:
+          - NOT_RUN
+          - QUEUED
+          - RUNNING
+          - SUCCEEDED
+          - FAILED
+        lastCompletedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+        lastErrorCode:
+          anyOf:
+          - type: string
+            pattern: ^[A-Z][A-Z0-9_]{0,127}$
+          - type: 'null'
+      required:
+      - status
+      - lastCompletedAt
+      - lastErrorCode
+    apis:
+    - control-api
+  RelayModelsPage:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelayModelCatalogItem'
+        currentProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelayModelCurrentProvider'
+        syncStatus:
+          $ref: '#/components/schemas/RelayModelSyncStatus'
+        asOf:
+          type: string
+          format: date-time
+      required:
+      - items
+      - currentProviders
+      - syncStatus
+      - asOf
+    apis:
+    - control-api
   Redaction:
     schema:
       type: object
@@ -12753,6 +12933,13 @@ resources:
       - expectedVersion
     apis:
     - control-api
+  listRelayModelsQuery:
+    schema:
+      type: object
+      additionalProperties: false
+      properties: {}
+    apis:
+    - control-api
   logoutInternalSessionRequest:
     schema:
       type: object
@@ -14549,6 +14736,69 @@ resources:
       - expectedVersion
     apis:
     - control-api
+  setModelAutoUpgradeReceipt:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        version:
+          type: integer
+          format: int64
+        autoUpgrade:
+          type: boolean
+        track:
+          anyOf:
+          - type: string
+          - type: 'null'
+        status:
+          type: string
+          enum:
+          - completed
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - providerId
+      - version
+      - autoUpgrade
+      - track
+      - status
+      - acceptedAt
+    apis:
+    - control-api
+  setModelAutoUpgradeRequest:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        enabled:
+          type: boolean
+        track:
+          type: string
+          minLength: 1
+          maxLength: 128
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+      required:
+      - providerId
+      - expectedVersion
+      - enabled
+      - reason
+    apis:
+    - control-api
   startAccessReviewReceipt:
     schema:
       type: object
@@ -15092,11 +15342,16 @@ resources:
           format: uuid
         testModel:
           type: string
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
         reason:
           type: string
       required:
       - providerId
       - testModel
+      - expectedVersion
     apis:
     - control-api
   transitionCaseReceipt:
@@ -15912,6 +16167,72 @@ resources:
           $ref: '#/components/schemas/SubscriptionScope'
     apis:
     - submission-api
+  upgradeProviderModelReceipt:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        attemptId:
+          type: string
+          format: uuid
+        providerId:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+        connectionTestId:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+          - QUEUED
+        acceptedAt:
+          type: string
+          format: date-time
+      required:
+      - attemptId
+      - providerId
+      - modelId
+      - connectionTestId
+      - jobId
+      - status
+      - acceptedAt
+    apis:
+    - control-api
+  upgradeProviderModelRequest:
+    schema:
+      type: object
+      additionalProperties: false
+      properties:
+        providerId:
+          type: string
+          format: uuid
+        modelId:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$
+        expectedVersion:
+          type: integer
+          format: int64
+          minimum: 1
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        dataPolicy:
+          $ref: '#/components/schemas/RelayDataPolicyInput'
+      required:
+      - providerId
+      - modelId
+      - expectedVersion
+      - reason
+    apis:
+    - control-api
   uuid-or-slug:
     schema:
       type: object

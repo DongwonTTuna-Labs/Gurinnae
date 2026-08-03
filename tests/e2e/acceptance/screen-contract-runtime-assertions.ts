@@ -252,7 +252,7 @@ export function assertFinalComponents(): void {
       };
     },
   );
-  expect(sections, "section component references").toHaveLength(496);
+  expect(sections, "section component references").toHaveLength(497);
   expect(components, "component catalog").toHaveLength(58);
   assertUnique(
     components.map((component) => component.id),

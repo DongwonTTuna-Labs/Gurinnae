@@ -156,7 +156,7 @@ bindings:
     owner: crates/domain
     application: crates/application::action_approval
     repository: crates/persistence-postgres::action_approval
-    relations: [ops.action_proposals, ops.action_proposal_versions, ops.action_approval_hypothesis_details, ops.action_approval_claim_details, ops.action_approval_task_details, ops.action_approval_comparable_details, ops.action_approval_communication_details, ops.action_approval_publication_details, ops.action_approval_retraction_details, ops.action_approval_rule_activation_details, ops.action_approval_role_grant_details, ops.action_approval_kill_switch_details, ops.action_approval_communication_authorization_details, ops.action_approval_asset_rights_details, ops.action_approval_retention_schedule_details, ops.action_approval_funding_disclosure_details, ops.action_approval_capability_activation_details, ops.action_approval_response_policy_calendar_details, ops.action_approval_commercial_control_details, ops.action_review_assignments, ops.action_decisions]
+    relations: [ops.action_proposals, ops.action_proposal_versions, ops.action_approval_hypothesis_details, ops.action_approval_claim_details, ops.action_approval_task_details, ops.action_approval_comparable_details, ops.action_approval_communication_details, ops.action_approval_publication_details, ops.action_approval_retraction_details, ops.action_approval_rule_activation_details, ops.action_approval_role_grant_details, ops.action_approval_kill_switch_details, ops.action_approval_communication_authorization_details, ops.action_approval_asset_rights_details, ops.action_approval_retention_schedule_details, ops.action_approval_funding_disclosure_details, ops.action_approval_capability_activation_details, ops.action_approval_response_policy_calendar_details, ops.action_approval_commercial_control_details, ops.action_approval_provider_control_details, ops.action_review_assignments, ops.action_decisions]
     identity: action_proposal_id+version+approval_digest
     concurrency: expected-version+idempotency-key
     operations: [listActionApprovalQueue, createActionProposal, getActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision, withdrawActionProposal, withdrawActionDecision]
@@ -294,6 +294,28 @@ bindings:
     operations: [startAgentRun, getAgentRun]
     events: [agent.tool_call_completed.v1, agent.output_validated.v1]
     errors: [AGENT_PROVIDER_TURN_INVALID, AGENT_PROVIDER_TURN_TERMINAL, MODEL_EGRESS_DENIED]
+  - noun: RelayCatalogModel
+    rust_type: gurine_analysis_worker::runner::RelayCatalogModel
+    owner: services/analysis-worker
+    application: services/analysis-worker::runner
+    repository: services/analysis-worker::runner
+    relations: [ops.relay_model_catalog, ops.relay_model_catalog_sync_runs]
+    identity: model_id+scheduled_bucket
+    concurrency: model-id-upsert+unique-six-hour-scheduled-bucket
+    operations: [listRelayModels, setModelAutoUpgrade]
+    events: []
+    errors: [RESOURCE_NOT_FOUND, VALIDATION_FAILED, DEPENDENCY_UNAVAILABLE]
+  - noun: ClaimedRelayUpgrade
+    rust_type: gurine_analysis_worker::runner::ClaimedRelayUpgrade
+    owner: services/analysis-worker
+    application: services/analysis-worker::runner
+    repository: services/analysis-worker::runner
+    relations: [ops.provider_model_upgrade_attempts, ops.provider_model_upgrade_receipts]
+    identity: attempt_id+receipt_sha256
+    concurrency: expected-provider-version+single-active-provider-target+six-hour-auto-cooldown+immutable-receipt
+    operations: [upgradeProviderModel]
+    events: []
+    errors: [VERSION_CONFLICT, PRECONDITION_FAILED, VALIDATION_FAILED]
   - noun: PublicationGateDecision
     rust_type: gurine_domain::publication::PublicationGateDecision
     owner: crates/domain

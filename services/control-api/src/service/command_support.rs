@@ -15,15 +15,17 @@ async fn append_audit_event(
     prepared: &PreparedCommand,
     transaction: &mut Transaction<'_, Postgres>,
 ) -> Result<Uuid, ServiceError> {
+    let action = command_audit_action(operation.id);
     let audit_event_id = sqlx::query_scalar!(
-        "SELECT ops.append_audit_event($1,'USER',$2,$3,$4,$5,$6,$7,'SUCCESS',NULL,$8,$9)",
+        "SELECT ops.append_audit_event($1,'USER',$2,$3,$4,$5,$6,$7,'SUCCESS',$8,$9,$10)",
         format!("control:{}:{}", prepared.resource_type, prepared.persisted_id),
         actor_id.to_string(),
         session_id,
-        format!("command.{}", operation.id),
+        action,
         prepared.resource_type,
         prepared.persisted_id.to_string(),
         operation.capability,
+        None::<&str>,
         request_id,
         json!({"resourceVersion":prepared.version,"operationId":operation.id,"requestSha256":key.request_hash}),
     )
@@ -31,6 +33,10 @@ async fn append_audit_event(
         .await
         .map_err(db)?;
     required_sqlx_value(audit_event_id)
+}
+
+fn command_audit_action(operation: &str) -> String {
+    format!("command.{operation}")
 }
 
 async fn enqueue_command_events(

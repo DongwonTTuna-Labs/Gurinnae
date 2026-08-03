@@ -131,6 +131,9 @@ function isPending(value: unknown): value is Pending {
     item.body !== null &&
     typeof item.actionContext === "object" &&
     item.actionContext !== null &&
+    (item.requiredAssuranceLevel === undefined ||
+      item.requiredAssuranceLevel === "ACTIVE_SESSION" ||
+      item.requiredAssuranceLevel === "STEP_UP") &&
     typeof pathParams === "object" &&
     pathParams !== null &&
     !Array.isArray(pathParams) &&

@@ -1,12 +1,19 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   type IndexedOperation,
   operationFields,
   optimisticVersion,
+  type RuntimeField,
 } from "@gurine/config";
 import type { ScreenViewModel } from "@gurine/ui";
 import type { RequestEvent } from "@sveltejs/kit";
 import { readInternalSession } from "./cookies";
+import { isProviderControlOperationId } from "./provider-control-proposal";
+import {
+  decorateRelayModelFields,
+  relayModelActionPreset,
+  relayModelFormCaption,
+} from "./relay-model-form";
 import { operations } from "./screen-contract";
 
 /** Browser forms do not receive a synchronizer token.  The encrypted
@@ -23,9 +30,18 @@ export function sameOrigin(event: RequestEvent): boolean {
     return false;
   }
 }
+export function csrfMatches(
+  candidate: FormDataEntryValue | null,
+  expected: string,
+): boolean {
+  if (typeof candidate !== "string") return false;
+  const actual = Buffer.from(candidate, "utf8");
+  const target = Buffer.from(expected, "utf8");
+  return actual.length === target.length && timingSafeEqual(actual, target);
+}
 export function formsFor(
   screen: ScreenViewModel,
-  event: RequestEvent,
+  event: Pick<RequestEvent, "params">,
   data: Record<string, unknown>,
   allowed?: ReadonlySet<string>,
 ) {
@@ -68,6 +84,13 @@ export function formsFor(
                         selectedTarget.expectedApprovalDigest,
                     }
                   : {}),
+                ...(selectedTarget.actionKind === "PROVIDER_CONTROL" &&
+                typeof selectedTarget.providerOperationId === "string" &&
+                isProviderControlOperationId(selectedTarget.providerOperationId)
+                  ? {
+                      providerOperationId: selectedTarget.providerOperationId,
+                    }
+                  : {}),
               }
             : {};
         const journeyTarget =
@@ -90,14 +113,21 @@ export function formsFor(
                   : {}),
               }
             : {};
+        const relayTarget = relayModelActionPreset(operationId, data);
         const preset = {
           ...(expectedVersion !== undefined ? { expectedVersion } : {}),
           ...approvalTarget,
           ...journeyTarget,
           ...explicit,
+          ...relayTarget,
         };
         const fields = indexed
-          ? operationFields(indexed, event.params, preset)
+          ? operationFields(
+              indexed,
+              event.params,
+              preset,
+              stringArray(action.expand_request_objects),
+            )
               .map((field) =>
                 operationId === "decideJourneyHandoff" &&
                 field.name === "reasonCode"
@@ -131,9 +161,43 @@ export function formsFor(
                   ? { ...field, required: false }
                   : field,
               )
+              .flatMap((field) => {
+                if (
+                  operationId !== "submitActionDecision" ||
+                  field.name !== "providerOperationId"
+                )
+                  return [field];
+                const providerOperationId = approvalTarget.providerOperationId;
+                return typeof providerOperationId === "string"
+                  ? [
+                      {
+                        ...field,
+                        value: providerOperationId,
+                        required: true,
+                        readonly: true,
+                      },
+                    ]
+                  : [];
+              })
           : [];
-        return [action.id, fields];
+        return [action.id, decorateRelayModelFields(operationId, fields, data)];
       }),
+  );
+}
+
+export function formCaptionsFor(
+  forms: Readonly<Record<string, readonly RuntimeField[]>>,
+  screen: ScreenViewModel,
+): Readonly<Record<string, string>> {
+  return Object.fromEntries(
+    screen.actions.flatMap((action) => {
+      const operationId = stringProperty(action, "operation_id");
+      const caption = relayModelFormCaption(
+        operationId,
+        forms[action.id] ?? [],
+      );
+      return caption ? [[action.id, caption]] : [];
+    }),
   );
 }
 
@@ -227,6 +291,7 @@ export function recordValue(
   const item = value[key];
   return isRecord(item) ? item : {};
 }
+
 export function stringArray(value: unknown): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")

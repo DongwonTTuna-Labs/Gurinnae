@@ -1,7 +1,7 @@
 schema_version: 1
 specification_version: 13.0.0
 status: FINAL
-contract_count: 64
+contract_count: 66
 contracts:
 - operation_id: acceptAgentSuggestion
   mode: OPTIMISTIC
@@ -586,14 +586,15 @@ contracts:
   - user_id
   - version
 - operation_id: disableProviderRouting
-  mode: OPTIMISTIC
+  mode: AUTHORIZED_EXECUTION_FENCE
   version_field: expectedVersion
   guard_relation: ops.provider_configs
   guard_identity_predicate: id = :providerId
   guard_version_predicate: version = :expectedVersion
   mutation_relation: ops.provider_configs
   mutation_identity_predicate: id = :providerId
-  success_effect: increment version by exactly one; DELETE commands delete exactly one current version
+  success_effect: validate and mutate only inside private.ExecuteProviderControl after a current ExecutionAuthorization; direct
+    HTTP performs no mutation
   zero_rows_resolution:
     probe: read identity without version predicate
     missing_error: RESOURCE_NOT_FOUND
@@ -609,6 +610,8 @@ contracts:
   mutation_columns:
   - id
   - version
+  direct_http_effect: NONE
+  execution_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   mode: OPTIMISTIC
   version_field: expectedVersion
@@ -1252,6 +1255,34 @@ contracts:
   mutation_columns:
   - id
   - row_version
+- operation_id: setModelAutoUpgrade
+  mode: AUTHORIZED_EXECUTION_FENCE
+  version_field: expectedVersion
+  guard_relation: ops.provider_configs
+  guard_identity_predicate: id = :providerId
+  guard_version_predicate: version = :expectedVersion
+  mutation_relation: ops.provider_configs
+  mutation_identity_predicate: id = :providerId
+  success_effect: validate and mutate only inside private.ExecuteProviderControl after a current ExecutionAuthorization; direct
+    HTTP performs no mutation
+  zero_rows_resolution:
+    probe: read identity without version predicate
+    missing_error: RESOURCE_NOT_FOUND
+    existing_error: VERSION_CONFLICT
+  version_mutation: version = version + 1
+  request_placeholders:
+  - expectedVersion
+  - providerId
+  context_placeholders: []
+  guard_columns:
+  - id
+  - version
+  mutation_columns:
+  - id
+  - routing_policy
+  - version
+  direct_http_effect: NONE
+  execution_owner: private.ExecuteProviderControl
 - operation_id: startRuleShadow
   mode: OPTIMISTIC
   version_field: expectedVersion
@@ -1555,6 +1586,35 @@ contracts:
   mutation_columns:
   - id
   - version
+- operation_id: upgradeProviderModel
+  mode: AUTHORIZED_EXECUTION_FENCE
+  version_field: expectedVersion
+  guard_relation: ops.provider_configs
+  guard_identity_predicate: id = :providerId
+  guard_version_predicate: version = :expectedVersion
+  mutation_relation: ops.provider_configs
+  mutation_identity_predicate: id = :providerId
+  success_effect: validate and mutate only inside private.ExecuteProviderControl after a current ExecutionAuthorization; direct
+    HTTP performs no mutation
+  zero_rows_resolution:
+    probe: read identity without version predicate
+    missing_error: RESOURCE_NOT_FOUND
+    existing_error: VERSION_CONFLICT
+  version_mutation: version = version + 1
+  request_placeholders:
+  - expectedVersion
+  - providerId
+  context_placeholders: []
+  guard_columns:
+  - id
+  - version
+  mutation_columns:
+  - id
+  - enabled
+  - routing_policy
+  - version
+  direct_http_effect: NONE
+  execution_owner: private.ExecuteProviderControl
 - operation_id: validateClaims
   mode: OPTIMISTIC
   version_field: expectedVersion

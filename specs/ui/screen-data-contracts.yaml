@@ -6816,6 +6816,7 @@ operations:
   path: /v1/internal/commands/disable-provider-routing
   purpose:
   - provider route disable
+  - logical provider-control proposal form; direct HTTP effect is forbidden
   consumers:
   - OPS-005
   auth: actor-assertion-and-capability
@@ -6834,168 +6835,54 @@ operations:
     required: true
     in: body
   request_schema: disableProviderRoutingRequest
-  response_schema: disableProviderRoutingReceipt
+  response_schema: AddendumProblemDetailsV1
   idempotency: required
-  optimistic_concurrency: required
-  audit: required
+  optimistic_concurrency: proposal-execution-fence-only
+  audit: none
   rate_limit: internal-user
   errors:
-  - '400'
-  - '401'
-  - '403'
-  - '404'
   - '409'
-  - '413'
-  - '415'
-  - '422'
-  - '500'
-  - '503'
   blocking_consumers: []
   nonblocking_consumers:
   - OPS-005
   response_fields:
-  - name: operationId
+  - name: code
     type: string
+    required: true
+  - name: title
+    type: string
+    required: true
+  - name: status
+    type: integer
     required: true
   - name: requestId
     type: uuid
     required: true
-  - name: status
-    type: enum:accepted,completed,rejected
-    required: true
-  - name: aggregateId
-    type: uuid-or-string
+  - name: detail
+    type: nullable-string
     required: false
-  - name: aggregateVersion
-    type: integer
-    required: false
-  - name: auditEventId
-    type: uuid
-    required: false
-  - name: receiptToken
-    type: string
-    required: false
-  - name: acceptedAt
-    type: date-time
-    required: true
-  - name: links
-    type: array:Link
-    required: true
   implementation_files:
-    handler: services/control-api/src/service/domains/operations.rs
-    application: crates/application/src/commands/disable_provider_routing.rs
-    integration_test: tests/integration/api/control-api/disable_provider_routing.rs
+    handler: services/control-api/src/routes/mod.rs
+    application: services/control-api/src/service/mod.rs
+    integration_test: services/control-api/src/service/mod.rs
     generated_client: packages/api-client-control/src/generated/
-    contract_test: tests/contract/control-api/disable_provider_routing.spec.ts
+    contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
   specification_version: 13.0.0
-  transport_errors:
-  - INVALID_PARAMETER
-  - INVALID_REQUEST
-  - UNSUPPORTED_MEDIA_TYPE
-  - PAYLOAD_TOO_LARGE
-  authorization_errors:
-  - ACTOR_ASSERTION_REQUIRED
-  - ACTOR_ASSERTION_INVALID
-  - ACTOR_ASSERTION_EXPIRED
-  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-  - ACTOR_ASSERTION_REQUEST_MISMATCH
-  - ACTOR_ASSERTION_REPLAYED
-  - CAPABILITY_DENIED
-  - STEP_UP_REQUIRED
-  concurrency_errors:
-  - IDEMPOTENCY_CONFLICT
-  - VERSION_CONFLICT
+  transport_errors: []
+  authorization_errors: []
+  concurrency_errors: []
   domain_errors:
-  - RESOURCE_NOT_FOUND
-  - PRECONDITION_FAILED
-  - VALIDATION_FAILED
-  - INVALID_STATE_TRANSITION
-  provider_errors:
-  - DEPENDENCY_UNAVAILABLE
-  - DEPENDENCY_RATE_LIMITED
+  - ACTION_PROPOSAL_REQUIRED
+  provider_errors: []
   error_codes:
-  - INVALID_PARAMETER
-  - INVALID_REQUEST
-  - UNSUPPORTED_MEDIA_TYPE
-  - PAYLOAD_TOO_LARGE
-  - ACTOR_ASSERTION_REQUIRED
-  - ACTOR_ASSERTION_INVALID
-  - ACTOR_ASSERTION_EXPIRED
-  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-  - ACTOR_ASSERTION_REQUEST_MISMATCH
-  - ACTOR_ASSERTION_REPLAYED
-  - CAPABILITY_DENIED
-  - STEP_UP_REQUIRED
-  - IDEMPOTENCY_CONFLICT
-  - VERSION_CONFLICT
-  - RESOURCE_NOT_FOUND
-  - PRECONDITION_FAILED
-  - VALIDATION_FAILED
-  - INVALID_STATE_TRANSITION
-  - DEPENDENCY_UNAVAILABLE
-  - DEPENDENCY_RATE_LIMITED
-  - INTERNAL_ERROR
+  - ACTION_PROPOSAL_REQUIRED
   http_error_mapping:
-    '400':
-    - INVALID_PARAMETER
-    - INVALID_REQUEST
-    '401':
-    - ACTOR_ASSERTION_REQUIRED
-    - ACTOR_ASSERTION_INVALID
-    - ACTOR_ASSERTION_EXPIRED
-    - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-    - ACTOR_ASSERTION_REQUEST_MISMATCH
-    '403':
-    - CAPABILITY_DENIED
-    - STEP_UP_REQUIRED
-    '404':
-    - RESOURCE_NOT_FOUND
     '409':
-    - ACTOR_ASSERTION_REPLAYED
-    - IDEMPOTENCY_CONFLICT
-    - VERSION_CONFLICT
-    - INVALID_STATE_TRANSITION
-    '413':
-    - PAYLOAD_TOO_LARGE
-    '415':
-    - UNSUPPORTED_MEDIA_TYPE
-    '422':
-    - PRECONDITION_FAILED
-    - VALIDATION_FAILED
-    '500':
-    - INTERNAL_ERROR
-    '503':
-    - DEPENDENCY_UNAVAILABLE
-    - DEPENDENCY_RATE_LIMITED
-  internal_errors:
-  - INTERNAL_ERROR
+    - ACTION_PROPOSAL_REQUIRED
+  internal_errors: []
   operation_kind: COMMAND
-  mutates_state: true
-  success_status: 200
-  concurrency_contract:
-    mode: OPTIMISTIC
-    version_field: expectedVersion
-    guard_relation: ops.provider_configs
-    guard_identity_predicate: id = :providerId
-    guard_version_predicate: version = :expectedVersion
-    mutation_relation: ops.provider_configs
-    mutation_identity_predicate: id = :providerId
-    success_effect: increment version by exactly one; DELETE commands delete exactly one current version
-    zero_rows_resolution:
-      probe: read identity without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - expectedVersion
-    - providerId
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+  mutates_state: false
+  success_status: 409
   assurance_policy:
     mode: STATIC
     default: STEP_UP
@@ -7014,6 +6901,13 @@ operations:
     - actionDigest
     - stepUpAuthorizationId
     - idempotencyKeySha256
+  direct_http_effect:
+    entrypoint: ACTION_PROPOSAL
+    state_effect: UNCHANGED
+    writes: []
+    outbox_events: []
+    external_effects: []
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   status: READY
   api: control-api
@@ -19650,6 +19544,111 @@ operations:
     step_up_possible: false
   assurance_level: NONE
   step_up_required: false
+- operation_id: listRelayModels
+  status: READY
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/list-relay-models
+  purpose:
+  - relay model catalog and provider selection state
+  consumers:
+  - OPS-005
+  auth: actor-assertion-and-capability
+  capability: cases.read
+  request_fields: []
+  request_schema: listRelayModelsQuery
+  response_schema: RelayModelsPage
+  idempotency: not-applicable
+  optimistic_concurrency: not-applicable
+  audit: read-access-log
+  rate_limit: internal-user
+  errors:
+  - '400'
+  - '401'
+  - '403'
+  - '409'
+  - '500'
+  - '503'
+  blocking_consumers:
+  - OPS-005
+  nonblocking_consumers: []
+  response_fields:
+  - name: items
+    type: array:RelayModelCatalogItem
+    required: true
+  - name: currentProviders
+    type: array:RelayModelCurrentProvider
+    required: true
+  - name: syncStatus
+    type: RelayModelSyncStatus
+    required: true
+  - name: asOf
+    type: date-time
+    required: true
+  implementation_files:
+    handler: services/control-api/src/service/domains/operations.rs
+    application: crates/application/src/queries/list_relay_models.rs
+    integration_test: tests/integration/api/control-api/list_relay_models.rs
+    generated_client: packages/api-client-control/src/generated/
+    contract_test: tests/contract/control-api/list_relay_models.spec.ts
+  specification_version: 13.0.0
+  transport_errors:
+  - INVALID_PARAMETER
+  authorization_errors:
+  - ACTOR_ASSERTION_REQUIRED
+  - ACTOR_ASSERTION_INVALID
+  - ACTOR_ASSERTION_EXPIRED
+  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
+  - ACTOR_ASSERTION_REQUEST_MISMATCH
+  - ACTOR_ASSERTION_REPLAYED
+  - CAPABILITY_DENIED
+  concurrency_errors: []
+  domain_errors: []
+  provider_errors:
+  - DEPENDENCY_UNAVAILABLE
+  - DEPENDENCY_RATE_LIMITED
+  error_codes:
+  - INVALID_PARAMETER
+  - ACTOR_ASSERTION_REQUIRED
+  - ACTOR_ASSERTION_INVALID
+  - ACTOR_ASSERTION_EXPIRED
+  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
+  - ACTOR_ASSERTION_REQUEST_MISMATCH
+  - ACTOR_ASSERTION_REPLAYED
+  - CAPABILITY_DENIED
+  - DEPENDENCY_UNAVAILABLE
+  - DEPENDENCY_RATE_LIMITED
+  - INTERNAL_ERROR
+  http_error_mapping:
+    '400':
+    - INVALID_PARAMETER
+    '401':
+    - ACTOR_ASSERTION_REQUIRED
+    - ACTOR_ASSERTION_INVALID
+    - ACTOR_ASSERTION_EXPIRED
+    - ACTOR_ASSERTION_AUDIENCE_MISMATCH
+    - ACTOR_ASSERTION_REQUEST_MISMATCH
+    '403':
+    - CAPABILITY_DENIED
+    '409':
+    - ACTOR_ASSERTION_REPLAYED
+    '500':
+    - INTERNAL_ERROR
+    '503':
+    - DEPENDENCY_UNAVAILABLE
+    - DEPENDENCY_RATE_LIMITED
+  internal_errors:
+  - INTERNAL_ERROR
+  operation_kind: QUERY
+  mutates_state: false
+  success_status: 200
+  assurance_policy:
+    mode: STATIC
+    default: ACTIVE_SESSION
+    conditions: []
+    step_up_possible: false
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
 - operation_id: listReviewQueue
   status: READY
   api: control-api
@@ -26804,6 +26803,113 @@ operations:
     step_up_possible: false
   assurance_level: NONE
   step_up_required: false
+- operation_id: setModelAutoUpgrade
+  status: READY
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/set-model-auto-upgrade
+  purpose:
+  - configure relay model automatic upgrade policy
+  - logical provider-control proposal form; direct HTTP effect is forbidden
+  consumers:
+  - OPS-005
+  auth: actor-assertion-and-capability
+  capability: kill_switch.execute
+  request_fields:
+  - name: providerId
+    type: uuid
+    required: true
+    in: body
+  - name: expectedVersion
+    type: integer
+    required: true
+    in: body
+  - name: enabled
+    type: boolean
+    required: true
+    in: body
+  - name: track
+    type: string
+    required: false
+    in: body
+  - name: reason
+    type: string
+    required: true
+    in: body
+  request_schema: setModelAutoUpgradeRequest
+  response_schema: AddendumProblemDetailsV1
+  idempotency: required
+  optimistic_concurrency: proposal-execution-fence-only
+  audit: none
+  rate_limit: internal-user
+  errors:
+  - '409'
+  blocking_consumers: []
+  nonblocking_consumers:
+  - OPS-005
+  response_fields:
+  - name: code
+    type: string
+    required: true
+  - name: title
+    type: string
+    required: true
+  - name: status
+    type: integer
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: detail
+    type: nullable-string
+    required: false
+  implementation_files:
+    handler: services/control-api/src/routes/mod.rs
+    application: services/control-api/src/service/mod.rs
+    integration_test: services/control-api/src/service/mod.rs
+    generated_client: packages/api-client-control/src/generated/
+    contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  specification_version: 13.0.0
+  transport_errors: []
+  authorization_errors: []
+  concurrency_errors: []
+  domain_errors:
+  - ACTION_PROPOSAL_REQUIRED
+  provider_errors: []
+  error_codes:
+  - ACTION_PROPOSAL_REQUIRED
+  http_error_mapping:
+    '409':
+    - ACTION_PROPOSAL_REQUIRED
+  internal_errors: []
+  operation_kind: COMMAND
+  mutates_state: false
+  success_status: 409
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
+  assurance_level: STEP_UP
+  step_up_required: true
+  step_up_policy:
+    owner: PRIVATE_IDENTITY_API
+    credential: request-bound actor assertion only
+    identity_api_authorization_required: true
+    control_api_receives_proof: false
+    mode: STATIC
+    required_claims:
+    - assuranceLevel
+    - actionDigest
+    - stepUpAuthorizationId
+    - idempotencyKeySha256
+  direct_http_effect:
+    entrypoint: ACTION_PROPOSAL
+    state_effect: UNCHANGED
+    writes: []
+    outbox_events: []
+    external_effects: []
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: startAccessReview
   status: READY
   api: control-api
@@ -28300,6 +28406,7 @@ operations:
   path: /v1/internal/commands/test-provider-connection
   purpose:
   - safe connectivity test
+  - logical provider-control proposal form; direct HTTP effect is forbidden
   consumers:
   - OPS-005
   auth: actor-assertion-and-capability
@@ -28313,140 +28420,63 @@ operations:
     type: string
     required: true
     in: body
+  - name: expectedVersion
+    type: integer
+    required: true
+    in: body
   - name: reason
     type: string
     required: false
     in: body
   request_schema: testProviderConnectionRequest
-  response_schema: testProviderConnectionReceipt
+  response_schema: AddendumProblemDetailsV1
   idempotency: required
-  optimistic_concurrency: required-when-resource-versioned
-  audit: required
+  optimistic_concurrency: proposal-execution-fence-only
+  audit: none
   rate_limit: internal-user
   errors:
-  - '400'
-  - '401'
-  - '403'
-  - '404'
   - '409'
-  - '413'
-  - '415'
-  - '422'
-  - '500'
-  - '503'
   blocking_consumers: []
   nonblocking_consumers:
   - OPS-005
   response_fields:
-  - name: operationId
+  - name: code
     type: string
+    required: true
+  - name: title
+    type: string
+    required: true
+  - name: status
+    type: integer
     required: true
   - name: requestId
     type: uuid
     required: true
-  - name: status
-    type: enum:accepted,completed,rejected
-    required: true
-  - name: aggregateId
-    type: uuid-or-string
+  - name: detail
+    type: nullable-string
     required: false
-  - name: aggregateVersion
-    type: integer
-    required: false
-  - name: auditEventId
-    type: uuid
-    required: false
-  - name: receiptToken
-    type: string
-    required: false
-  - name: acceptedAt
-    type: date-time
-    required: true
-  - name: links
-    type: array:Link
-    required: true
   implementation_files:
-    handler: services/control-api/src/service/domains/operations.rs
-    application: crates/application/src/commands/test_provider_connection.rs
-    integration_test: tests/integration/api/control-api/test_provider_connection.rs
+    handler: services/control-api/src/routes/mod.rs
+    application: services/control-api/src/service/mod.rs
+    integration_test: services/control-api/src/service/mod.rs
     generated_client: packages/api-client-control/src/generated/
-    contract_test: tests/contract/control-api/test_provider_connection.spec.ts
+    contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
   specification_version: 13.0.0
-  transport_errors:
-  - INVALID_PARAMETER
-  - INVALID_REQUEST
-  - UNSUPPORTED_MEDIA_TYPE
-  - PAYLOAD_TOO_LARGE
-  authorization_errors:
-  - ACTOR_ASSERTION_REQUIRED
-  - ACTOR_ASSERTION_INVALID
-  - ACTOR_ASSERTION_EXPIRED
-  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-  - ACTOR_ASSERTION_REQUEST_MISMATCH
-  - ACTOR_ASSERTION_REPLAYED
-  - CAPABILITY_DENIED
-  concurrency_errors:
-  - IDEMPOTENCY_CONFLICT
+  transport_errors: []
+  authorization_errors: []
+  concurrency_errors: []
   domain_errors:
-  - RESOURCE_NOT_FOUND
-  - PRECONDITION_FAILED
-  - VALIDATION_FAILED
-  provider_errors:
-  - DEPENDENCY_UNAVAILABLE
-  - DEPENDENCY_RATE_LIMITED
+  - ACTION_PROPOSAL_REQUIRED
+  provider_errors: []
   error_codes:
-  - INVALID_PARAMETER
-  - INVALID_REQUEST
-  - UNSUPPORTED_MEDIA_TYPE
-  - PAYLOAD_TOO_LARGE
-  - ACTOR_ASSERTION_REQUIRED
-  - ACTOR_ASSERTION_INVALID
-  - ACTOR_ASSERTION_EXPIRED
-  - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-  - ACTOR_ASSERTION_REQUEST_MISMATCH
-  - ACTOR_ASSERTION_REPLAYED
-  - CAPABILITY_DENIED
-  - IDEMPOTENCY_CONFLICT
-  - RESOURCE_NOT_FOUND
-  - PRECONDITION_FAILED
-  - VALIDATION_FAILED
-  - DEPENDENCY_UNAVAILABLE
-  - DEPENDENCY_RATE_LIMITED
-  - INTERNAL_ERROR
+  - ACTION_PROPOSAL_REQUIRED
   http_error_mapping:
-    '400':
-    - INVALID_PARAMETER
-    - INVALID_REQUEST
-    '401':
-    - ACTOR_ASSERTION_REQUIRED
-    - ACTOR_ASSERTION_INVALID
-    - ACTOR_ASSERTION_EXPIRED
-    - ACTOR_ASSERTION_AUDIENCE_MISMATCH
-    - ACTOR_ASSERTION_REQUEST_MISMATCH
-    '403':
-    - CAPABILITY_DENIED
-    '404':
-    - RESOURCE_NOT_FOUND
     '409':
-    - ACTOR_ASSERTION_REPLAYED
-    - IDEMPOTENCY_CONFLICT
-    '413':
-    - PAYLOAD_TOO_LARGE
-    '415':
-    - UNSUPPORTED_MEDIA_TYPE
-    '422':
-    - PRECONDITION_FAILED
-    - VALIDATION_FAILED
-    '500':
-    - INTERNAL_ERROR
-    '503':
-    - DEPENDENCY_UNAVAILABLE
-    - DEPENDENCY_RATE_LIMITED
-  internal_errors:
-  - INTERNAL_ERROR
+    - ACTION_PROPOSAL_REQUIRED
+  internal_errors: []
   operation_kind: COMMAND
-  mutates_state: true
-  success_status: 202
+  mutates_state: false
+  success_status: 409
   assurance_policy:
     mode: STATIC
     default: ACTIVE_SESSION
@@ -28454,6 +28484,13 @@ operations:
     step_up_possible: false
   assurance_level: ACTIVE_SESSION
   step_up_required: false
+  direct_http_effect:
+    entrypoint: ACTION_PROPOSAL
+    state_effect: UNCHANGED
+    writes: []
+    outbox_events: []
+    external_effects: []
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: transitionCase
   status: READY
   api: control-api
@@ -30693,6 +30730,113 @@ operations:
     step_up_possible: false
   assurance_level: SCOPED_TOKEN
   step_up_required: false
+- operation_id: upgradeProviderModel
+  status: READY
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/upgrade-provider-model
+  purpose:
+  - queue a version-fenced relay model upgrade after connection validation
+  - logical provider-control proposal form; direct HTTP effect is forbidden
+  consumers:
+  - OPS-005
+  auth: actor-assertion-and-capability
+  capability: kill_switch.execute
+  request_fields:
+  - name: providerId
+    type: uuid
+    required: true
+    in: body
+  - name: modelId
+    type: string
+    required: true
+    in: body
+  - name: expectedVersion
+    type: integer
+    required: true
+    in: body
+  - name: reason
+    type: string
+    required: true
+    in: body
+  - name: dataPolicy
+    type: RelayDataPolicyInput
+    required: false
+    in: body
+  request_schema: upgradeProviderModelRequest
+  response_schema: AddendumProblemDetailsV1
+  idempotency: required
+  optimistic_concurrency: proposal-execution-fence-only
+  audit: none
+  rate_limit: internal-user
+  errors:
+  - '409'
+  blocking_consumers: []
+  nonblocking_consumers:
+  - OPS-005
+  response_fields:
+  - name: code
+    type: string
+    required: true
+  - name: title
+    type: string
+    required: true
+  - name: status
+    type: integer
+    required: true
+  - name: requestId
+    type: uuid
+    required: true
+  - name: detail
+    type: nullable-string
+    required: false
+  implementation_files:
+    handler: services/control-api/src/routes/mod.rs
+    application: services/control-api/src/service/mod.rs
+    integration_test: services/control-api/src/service/mod.rs
+    generated_client: packages/api-client-control/src/generated/
+    contract_test: tests/e2e/support/mock-api-provider-proposals.test.ts
+  specification_version: 13.0.0
+  transport_errors: []
+  authorization_errors: []
+  concurrency_errors: []
+  domain_errors:
+  - ACTION_PROPOSAL_REQUIRED
+  provider_errors: []
+  error_codes:
+  - ACTION_PROPOSAL_REQUIRED
+  http_error_mapping:
+    '409':
+    - ACTION_PROPOSAL_REQUIRED
+  internal_errors: []
+  operation_kind: COMMAND
+  mutates_state: false
+  success_status: 409
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
+  assurance_level: STEP_UP
+  step_up_required: true
+  step_up_policy:
+    owner: PRIVATE_IDENTITY_API
+    credential: request-bound actor assertion only
+    identity_api_authorization_required: true
+    control_api_receives_proof: false
+    mode: STATIC
+    required_claims:
+    - assuranceLevel
+    - actionDigest
+    - stepUpAuthorizationId
+    - idempotencyKeySha256
+  direct_http_effect:
+    entrypoint: ACTION_PROPOSAL
+    state_effect: UNCHANGED
+    writes: []
+    outbox_events: []
+    external_effects: []
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: validateClaims
   status: READY
   api: control-api
@@ -31510,18 +31654,18 @@ operations:
     step_up_possible: false
   assurance_level: SCOPED_TOKEN
   step_up_required: false
-operation_count: 212
-http_operation_count: 212
+operation_count: 215
+http_operation_count: 215
 identity_operation_count: 6
-api_operation_count: 212
-command_operation_count: 105
-query_operation_count: 107
+api_operation_count: 215
+command_operation_count: 107
+query_operation_count: 108
 counts:
-  total: 212
-  query: 107
-  command: 105
-  httpNonGet: 102
+  total: 215
+  query: 108
+  command: 107
+  httpNonGet: 104
   public: 41
   submission: 34
-  control: 131
+  control: 134
   identity: 6

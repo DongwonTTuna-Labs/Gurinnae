@@ -68,6 +68,8 @@ pub enum ServiceError {
     PreconditionFailed,
     #[error("control command capability is denied")]
     CapabilityDenied,
+    #[error("provider control must be submitted through an action proposal")]
+    ProposalRequired,
     #[error("idempotency key was reused with different request bytes")]
     IdempotencyConflict,
     #[error("control persistence is unavailable")]
@@ -108,6 +110,7 @@ pub async fn execute(
     domain_events: &Mutex<InProcessDomainEventJournal>,
     request_id: Uuid,
 ) -> Result<Output, ServiceError> {
+    reject_direct_provider_control(operation.id)?;
     let handler = registry::lookup(operation.id)?;
     if operation.operation_kind == "QUERY" {
         let registry::Handler::Query(handler) = handler else {
@@ -139,6 +142,20 @@ pub async fn execute(
         request_id,
     )
     .await
+}
+
+pub(crate) fn reject_direct_provider_control(operation_id: &str) -> Result<(), ServiceError> {
+    if matches!(
+        operation_id,
+        "disableProviderRouting"
+            | "testProviderConnection"
+            | "upgradeProviderModel"
+            | "setModelAutoUpgrade"
+    ) {
+        Err(ServiceError::ProposalRequired)
+    } else {
+        Ok(())
+    }
 }
 
 async fn registered_query(
@@ -194,6 +211,28 @@ mod tests {
     use actix_web::test::TestRequest;
 
     use super::*;
+
+    #[test]
+    fn provider_control_direct_operations_require_action_proposals() {
+        for operation_id in [
+            "disableProviderRouting",
+            "testProviderConnection",
+            "upgradeProviderModel",
+            "setModelAutoUpgrade",
+        ] {
+            assert!(matches!(
+                reject_direct_provider_control(operation_id),
+                Err(ServiceError::ProposalRequired)
+            ));
+        }
+    }
+
+    #[test]
+    fn non_provider_control_operations_keep_the_existing_dispatch_path() {
+        for operation_id in ["cancelJob", "listProviders", "createActionProposal"] {
+            assert!(reject_direct_provider_control(operation_id).is_ok());
+        }
+    }
 
     #[test]
     fn unknown_command_is_rejected_before_persistence() {

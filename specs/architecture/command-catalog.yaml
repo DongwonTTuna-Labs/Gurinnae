@@ -780,37 +780,16 @@ commands:
   aggregate: provider
   authorization:
     capability: kill_switch.execute
-    step_up_required: false
-  repository_methods:
-  - ProviderRepository::disable_routing
-  domain_events:
-  - provider.routing_disabled.v1
+    step_up_required: true
+  repository_methods: []
+  domain_events: []
   integration_events: []
-  audit_action: command.disableProviderRouting
-  concurrency:
-    mode: OPTIMISTIC
-    version_field: expectedVersion
-    guard_relation: ops.provider_configs
-    guard_identity_predicate: id = :providerId
-    guard_version_predicate: version = :expectedVersion
-    mutation_relation: ops.provider_configs
-    mutation_identity_predicate: id = :providerId
-    success_effect: increment version by exactly one; DELETE commands delete exactly one current version
-    zero_rows_resolution:
-      probe: read identity without version predicate
-      missing_error: RESOURCE_NOT_FOUND
-      existing_error: VERSION_CONFLICT
-    version_mutation: version = version + 1
-    request_placeholders:
-    - expectedVersion
-    - providerId
-    context_placeholders: []
-    guard_columns:
-    - id
-    - version
-    mutation_columns:
-    - id
-    - version
+  audit_action: none
+  concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: disableUser
   api: control-api
   method: POST
@@ -1865,12 +1844,15 @@ commands:
   authorization:
     capability: jobs.operate
     step_up_required: false
-  repository_methods:
-  - ProviderRepository::request_test
+  repository_methods: []
   domain_events: []
   integration_events: []
-  audit_action: provider.connection_test.requested
+  audit_action: none
   concurrency: null
+  direct_http_effect:
+    result: 409 ACTION_PROPOSAL_REQUIRED
+    state_effect: UNCHANGED
+    authorized_effect_owner: private.ExecuteProviderControl
 - operation_id: transitionCase
   api: control-api
   method: POST

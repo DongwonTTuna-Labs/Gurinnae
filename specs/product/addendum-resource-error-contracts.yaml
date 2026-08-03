@@ -302,14 +302,14 @@ operation_bindings:
   receiveTwilioVoiceCallback: {scope: PRIVATE_COMMUNICATION, source_pointer: 'specs/product/owner-addendum-2026-07-14.yaml#private_communication_gateway_operations[operation_id=receiveTwilioVoiceCallback]', transport_profile: PRIVATE_PROVIDER_CALLBACK, request_schema: ReceiveTwilioVoiceCallbackRequestV1, success_status: 202, success_media_type: application/json, success_schema: CommunicationCallbackReceiptV1}
 
 request_schemas_by_operation:
-  listActionApprovalQueue: {name: ListActionApprovalQueueRequestV1, additional_properties: false, fields: {actionKind: 'optional<unique-array<ActionKindV1>[1..17]>@query', proposalState: 'optional<unique-array<enum<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>>[1..8]>@query', assignmentState: 'optional<unique-array<enum<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>>[1..6]>@query', dueBefore: 'optional<datetime>@query', cursor: 'optional<string[1..4096]>@query', limit: 'optional<int32[1..100]=20>@query', sort: 'optional<enum<DUE_ASC|UPDATED_DESC>=DUE_ASC>@query'}}
+  listActionApprovalQueue: {name: ListActionApprovalQueueRequestV1, additional_properties: false, fields: {actionKind: 'optional<unique-array<ActionKindV1>[1..18]>@query', proposalState: 'optional<unique-array<enum<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>>[1..8]>@query', assignmentState: 'optional<unique-array<enum<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>>[1..6]>@query', dueBefore: 'optional<datetime>@query', cursor: 'optional<string[1..4096]>@query', limit: 'optional<int32[1..100]=20>@query', sort: 'optional<enum<DUE_ASC|UPDATED_DESC>=DUE_ASC>@query'}}
   createActionProposal: {name: CreateActionProposalRequestV1, additional_properties: false, fields: {actionKind: 'ActionKindV1@body', origin: 'ActionOriginV1@body', draft: 'ActionPayloadV1@body', rationale: 'ActionRationaleV1@body', expiresAt: 'datetime@body'}, invariants: ['actionKind equals draft.kind', 'rationale equals draft.rationale byte-for-byte after canonicalization']}
   getActionProposal: {name: GetActionProposalRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path'}}
   updateActionDraft: {name: UpdateActionDraftRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', expectedVersion: 'int64[1..max]@body', expectedContentDigest: 'sha256@body', draft: 'ActionPayloadV1@body', rationale: 'ActionRationaleV1@body', expiresAt: 'datetime@body'}, invariants: ['rationale equals draft.rationale byte-for-byte after canonicalization']}
   previewActionDraft: {name: PreviewActionDraftRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', expectedVersion: 'int64[1..max]@body', expectedContentDigest: 'sha256@body'}}
   submitActionForReview: {name: SubmitActionForReviewRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', expectedVersion: 'int64[1..max]@body', expectedContentDigest: 'sha256@body', previewId: 'uuid@body', previewDigest: 'sha256@body'}}
   claimActionReview: {name: ClaimActionReviewRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', assignmentId: 'uuid@body', expectedProposalVersion: 'int64[1..max]@body', expectedAssignmentVersion: 'int64[1..max]@body', expectedApprovalDigest: 'sha256@body'}}
-  submitActionDecision: {name: SubmitActionDecisionRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', actionKind: 'ActionKindV1@body', assignmentId: 'uuid@body', expectedProposalVersion: 'int64[1..max]@body', expectedAssignmentVersion: 'int64[1..max]@body', expectedApprovalDigest: 'sha256@body', decision: 'ActionDecisionV1@body'}}
+  submitActionDecision: {name: SubmitActionDecisionRequestV1, additional_properties: false, fields: {proposalId: 'uuid@path', actionKind: 'ActionKindV1@body', providerOperationId: 'optional<ProviderControlOperationIdV1>@body', assignmentId: 'uuid@body', expectedProposalVersion: 'int64[1..max]@body', expectedAssignmentVersion: 'int64[1..max]@body', expectedApprovalDigest: 'sha256@body', decision: 'ActionDecisionV1@body'}, invariants: ['providerOperationId is required iff actionKind=PROVIDER_CONTROL and forbidden otherwise', 'providerOperationId equals the immutable selected ProviderControlApprovalDetailV1 operationId before assurance selection or mutation']}
   getActionExecutionReceipt: {name: GetActionExecutionReceiptRequestV1, additional_properties: false, fields: {executionId: 'uuid@path'}}
   cancelActionExecution: {name: CancelActionExecutionRequestV1, additional_properties: false, fields: {executionId: 'uuid@path', expectedGeneration: 'int64[1..max]@body', expectedStateVersion: 'int64[1..max]@body', reasonCode: 'enum<USER_REQUEST|POLICY_CHANGE|CONSENT_REVOKED|SUPPRESSION|RIGHTS_REVOKED|INCIDENT|KILL_SWITCH|BUDGET|OTHER>@body', reasonNote: 'string[1..2000]@body'}}
   retryActionExecution: {name: RetryActionExecutionRequestV1, additional_properties: false, fields: {executionId: 'uuid@path', actionKind: 'ActionKindV1@body', expectedGeneration: 'int64[1..max]@body', expectedStateVersion: 'int64[1..max]@body', safeRetryProof: 'SafeRetryProofV1@body', reasonCode: 'enum<NO_PROVIDER_ATTEMPT|PROVIDER_LOOKUP_NOT_FOUND|PROVIDER_IDEMPOTENT_REPLAY_SAFE>@body', reasonNote: 'string[1..2000]@body'}, invariants: ['reasonCode equals safeRetryProof.kind']}
@@ -386,6 +386,7 @@ private_application_command_bindings:
   private.DecideCapabilityActivation: {scope: PRIVATE_APPLICATION, source_pointer: "specs/product/addendum-operation-contracts.yaml#private_application_commands['private.DecideCapabilityActivation']", request_schema: DecideCapabilityActivationCommandV1, success_schema: CapabilityActivationDecisionReceiptV1, caller: action-execution-worker.capability-activation-executor}
   private.CreateBusinessCalendarVersion: {scope: PRIVATE_APPLICATION, source_pointer: "specs/product/addendum-operation-contracts.yaml#private_application_commands['private.CreateBusinessCalendarVersion']", request_schema: CreateBusinessCalendarVersionCommandV1, success_schema: BusinessCalendarVersionReceiptV1, caller: action-execution-worker.business-calendar-executor}
   private.ApplyCommercialControl: {scope: PRIVATE_APPLICATION, source_pointer: "specs/product/addendum-operation-contracts.yaml#private_application_commands['private.ApplyCommercialControl']", request_schema: ApplyCommercialControlCommandV1, success_schema: CommercialControlExecutionReceiptV1, caller: action-execution-worker.commercial-control-executor}
+  private.ExecuteProviderControl: {scope: PRIVATE_APPLICATION, source_pointer: "specs/product/addendum-operation-contracts.yaml#private_application_commands['private.ExecuteProviderControl']", request_schema: ExecuteProviderControlCommandV1, success_schema: ProviderControlExecutionReceiptV1, caller: analysis-worker.provider-control-executor}
   private.MaterializePaidEvidencePacket: {scope: PRIVATE_APPLICATION, source_pointer: "specs/product/addendum-operation-contracts.yaml#private_application_commands['private.MaterializePaidEvidencePacket']", request_schema: MaterializePaidEvidencePacketCommandV1, success_schema: PaidEvidencePacketMaterializationReceiptV1, caller: workflow-worker.paid-evidence-packet-materializer}
 private_application_request_schemas:
   private.RecordOutboundDeliveryObservation: {name: RecordOutboundDeliveryObservationCommandV1, additional_properties: false, fields: {deliveryId: uuid, expectedDeliveryVersion: 'int64[1..max]', sourceKind: 'enum<PROVIDER_RESPONSE|PROVIDER_CALLBACK|PROVIDER_POLL|RECONCILIATION_DECISION|CANCELLATION|SUPPRESSION>', attemptId: 'nullable<uuid>', sourceReceiptId: 'nullable<uuid>', sourceReceiptDigest: 'nullable<sha256>', observationKeyDigest: sha256, evidenceKind: 'enum<PROVIDER_RESPONSE|SIGNED_PROVIDER_CALLBACK|AUTHENTICATED_PROVIDER_POLL|OFFICIAL_CHANNEL_RECEIPT|RECONCILIATION_PROOF|CANCELLATION_PROOF>', assertedState: 'enum<PROVIDER_ACCEPTED|DELIVERED|READ|FAILED_PERMANENT|RECONCILIATION_REQUIRED|CANCELLED|SUPPRESSED>', providerEvidenceDigest: sha256, providerOccurredAt: 'nullable<datetime>'}, invariants: ['PROVIDER_RESPONSE requires attemptId and forbids sourceReceiptId/sourceReceiptDigest', 'PROVIDER_CALLBACK|PROVIDER_POLL|RECONCILIATION_DECISION require an exact immutable sourceReceiptId/sourceReceiptDigest and forbid attemptId', 'CANCELLATION|SUPPRESSION forbid both source pointers', 'observedAt is forbidden input and observed_at is derived from a DB-owned transaction/callback/poll/reconciliation receipt time', 'no raw response, signature, provider identifier, endpoint or message bytes']}
@@ -403,6 +404,7 @@ private_application_request_schemas:
   private.DecideCapabilityActivation: {name: DecideCapabilityActivationCommandV1, additional_properties: false, fields: {executionId: uuid, generation: 'int64[1..max]', executionDigest: sha256, approvalDigest: sha256, countedDecisionReceiptSetDigest: sha256, effectIdempotencyKeySha256: sha256, targetRequest: CapabilityActivationActionTargetV1}}
   private.CreateBusinessCalendarVersion: {name: CreateBusinessCalendarVersionCommandV1, additional_properties: false, fields: {executionId: uuid, generation: 'int64[1..max]', executionDigest: sha256, approvalDigest: sha256, countedDecisionReceiptSetDigest: sha256, effectIdempotencyKeySha256: sha256, targetRequest: BusinessCalendarActionTargetV1}}
   private.ApplyCommercialControl: {name: ApplyCommercialControlCommandV1, additional_properties: false, fields: {executionId: uuid, generation: 'int64[1..max]', executionDigest: sha256, approvalDigest: sha256, countedDecisionReceiptSetDigest: sha256, effectIdempotencyKeySha256: sha256, targetRequest: CommercialControlActionTargetV1}}
+  private.ExecuteProviderControl: {name: ExecuteProviderControlCommandV1, additional_properties: false, fields: {executionId: uuid, generation: 'int64[1..max]', executionDigest: sha256, approvalDigest: sha256, countedDecisionReceiptSetDigest: sha256, effectIdempotencyKeySha256: sha256, targetRequest: ProviderControlActionTargetV1}, invariants: ['targetRequest.operationId, providerId and expectedVersion equal the immutable PROVIDER_CONTROL approval detail and ActionTargetV1 binding', 'the selected operation policy is revalidated before claim or mutation']}
   private.MaterializePaidEvidencePacket: {name: MaterializePaidEvidencePacketCommandV1, additional_properties: false, fields: {sourceEventId: uuid, packetId: uuid, organizationId: uuid, qualificationEpisodeId: uuid, qualificationEpisodeVersion: 'int64[1..max]', qualificationEpisodeDigest: sha256, commercialContractId: uuid, commercialContractVersion: 'int64[1..max]', commercialContractDigest: sha256, subject: PaidEvidencePacketSubjectV1, orderedMembers: 'array<PaidEvidencePacketMemberInputV1>[10..10]', expectedPacketSubjectDigest: sha256}}
 private_application_error_sets:
   private.RecordOutboundDeliveryObservation: [RESOURCE_NOT_FOUND, DELIVERY_VERSION_CONFLICT, DELIVERY_OBSERVATION_INVALID, DELIVERY_OBSERVATION_CONFLICT, DELIVERY_RECONCILIATION_REQUIRED, INTERNAL_ERROR]
@@ -420,6 +422,7 @@ private_application_error_sets:
   private.DecideCapabilityActivation: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   private.CreateBusinessCalendarVersion: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   private.ApplyCommercialControl: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  private.ExecuteProviderControl: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_DENIED, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   private.MaterializePaidEvidencePacket: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PAID_EVIDENCE_SUBJECT_INVALID, PAID_EVIDENCE_MEMBER_SET_INVALID, EVENT_REPLAY_CONFLICT, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
 worker_receipt_bindings:
   conflict-expiry-worker: {trigger_event: governance.conflict_expired.v1, receipt_schema: ConflictExpiryReceiptV1, persistence: ops.audit_events plus ops.outbox under the immutable expiry idempotency identity}
@@ -428,6 +431,14 @@ base_operation_extension_error_sets:
   placeTemporaryRestriction: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PUBLICATION_STATE_INVALID, PUBLICATION_RESTRICTION_CAUSE_INVALID, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   publishCase.RESTORE_ACCESS: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, PUBLICATION_STATE_INVALID, PUBLICATION_RESTRICTION_CAUSE_ACTIVE, PUBLICATION_GATE_BLOCKED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
   placeLegalHold: [INVALID_PARAMETER, TARGET_NOT_FOUND, LEGAL_HOLD_TARGET_INVALID, CONFLICT_UNRESOLVED, STEP_UP_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+provider_control_http_side_door_error_sets:
+  disableProviderRouting: [ACTION_PROPOSAL_REQUIRED]
+  testProviderConnection: [ACTION_PROPOSAL_REQUIRED]
+  upgradeProviderModel: [ACTION_PROPOSAL_REQUIRED]
+  setModelAutoUpgrade: [ACTION_PROPOSAL_REQUIRED]
+  invariants:
+    - Every syntactically valid direct HTTP request returns the same 409 ACTION_PROPOSAL_REQUIRED problem and performs zero writes or external effects.
+    - Request schemas remain the logical form anchors for the matching ProviderControlActionV1 branch; the error does not imply that a proposal already exists.
 base_operation_extension_request_overlays:
   resolveCorrectionRequest:
     branch: resolution=RESOLVED
@@ -471,7 +482,36 @@ derived_session_authorization_and_rotation:
 schemas:
   ActionKindV1:
     kind: enum
-    values: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL]
+    values: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL, PROVIDER_CONTROL]
+
+  ProviderControlOperationIdV1:
+    kind: enum
+    values: [disableProviderRouting, testProviderConnection, upgradeProviderModel, setModelAutoUpgrade]
+
+  ProviderControlActionV1:
+    kind: discriminated_union
+    discriminator: operationId
+    variants:
+      disableProviderRouting:
+        additional_properties: false
+        required: [operationId, providerId, reason, expectedVersion]
+        fields: {operationId: 'const<disableProviderRouting>', providerId: uuid-or-slug, reason: string, expectedVersion: 'int64[1..max]'}
+      testProviderConnection:
+        additional_properties: false
+        required: [operationId, providerId, testModel, expectedVersion]
+        fields: {operationId: 'const<testProviderConnection>', providerId: uuid, testModel: string, reason: string, expectedVersion: 'int64[1..max]'}
+      upgradeProviderModel:
+        additional_properties: false
+        required: [operationId, providerId, modelId, expectedVersion, reason]
+        fields: {operationId: 'const<upgradeProviderModel>', providerId: uuid, modelId: 'string-pattern<^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$>[1..255]', expectedVersion: 'int64[1..max]', reason: 'string[1..4000]', dataPolicy: RelayDataPolicyInput}
+      setModelAutoUpgrade:
+        additional_properties: false
+        required: [operationId, providerId, expectedVersion, enabled, reason]
+        fields: {operationId: 'const<setModelAutoUpgrade>', providerId: uuid, expectedVersion: 'int64[1..max]', enabled: boolean, track: 'string-pattern<^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$>[1..128]', reason: 'string[1..4000]'}
+    invariants:
+      - The discriminator set is exactly the four provider-control HTTP operation IDs and no fallback branch exists.
+      - Every branch contains exactly its existing request fields; testProviderConnection adds expectedVersion as the required execution fence.
+      - ActionTargetV1 is CAPABILITY and its targetId and expectedVersion equal this branch providerId and expectedVersion.
 
   ProviderChannelV1:
     kind: enum
@@ -607,9 +647,11 @@ schemas:
       CAPABILITY_ACTIVATION: {additional_properties: false, fields: {capabilityClass: 'enum<PROVIDER|CONNECTOR|AGENT_MODEL|COMMUNICATION_CHANNEL|PUBLICATION>', capabilityId: 'string[1..200]', environment: 'enum<DEVELOPMENT|TEST|STAGING|PRODUCTION>', configurationDigest: sha256, evidenceReceiptIds: 'unique-array<uuid>[1..100]', policyDigest: sha256, contractDigest: sha256, rightsDigest: sha256, jurisdiction: 'string[2..64]', effectiveAt: datetime, expiresAt: 'nullable<datetime>'}}
       RESPONSE_POLICY_CALENDAR: {additional_properties: false, fields: {calendarId: uuid, expectedCalendarVersion: 'int64[0..max]', timezone: 'string[1..100]', weekendDays: 'unique-array<enum<MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY>>[1..7]', holidayDates: 'unique-array<date>[0..1000]', policyDigest: sha256, effectiveAt: datetime, reviewExpiresAt: datetime}}
       COMMERCIAL_CONTROL: {additional_properties: false, fields: {triggerId: uuid, triggerVersion: 'int64[1..max]', triggerDigest: sha256, triggerKind: 'enum<METRIC_THRESHOLD|COMMERCIAL_PAUSE|TRUST_HARD_STOP>', exactMetricResultDigests: 'unique-array<sha256>[1..100]', dependencyInputSetDigest: sha256, evidenceSetDigest: sha256, affectedScopeDigest: sha256, requestedActions: 'unique-array<enum<PAUSE_NEW_GA_SALES|PAUSE_PAID_ACQUISITION|SUSPEND_AFFECTED_PAID_CAPABILITY|RESUME_NEW_GA_SALES|RESUME_PAID_ACQUISITION|REACTIVATE_PAID_CAPABILITY>>[1..3]', expectedKillSwitchGeneration: 'int64[0..max]', expectedCapabilityVersionSetDigest: sha256, expectedContractVersionSetDigest: sha256, reason: 'string[1..4000]', consequence: 'string[1..4000]', existingCustomerContinuityPlanDigest: sha256, originalControlReceiptDigest: 'nullable<sha256>', resumeEvidenceSetDigest: 'nullable<sha256>', expiresAt: datetime, commercialControlBindingDigest: sha256}}
+      PROVIDER_CONTROL: {additional_properties: false, fields: {providerControl: ProviderControlActionV1}}
     invariants:
       - common fields and selected variant fields form one closed object.
       - target identity and expected version equal the selected variant identity and expected-version fields.
+      - PROVIDER_CONTROL requires targetType CAPABILITY and targetId and expectedVersion equal providerControl.providerId and providerControl.expectedVersion.
       - externalSideEffect is true exactly for effects that can leave Gurinnae or change public/access state.
 
   TaskActionTargetV1: {kind: closed_specialization, source: ActionPayloadV1.TASK, fields: exact variant fields without common envelope}
@@ -624,6 +666,7 @@ schemas:
   CapabilityActivationActionTargetV1: {kind: closed_specialization, source: ActionPayloadV1.CAPABILITY_ACTIVATION, fields: exact variant fields without common envelope}
   BusinessCalendarActionTargetV1: {kind: closed_specialization, source: ActionPayloadV1.RESPONSE_POLICY_CALENDAR, fields: exact variant fields without common envelope}
   CommercialControlActionTargetV1: {kind: closed_specialization, source: ActionPayloadV1.COMMERCIAL_CONTROL, fields: exact variant fields without common envelope}
+  ProviderControlActionTargetV1: {kind: closed_specialization, source: ProviderControlActionV1, fields: exact selected operationId branch, invariants: [operationId providerId and expectedVersion equal the immutable PROVIDER_CONTROL payload approval detail and ActionTargetV1 binding]}
 
   PrivateActionExecutionReceiptV1:
     kind: object
@@ -643,10 +686,36 @@ schemas:
   CapabilityActivationDecisionReceiptV1: {kind: closed_specialization, source: PrivateActionExecutionReceiptV1, actionKind: CAPABILITY_ACTIVATION}
   BusinessCalendarVersionReceiptV1: {kind: closed_specialization, source: PrivateActionExecutionReceiptV1, actionKind: RESPONSE_POLICY_CALENDAR}
   CommercialControlExecutionReceiptV1: {kind: closed_specialization, source: PrivateActionExecutionReceiptV1, actionKind: COMMERCIAL_CONTROL}
+  ProviderControlExecutionReceiptV1: {kind: closed_specialization, source: PrivateActionExecutionReceiptV1, actionKind: PROVIDER_CONTROL, fields: {providerOperationId: ProviderControlOperationIdV1}, invariants: [providerOperationId equals the immutable selected provider control operation and the committed provider-specific receipt]}
 
   ActionTargetTypeV1:
     kind: enum
     values: [CASE, CLAIM, TASK, LINE_ITEM, COMMUNICATION_INTENT, PUBLICATION, RULE_VERSION, USER, KILL_SWITCH, COMMUNICATION_SUBJECT, ASSET, RECORD_CLASS, FUNDING_DISCLOSURE, CAPABILITY, BUSINESS_CALENDAR, BUSINESS_CONTROL_TRIGGER]
+
+  ProviderControlApprovalDetailV1:
+    kind: discriminated_union
+    discriminator: operationId
+    variants:
+      disableProviderRouting:
+        additional_properties: false
+        required: [operationId, providerId, expectedVersion, reasonDigest]
+        fields: {operationId: 'const<disableProviderRouting>', providerId: uuid-or-slug, expectedVersion: 'int64[1..max]', reasonDigest: sha256}
+      testProviderConnection:
+        additional_properties: false
+        required: [operationId, providerId, expectedVersion, testModel]
+        fields: {operationId: 'const<testProviderConnection>', providerId: uuid, expectedVersion: 'int64[1..max]', testModel: string, reasonDigest: sha256}
+      upgradeProviderModel:
+        additional_properties: false
+        required: [operationId, providerId, expectedVersion, modelId, reasonDigest]
+        fields: {operationId: 'const<upgradeProviderModel>', providerId: uuid, expectedVersion: 'int64[1..max]', modelId: 'string-pattern<^[A-Za-z0-9][A-Za-z0-9._:/-]{0,254}$>[1..255]', reasonDigest: sha256, dataPolicyDigest: sha256}
+      setModelAutoUpgrade:
+        additional_properties: false
+        required: [operationId, providerId, expectedVersion, enabled, reasonDigest]
+        fields: {operationId: 'const<setModelAutoUpgrade>', providerId: uuid, expectedVersion: 'int64[1..max]', enabled: boolean, track: 'string-pattern<^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$>[1..128]', reasonDigest: sha256}
+    invariants:
+      - Optional reason dataPolicy and track fields produce their digest or value only when present; absence is not encoded as a sentinel.
+      - operationId providerId and expectedVersion are byte-equal to ProviderControlActionV1 and the executor target request.
+      - No provider-control request bytes or unlisted JSON properties exist outside the selected branch.
 
   ActionApprovalDetailV1:
     kind: discriminated_union
@@ -703,13 +772,16 @@ schemas:
       COMMERCIAL_CONTROL:
         additional_properties: false
         fields: {kind: 'const<COMMERCIAL_CONTROL>', triggerId: uuid, triggerVersion: 'int64[1..max]', triggerAsOf: datetime, triggerKind: 'enum<METRIC_THRESHOLD|COMMERCIAL_PAUSE|TRUST_HARD_STOP>', triggerDigest: sha256, controlMode: 'enum<PAUSE|RESUME>', metricResultSetDigest: sha256, transitiveInputSetDigest: sha256, triggerPolicyDigest: sha256, affectedScopeDigest: sha256, requestedActions: 'unique-array<enum<PAUSE_NEW_GA_SALES|PAUSE_PAID_ACQUISITION|SUSPEND_AFFECTED_PAID_CAPABILITY|RESUME_NEW_GA_SALES|RESUME_PAID_ACQUISITION|REACTIVATE_PAID_CAPABILITY>>[1..3]', requestedActionSetDigest: sha256, currentOfferProfileDigest: sha256, currentContractHeadDigest: sha256, currentCapabilityVersionSetDigest: sha256, currentKillSwitchVersionSetDigest: sha256, productExecutionPlanDigest: sha256, externalExecutionPlanDigest: sha256, externalSystemBindingSetDigest: sha256, existingCustomerContinuityPlanDigest: sha256, consequenceDigest: sha256, budgetPolicyDigest: sha256, controlEvidence: CommercialControlEvidenceV1, importContractDigest: sha256, acknowledgementRequirementDigest: sha256, ackDueAt: datetime, expectedTerminalState: 'enum<PAUSED|NORMAL>'}
+      PROVIDER_CONTROL:
+        additional_properties: false
+        fields: {kind: 'const<PROVIDER_CONTROL>', providerControl: ProviderControlApprovalDetailV1}
 
   ActionApprovalDetailBindingV1:
     kind: object
     additional_properties: false
     required: [actionDetailKind, actionDetail]
     fields: {actionDetailKind: ActionKindV1, actionDetail: ActionApprovalDetailV1}
-    invariants: [actionDetailKind equals actionDetail.kind, the selected detail branch is exactly one of the seventeen ActionKindV1 values, canonical bytes are GURINE_CANONICAL_JSON_V1 over the two-field wrapper rather than raw actionDetail]
+    invariants: [actionDetailKind equals actionDetail.kind, the selected detail branch is exactly one of the eighteen ActionKindV1 values, canonical bytes are GURINE_CANONICAL_JSON_V1 over the two-field wrapper rather than raw actionDetail]
 
   ExpiryBindingV1:
     kind: discriminated_union
@@ -879,6 +951,7 @@ schemas:
       CAPABILITY_ACTIVATION: {additional_properties: false, fields: {kind: 'const<CAPABILITY_ACTIVATION>', capabilityLabel: 'string[1..500]', decision: 'enum<ACTIVATE|SUSPEND|REACTIVATE>', configurationAndPreflight: 'string[1..4000]', policyRightsJurisdiction: 'string[1..4000]', killSwitchAndExpiry: 'string[1..2000]'}}
       RESPONSE_POLICY_CALENDAR: {additional_properties: false, fields: {kind: 'const<RESPONSE_POLICY_CALENDAR>', calendarLabel: 'string[1..500]', timezoneAndWorkingDays: 'string[1..2000]', holidaySummary: 'string[1..4000]', responseClockImpact: 'string[1..4000]', reviewExpiry: 'string[1..1000]'}}
       COMMERCIAL_CONTROL: {additional_properties: false, fields: {kind: 'const<COMMERCIAL_CONTROL>', plainLanguageTrigger: 'string[1..4000]', affectedScope: 'string[1..4000]', requestedActions: 'array<string[1..1000]>[1..3]', whyNow: 'string[1..4000]', evidenceAndMetricInputs: 'string[1..4000]', currentVersions: 'string[1..4000]', expectedProductEffects: 'string[1..4000]', expectedExternalEffects: 'string[1..4000]', existingCustomerContinuityPlan: 'string[1..4000]', maximumCostAndExposure: 'string[1..4000]', expiry: 'string[1..1000]', rollbackOrResumeRequirements: 'string[1..4000]', requiredQuorum: 'array<string[1..500]>[3..5]', importReceiptStatus: 'string[1..2000]', acknowledgementStatus: 'string[1..2000]'}}
+      PROVIDER_CONTROL: {additional_properties: false, fields: {kind: 'const<PROVIDER_CONTROL>', providerControl: ProviderControlActionV1}}
 
   ActionApprovalSubjectViewV1:
     kind: object
@@ -932,7 +1005,7 @@ schemas:
       actionDetailDigest: sha256
     invariants:
       - Field keys equal required and are byte-for-byte set-equal to the canonical approval policy schema.
-      - actionKind equals actionDetailKind and actionDetail selects exactly one of the seventeen closed branches.
+      - actionKind equals actionDetailKind and actionDetail selects exactly one of the eighteen closed branches.
       - actionDetailDigest is recomputed from Gurine Canonical JSON v1 bytes for actionDetailKind and actionDetail.
       - decisionDigest, decisionKind, actorId, assignmentId, slotKind, reasonCode, reason, assurance, conflictDeclarationId and decidedAt are forbidden.
       - Inapplicable provider, recipient, rendering, consent, suppression, rights and cost fields are absent rather than represented by sentinels.
@@ -1390,7 +1463,7 @@ schemas:
   ActionApprovalQueueFiltersV1:
     kind: object
     additional_properties: false
-    fields: {actionKind: 'array<ActionKindV1>[0..17]', proposalState: 'array<enum<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>>[0..8]', assignmentState: 'array<enum<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>>[0..6]', dueBefore: 'nullable<datetime>', sort: 'enum<DUE_ASC|UPDATED_DESC>'}
+    fields: {actionKind: 'array<ActionKindV1>[0..18]', proposalState: 'array<enum<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>>[0..8]', assignmentState: 'array<enum<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>>[0..6]', dueBefore: 'nullable<datetime>', sort: 'enum<DUE_ASC|UPDATED_DESC>'}
 
   ActionApprovalQueueItemV1:
     kind: object
@@ -2116,6 +2189,7 @@ error_catalog_additions:
   ACTION_KIND_MISMATCH: {layer: DOMAIN, http_status: 422, title: 요청한 행동 종류와 저장된 제안 종류가 다릅니다, retryable: false, exposure: safe, state_source: ActionProposal, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion]}
   ACTION_POLICY_BLOCKED: {layer: DOMAIN, http_status: 422, title: 현재 정책이 이 행동을 차단했습니다, retryable: false, exposure: safe, state_source: ActionProposal, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion]}
   ACTION_PREVIEW_STALE: {layer: CONCURRENCY, http_status: 409, title: 검토 미리보기가 현재 제안과 다릅니다, retryable: true, exposure: safe, state_source: ActionProposal, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion, expectedVersion]}
+  ACTION_PROPOSAL_REQUIRED: {layer: DOMAIN, http_status: 409, title: 이 공급자 제어는 행동 제안과 승인을 거쳐야 합니다, retryable: false, exposure: safe, state_source: NONE, state_effect: UNCHANGED, allowed_extensions: []}
   ACTION_PROPOSAL_STALE: {layer: CONCURRENCY, http_status: 409, title: 행동 제안 버전이 변경되었습니다, retryable: true, exposure: safe, state_source: ActionProposal, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion, expectedVersion]}
   ACTION_QUORUM_UNAVAILABLE: {layer: DOMAIN, http_status: 422, title: 필요한 독립 검토 정족수를 현재 구성할 수 없습니다, retryable: false, exposure: safe, state_source: ActionProposal, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion]}
   ACTION_REVIEW_ALREADY_CLAIMED: {layer: CONCURRENCY, http_status: 409, title: 검토 배정이 이미 다른 유효한 작업으로 선점되었습니다, retryable: true, exposure: safe, state_source: ActionReviewAssignment, state_effect: UNCHANGED, allowed_extensions: [currentState, currentVersion]}

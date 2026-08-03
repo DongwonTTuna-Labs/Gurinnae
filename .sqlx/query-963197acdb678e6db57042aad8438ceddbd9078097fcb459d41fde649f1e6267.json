@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.relay_model_catalog_sync_runs(id,scheduled_bucket,status) VALUES($1,$2,'QUEUED') ON CONFLICT(scheduled_bucket) DO NOTHING RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.relay_model_catalog_sync_runs",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "963197acdb678e6db57042aad8438ceddbd9078097fcb459d41fde649f1e6267"
+}

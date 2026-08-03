@@ -1426,6 +1426,53 @@ export type QueueHealth = {
     oldestReadyAgeSeconds?: number | null;
 };
 
+export type RelayDataPolicyInput = {
+    processingRegion: string;
+    retentionMode: 'ZERO_RETENTION' | 'BOUNDED_PROVIDER_RETENTION' | 'LOCAL_ONLY';
+    policyVersion: string;
+};
+
+export type RelayModelCatalogItem = {
+    modelId: string;
+    family: string | null;
+    track: string | null;
+    createdAt: string | null;
+    firstSeenAt: string;
+    lastSeenAt: string;
+    active: boolean;
+    new: boolean;
+};
+
+export type RelayModelCurrentProvider = {
+    providerId: string;
+    name: string;
+    currentModel: string | null;
+    enabled: boolean;
+    version: number;
+    autoUpgrade: boolean;
+    /**
+     * true when automatic upgrade is enabled and two or more active models with created timestamps share the latest created timestamp in the provider track; no model is selected automatically.
+     */
+    autoUpgradeConflict: boolean;
+    track: string | null;
+    dataPolicyState: 'UNCONFIGURED' | 'CONFIGURED';
+    pricingVersion: string;
+    unpriced: boolean;
+};
+
+export type RelayModelSyncStatus = {
+    status: 'NOT_RUN' | 'QUEUED' | 'RUNNING' | 'SUCCEEDED' | 'FAILED';
+    lastCompletedAt: string | null;
+    lastErrorCode: string | null;
+};
+
+export type RelayModelsPage = {
+    items: Array<RelayModelCatalogItem>;
+    currentProviders: Array<RelayModelCurrentProvider>;
+    syncStatus: RelayModelSyncStatus;
+    asOf: string;
+};
+
 export type Redaction = {
     id: string;
     locator: string;
@@ -2642,6 +2689,10 @@ export type LinkSignalToCaseRequest = {
     expectedVersion: number;
 };
 
+export type ListRelayModelsQuery = {
+    [key: string]: never;
+};
+
 export type MarkNotificationReadReceipt = {
     operationId: string;
     requestId: string;
@@ -3097,6 +3148,23 @@ export type ScheduleRuleActivationRequest = {
     expectedVersion: number;
 };
 
+export type SetModelAutoUpgradeReceipt = {
+    providerId: string;
+    version: number;
+    autoUpgrade: boolean;
+    track: string | null;
+    status: 'completed';
+    acceptedAt: string;
+};
+
+export type SetModelAutoUpgradeRequest = {
+    providerId: string;
+    expectedVersion: number;
+    enabled: boolean;
+    track?: string;
+    reason: string;
+};
+
 export type StartAccessReviewReceipt = {
     operationId: string;
     requestId: string;
@@ -3230,6 +3298,7 @@ export type TestProviderConnectionRequest = {
     providerId: string;
     testModel: string;
     reason?: string;
+    expectedVersion: number;
 };
 
 export type TransitionCaseReceipt = {
@@ -3437,6 +3506,24 @@ export type UpdateSavedViewRequest = {
     expectedVersion: number;
 };
 
+export type UpgradeProviderModelReceipt = {
+    attemptId: string;
+    providerId: string;
+    modelId: string;
+    connectionTestId: string;
+    jobId: string;
+    status: 'QUEUED';
+    acceptedAt: string;
+};
+
+export type UpgradeProviderModelRequest = {
+    providerId: string;
+    modelId: string;
+    expectedVersion: number;
+    reason: string;
+    dataPolicy?: RelayDataPolicyInput;
+};
+
 export type UuidOrSlug = string;
 
 export type ValidateClaimsReceipt = {
@@ -3502,14 +3589,14 @@ export type ActionApprovalQueuePageV1 = {
     items: Array<ActionApprovalQueueItemV1>;
     appliedFilters: ActionApprovalQueueFiltersV1;
     asOf: string;
-    nextCursor: string | null;
-    totalApproximate: number | null;
+    nextCursor: string;
+    totalApproximate: number;
     operationId: string;
     links: Array<Link>;
 };
 
 export type CreateActionProposalRequestV1 = {
-    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL' | 'PROVIDER_CONTROL';
     origin: ActionOriginV1;
     draft: ActionPayloadV1;
     rationale: ActionRationaleV1;
@@ -3592,7 +3679,8 @@ export type ActionReviewClaimedReceiptV1 = {
 
 export type SubmitActionDecisionRequestV1 = {
     proposalId: string;
-    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL' | 'PROVIDER_CONTROL';
+    providerOperationId?: ProviderControlOperationIdV1;
     assignmentId: string;
     expectedProposalVersion: number;
     expectedAssignmentVersion: number;
@@ -3640,7 +3728,7 @@ export type ActionExecutionMutationReceiptV1 = {
 
 export type RetryActionExecutionRequestV1 = {
     executionId: string;
-    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
+    actionKind: 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL' | 'PROVIDER_CONTROL';
     expectedGeneration: number;
     expectedStateVersion: number;
     safeRetryProof: SafeRetryProofV1;
@@ -3804,8 +3892,8 @@ export type ResponseAppealQueuePageV1 = {
     items: Array<ResponseAppealSummaryV1>;
     appliedFilters: ResponseAppealQueueFiltersV1;
     asOf: string;
-    nextCursor: string | null;
-    totalApproximate: number | null;
+    nextCursor: string;
+    totalApproximate: number;
     operationId: string;
     links: Array<Link>;
 };
@@ -3877,8 +3965,8 @@ export type RetentionRequestQueuePageV1 = {
     items: Array<RetentionRequestSummaryV1>;
     appliedFilters: RetentionRequestQueueFiltersV1;
     asOf: string;
-    nextCursor: string | null;
-    totalApproximate: number | null;
+    nextCursor: string;
+    totalApproximate: number;
     operationId: string;
     links: Array<Link>;
 };
@@ -3931,7 +4019,7 @@ export type RecordClassSchedulePageV1 = {
     appliedRecordClasses: Array<string>;
     appliedStates: Array<string>;
     asOf: string;
-    nextCursor: string | null;
+    nextCursor: string;
     operationId: string;
     links: Array<Link>;
 };
@@ -4121,7 +4209,7 @@ export type ActionProposalSummaryV1 = {
     expiresAt: string;
 };
 
-export type ActionKindV1 = 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL';
+export type ActionKindV1 = 'HYPOTHESIS' | 'CLAIM' | 'TASK' | 'COMPARABLE' | 'COMMUNICATION' | 'PUBLICATION' | 'RETRACTION' | 'RULE_ACTIVATION' | 'ROLE_GRANT' | 'KILL_SWITCH' | 'COMMUNICATION_AUTHORIZATION' | 'ASSET_RIGHTS_DECISION' | 'RETENTION_SCHEDULE' | 'FUNDING_DISCLOSURE' | 'CAPABILITY_ACTIVATION' | 'RESPONSE_POLICY_CALENDAR' | 'COMMERCIAL_CONTROL' | 'PROVIDER_CONTROL';
 
 export type ActionTargetV1 = {
     targetType: 'CASE' | 'CLAIM' | 'TASK' | 'LINE_ITEM' | 'COMMUNICATION_INTENT' | 'PUBLICATION' | 'RULE_VERSION' | 'USER' | 'KILL_SWITCH' | 'COMMUNICATION_SUBJECT' | 'ASSET' | 'RECORD_CLASS' | 'FUNDING_DISCLOSURE' | 'CAPABILITY' | 'BUSINESS_CALENDAR' | 'BUSINESS_CONTROL_TRIGGER';
@@ -4469,6 +4557,13 @@ export type ActionPayloadV1 = {
     resumeEvidenceSetDigest: string | null;
     expiresAt: string;
     commercialControlBindingDigest: string;
+} | {
+    schemaVersion: 'action-payload.v1';
+    kind: 'PROVIDER_CONTROL';
+    target: ActionTargetV1;
+    rationale: ActionRationaleV1;
+    effect: ActionEffectV1;
+    providerControl: ProviderControlActionV1;
 };
 
 export type ActionRationaleV1 = {
@@ -4810,6 +4905,9 @@ export type ActionApprovalDetailV1 = {
     acknowledgementRequirementDigest: string;
     ackDueAt: string;
     expectedTerminalState: 'PAUSED' | 'NORMAL';
+} | {
+    kind: 'PROVIDER_CONTROL';
+    providerControl: ProviderControlApprovalDetailV1;
 };
 
 export type ActionApprovalSubjectViewV1 = {
@@ -5078,6 +5176,9 @@ export type ActionApprovalDetailViewV1 = {
     requiredQuorum: Array<string>;
     importReceiptStatus: string;
     acknowledgementStatus: string;
+} | {
+    kind: 'PROVIDER_CONTROL';
+    providerControl: ProviderControlActionV1;
 };
 
 export type ActionAssignmentHistoryPageV1 = {
@@ -5085,7 +5186,7 @@ export type ActionAssignmentHistoryPageV1 = {
     order: 'slot-ordinal-asc-generation-asc-assignment-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: string | null;
+    nextCursor: string;
     complete: boolean;
 };
 
@@ -5094,7 +5195,7 @@ export type ActionDecisionHistoryPageV1 = {
     order: 'decided-at-asc-decision-id-asc';
     asOf: string;
     pageDigest: string;
-    nextCursor: string | null;
+    nextCursor: string;
     complete: boolean;
 };
 
@@ -5836,6 +5937,62 @@ export type CommercialControlEvidenceV1 = {
     remedyVerificationDigest: string;
     resumeEvidenceSetDigest: string;
 };
+
+export type ProviderControlActionV1 = {
+    operationId: 'disableProviderRouting';
+    providerId: UuidOrSlug;
+    reason: string;
+    expectedVersion: number;
+} | {
+    operationId: 'testProviderConnection';
+    providerId: string;
+    testModel: string;
+    reason?: string;
+    expectedVersion: number;
+} | {
+    operationId: 'upgradeProviderModel';
+    providerId: string;
+    modelId: string;
+    expectedVersion: number;
+    reason: string;
+    dataPolicy?: RelayDataPolicyInput;
+} | {
+    operationId: 'setModelAutoUpgrade';
+    providerId: string;
+    expectedVersion: number;
+    enabled: boolean;
+    track?: string;
+    reason: string;
+};
+
+export type ProviderControlApprovalDetailV1 = {
+    operationId: 'disableProviderRouting';
+    providerId: UuidOrSlug;
+    expectedVersion: number;
+    reasonDigest: string;
+} | {
+    operationId: 'testProviderConnection';
+    providerId: string;
+    expectedVersion: number;
+    testModel: string;
+    reasonDigest?: string;
+} | {
+    operationId: 'upgradeProviderModel';
+    providerId: string;
+    expectedVersion: number;
+    modelId: string;
+    reasonDigest: string;
+    dataPolicyDigest?: string;
+} | {
+    operationId: 'setModelAutoUpgrade';
+    providerId: string;
+    expectedVersion: number;
+    enabled: boolean;
+    track?: string;
+    reasonDigest: string;
+};
+
+export type ProviderControlOperationIdV1 = 'disableProviderRouting' | 'testProviderConnection' | 'upgradeProviderModel' | 'setModelAutoUpgrade';
 
 export type AcceptAgentSuggestionData = {
     body: AcceptAgentSuggestionRequest;
@@ -7261,57 +7418,12 @@ export type DisableProviderRoutingData = {
 
 export type DisableProviderRoutingErrors = {
     /**
-     * Problem response: INVALID_PARAMETER, INVALID_REQUEST
+     * Provider control requires an approved action proposal
      */
-    400: ProblemDetails;
-    /**
-     * Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID, ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH
-     */
-    401: ProblemDetails;
-    /**
-     * Problem response: CAPABILITY_DENIED, STEP_UP_REQUIRED
-     */
-    403: ProblemDetails;
-    /**
-     * Problem response: RESOURCE_NOT_FOUND
-     */
-    404: ProblemDetails;
-    /**
-     * Problem response: ACTOR_ASSERTION_REPLAYED, IDEMPOTENCY_CONFLICT, VERSION_CONFLICT, INVALID_STATE_TRANSITION
-     */
-    409: ProblemDetails;
-    /**
-     * Problem response: PAYLOAD_TOO_LARGE
-     */
-    413: ProblemDetails;
-    /**
-     * Problem response: UNSUPPORTED_MEDIA_TYPE
-     */
-    415: ProblemDetails;
-    /**
-     * Problem response: PRECONDITION_FAILED, VALIDATION_FAILED
-     */
-    422: ProblemDetails;
-    /**
-     * Problem response: INTERNAL_ERROR
-     */
-    500: ProblemDetails;
-    /**
-     * Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED
-     */
-    503: ProblemDetails;
+    409: AddendumProblemDetailsV1;
 };
 
 export type DisableProviderRoutingError = DisableProviderRoutingErrors[keyof DisableProviderRoutingErrors];
-
-export type DisableProviderRoutingResponses = {
-    /**
-     * Successful response
-     */
-    200: DisableProviderRoutingReceipt;
-};
-
-export type DisableProviderRoutingResponse = DisableProviderRoutingResponses[keyof DisableProviderRoutingResponses];
 
 export type DisableUserData = {
     body: DisableUserRequest;
@@ -9171,6 +9283,26 @@ export type ScheduleRuleActivationResponses = {
 
 export type ScheduleRuleActivationResponse = ScheduleRuleActivationResponses[keyof ScheduleRuleActivationResponses];
 
+export type SetModelAutoUpgradeData = {
+    body: SetModelAutoUpgradeRequest;
+    headers: {
+        'X-Request-ID'?: string;
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/set-model-auto-upgrade';
+};
+
+export type SetModelAutoUpgradeErrors = {
+    /**
+     * Provider control requires an approved action proposal
+     */
+    409: AddendumProblemDetailsV1;
+};
+
+export type SetModelAutoUpgradeError = SetModelAutoUpgradeErrors[keyof SetModelAutoUpgradeErrors];
+
 export type StartAccessReviewData = {
     body: StartAccessReviewRequest;
     headers: {
@@ -9562,57 +9694,12 @@ export type TestProviderConnectionData = {
 
 export type TestProviderConnectionErrors = {
     /**
-     * Problem response: INVALID_PARAMETER, INVALID_REQUEST
+     * Provider control requires an approved action proposal
      */
-    400: ProblemDetails;
-    /**
-     * Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID, ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH
-     */
-    401: ProblemDetails;
-    /**
-     * Problem response: CAPABILITY_DENIED
-     */
-    403: ProblemDetails;
-    /**
-     * Problem response: RESOURCE_NOT_FOUND
-     */
-    404: ProblemDetails;
-    /**
-     * Problem response: ACTOR_ASSERTION_REPLAYED, IDEMPOTENCY_CONFLICT
-     */
-    409: ProblemDetails;
-    /**
-     * Problem response: PAYLOAD_TOO_LARGE
-     */
-    413: ProblemDetails;
-    /**
-     * Problem response: UNSUPPORTED_MEDIA_TYPE
-     */
-    415: ProblemDetails;
-    /**
-     * Problem response: PRECONDITION_FAILED, VALIDATION_FAILED
-     */
-    422: ProblemDetails;
-    /**
-     * Problem response: INTERNAL_ERROR
-     */
-    500: ProblemDetails;
-    /**
-     * Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED
-     */
-    503: ProblemDetails;
+    409: AddendumProblemDetailsV1;
 };
 
 export type TestProviderConnectionError = TestProviderConnectionErrors[keyof TestProviderConnectionErrors];
-
-export type TestProviderConnectionResponses = {
-    /**
-     * Successful response
-     */
-    202: TestProviderConnectionReceipt;
-};
-
-export type TestProviderConnectionResponse = TestProviderConnectionResponses[keyof TestProviderConnectionResponses];
 
 export type TransitionCaseData = {
     body: TransitionCaseRequest;
@@ -10158,6 +10245,26 @@ export type UpdateHypothesisResponses = {
 };
 
 export type UpdateHypothesisResponse = UpdateHypothesisResponses[keyof UpdateHypothesisResponses];
+
+export type UpgradeProviderModelData = {
+    body: UpgradeProviderModelRequest;
+    headers: {
+        'X-Request-ID'?: string;
+        'Idempotency-Key': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/commands/upgrade-provider-model';
+};
+
+export type UpgradeProviderModelErrors = {
+    /**
+     * Provider control requires an approved action proposal
+     */
+    409: AddendumProblemDetailsV1;
+};
+
+export type UpgradeProviderModelError = UpgradeProviderModelErrors[keyof UpgradeProviderModelErrors];
 
 export type ValidateClaimsData = {
     body: ValidateClaimsRequest;
@@ -12770,6 +12877,54 @@ export type ListProvidersResponses = {
 };
 
 export type ListProvidersResponse = ListProvidersResponses[keyof ListProvidersResponses];
+
+export type ListRelayModelsData = {
+    body?: never;
+    headers?: {
+        'X-Request-ID'?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/internal/queries/list-relay-models';
+};
+
+export type ListRelayModelsErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: ProblemDetails;
+    /**
+     * Problem response: ACTOR_ASSERTION_REQUIRED, ACTOR_ASSERTION_INVALID, ACTOR_ASSERTION_EXPIRED, ACTOR_ASSERTION_AUDIENCE_MISMATCH, ACTOR_ASSERTION_REQUEST_MISMATCH
+     */
+    401: ProblemDetails;
+    /**
+     * Problem response: CAPABILITY_DENIED
+     */
+    403: ProblemDetails;
+    /**
+     * Problem response: ACTOR_ASSERTION_REPLAYED
+     */
+    409: ProblemDetails;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: ProblemDetails;
+    /**
+     * Problem response: DEPENDENCY_UNAVAILABLE, DEPENDENCY_RATE_LIMITED
+     */
+    503: ProblemDetails;
+};
+
+export type ListRelayModelsError = ListRelayModelsErrors[keyof ListRelayModelsErrors];
+
+export type ListRelayModelsResponses = {
+    /**
+     * Successful response
+     */
+    200: RelayModelsPage;
+};
+
+export type ListRelayModelsResponse = ListRelayModelsResponses[keyof ListRelayModelsResponses];
 
 export type ListReviewQueueData = {
     body?: never;

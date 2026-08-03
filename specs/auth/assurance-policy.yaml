@@ -897,6 +897,17 @@ commands:
     default: STEP_UP
     conditions: []
     step_up_possible: true
+- operation_id: setModelAutoUpgrade
+  api: control-api
+  capability: kill_switch.execute
+  assurance_level: STEP_UP
+  step_up_required: true
+  step_up_owner: NONE
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
 - operation_id: startAccessReview
   api: control-api
   capability: roles.grant
@@ -1154,6 +1165,17 @@ commands:
     default: SCOPED_TOKEN
     conditions: []
     step_up_possible: false
+- operation_id: upgradeProviderModel
+  api: control-api
+  capability: kill_switch.execute
+  assurance_level: STEP_UP
+  step_up_required: true
+  step_up_owner: NONE
+  assurance_policy:
+    mode: STATIC
+    default: STEP_UP
+    conditions: []
+    step_up_possible: true
 - operation_id: validateClaims
   api: control-api
   capability: claims.author

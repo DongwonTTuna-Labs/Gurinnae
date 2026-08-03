@@ -424,6 +424,7 @@ OPS-003.attempts|getJob.$projection.attempt_projection->attempt_projection
 OPS-003.payload|getJob.$projection.redacted_payload_projection->redacted_payload_projection
 OPS-005.quotas|listProviders.$projection.quota_projection->quota_projection
 OPS-005.fallback|listProviders.$projection.fallback_projection->fallback_projection
+OPS-005.model-catalog|listRelayModels.items->model_rows,listRelayModels.currentProviders->current_providers,listRelayModels.syncStatus->sync_status,listRelayModels.asOf->as_of
 OPS-006.catalog|listKillSwitches.items->kill_switch_rows
 OPS-006.runbook|listKillSwitches.$projection.runbook_projection->runbook_projection
 AUD-001.filters|searchAuditEvents.appliedFilters->audit_filters
@@ -963,7 +964,7 @@ createActionProposal@CAS-011.decisions|create-action-proposal--decisions|view_mo
 createActionProposal@CAS-015.proposal|create-action-proposal--proposal|view_model.sections.proposal.selected_target|view_model.sections.proposal.forms.create_action_proposal__proposal|request_context.review_console_session|action_result.create_action_proposal__proposal.validated_receipt|CAS-015|proposal|handle__cas_015__create_action_proposal__proposal
 createActionProposal@RULE-004.approval|create-action-proposal--approval|view_model.sections.approval.selected_target|view_model.sections.approval.forms.create_action_proposal__approval|request_context.review_console_session|action_result.create_action_proposal__approval.validated_receipt|RULE-004|approval|handle__rule_004__create_action_proposal__approval
 createActionProposal@REV-003.gates|create-action-proposal--gates|view_model.sections.gates.selected_target|view_model.sections.gates.forms.create_action_proposal__gates|request_context.review_console_session|action_result.create_action_proposal__gates.validated_receipt|REV-003|gates|handle__rev_003__create_action_proposal__gates
-createActionProposal@OPS-005.status|create-action-proposal--status|view_model.sections.status.selected_target|view_model.sections.status.forms.create_action_proposal__status|request_context.review_console_session|action_result.create_action_proposal__status.validated_receipt|OPS-005|status|handle__ops_005__create_action_proposal__status
+createActionProposal@OPS-005.status|create-action-proposal--status|view_model.sections.status.selected_target|view_model.sections.status.forms.create_action_proposal__status|request_context.review_console_session|action_result.create_action_proposal__status.validated_receipt|INT-002|tasks|handle__ops_005__create_action_proposal__status
 createActionProposal@OPS-006.approval|create-action-proposal--approval|view_model.sections.approval.selected_target|view_model.sections.approval.forms.create_action_proposal__approval|request_context.review_console_session|action_result.create_action_proposal__approval.validated_receipt|OPS-006|approval|handle__ops_006__create_action_proposal__approval
 createActionProposal@ADM-002.requests|create-action-proposal--requests|view_model.sections.requests.selected_target|view_model.sections.requests.forms.create_action_proposal__requests|request_context.review_console_session|action_result.create_action_proposal__requests.validated_receipt|ADM-002|requests|handle__adm_002__create_action_proposal__requests
 updateActionDraft@CAS-002.next|update-action-draft--next|view_model.sections.next.selected_target|view_model.sections.next.forms.update_action_draft__next|request_context.review_console_session|action_result.update_action_draft__next.validated_receipt|CAS-002|next|handle__cas_002__update_action_draft__next
@@ -1594,7 +1595,153 @@ def base_operation_contract(operation: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def additive_operation_metadata(
+    operation: dict[str, Any], resources: dict[str, Any]
+) -> dict[str, Any]:
+    operation_id = operation["operation_id"]
+    operation_bindings = resources.get("operation_bindings")
+    if not isinstance(operation_bindings, dict):
+        raise ValueError("additive resources: operation_bindings must be a mapping")
+    binding = operation_bindings.get(operation_id)
+    if not isinstance(binding, dict):
+        raise ValueError(f"{operation_id}: missing additive external operation binding")
+    if binding.get("scope") != "ADDITIVE_EXTERNAL":
+        raise ValueError(f"{operation_id}: operation binding is not ADDITIVE_EXTERNAL")
+
+    request_schemas = resources.get("request_schemas_by_operation")
+    if not isinstance(request_schemas, dict):
+        raise ValueError(
+            "additive resources: request_schemas_by_operation must be a mapping"
+        )
+    request_definition = request_schemas.get(operation_id)
+    if not isinstance(request_definition, dict):
+        raise ValueError(f"{operation_id}: missing additive request schema definition")
+    request_schema = binding.get("request_schema")
+    if not isinstance(request_schema, str) or not request_schema:
+        raise ValueError(f"{operation_id}: missing additive request schema binding")
+    if request_definition.get("name") != request_schema:
+        raise ValueError(
+            f"{operation_id}: request schema definition does not match operation binding"
+        )
+
+    response_schema = binding.get("success_schema")
+    if not isinstance(response_schema, str) or not response_schema:
+        raise ValueError(f"{operation_id}: missing additive success schema binding")
+    if operation.get("response") != response_schema:
+        raise ValueError(
+            f"{operation_id}: response schema does not match operation binding"
+        )
+    success_status = binding.get("success_status")
+    if not isinstance(success_status, int) or isinstance(success_status, bool):
+        raise ValueError(f"{operation_id}: missing additive integer success status")
+
+    metadata = {
+        "operation_id": operation_id,
+        "scope": "ADDITIVE_EXTERNAL",
+        "status": "READY",
+        "api": operation.get("api"),
+        "method": operation.get("method"),
+        "path": operation.get("path"),
+        "request_schema": request_schema,
+        "response_schema": response_schema,
+        "success_status": success_status,
+        "operation": operation,
+    }
+    for field in ("api", "method", "path"):
+        if not isinstance(metadata[field], str) or not metadata[field]:
+            raise ValueError(f"{operation_id}: missing additive {field}")
+    return metadata
+
+
+def build_external_operation_catalog(
+    data: dict[str, Any],
+    addendum_operations: dict[str, Any],
+    resources: dict[str, Any],
+) -> dict[str, dict[str, Any]]:
+    base_by = unique_by_key(
+        data["operations"], "operation_id", "screen data operations"
+    )
+    additive_by = unique_by_key(
+        addendum_operations["operations"],
+        "operation_id",
+        "additive operations",
+    )
+    duplicates = sorted(set(base_by) & set(additive_by))
+    if duplicates:
+        raise ValueError(
+            f"duplicate external operation IDs across base/additive catalogs: {duplicates}"
+        )
+
+    operation_bindings = resources.get("operation_bindings")
+    if not isinstance(operation_bindings, dict):
+        raise ValueError("additive resources: operation_bindings must be a mapping")
+    external_binding_ids = {
+        operation_id
+        for operation_id, binding in operation_bindings.items()
+        if isinstance(binding, dict) and binding.get("scope") == "ADDITIVE_EXTERNAL"
+    }
+    if external_binding_ids != set(additive_by):
+        missing = sorted(set(additive_by) - external_binding_ids)
+        extra = sorted(external_binding_ids - set(additive_by))
+        raise ValueError(
+            "additive external operation binding set mismatch: "
+            f"missing={missing}, extra={extra}"
+        )
+
+    catalog: dict[str, dict[str, Any]] = {
+        operation_id: {
+            "operation_id": operation_id,
+            "scope": "BASE",
+            "status": operation.get("status"),
+            "api": operation.get("api"),
+            "method": operation.get("method"),
+            "path": operation.get("path"),
+            "request_schema": operation.get("request_schema"),
+            "response_schema": operation.get("response_schema"),
+            "success_status": operation.get("success_status"),
+            "operation": operation,
+        }
+        for operation_id, operation in base_by.items()
+    }
+    catalog.update(
+        {
+            operation_id: additive_operation_metadata(operation, resources)
+            for operation_id, operation in additive_by.items()
+        }
+    )
+    return catalog
+
+
+def validate_screen_data_requirement(
+    screen_id: str,
+    requirement: dict[str, Any],
+    external_catalog: dict[str, dict[str, Any]],
+) -> dict[str, Any]:
+    operation_id = requirement.get("operation_id")
+    operation = external_catalog.get(operation_id)
+    if operation is None:
+        raise ValueError(f"{screen_id}: unknown data requirement {operation_id}")
+    fields = [
+        "status",
+        "api",
+        "method",
+        "path",
+        "request_schema",
+        "response_schema",
+    ]
+    if operation["scope"] == "ADDITIVE_EXTERNAL" or "success_status" in requirement:
+        fields.append("success_status")
+    for field in fields:
+        if requirement.get(field) != operation.get(field):
+            raise ValueError(
+                f"{screen_id}:{operation_id}: {field} mismatch "
+                f"({requirement.get(field)!r} != {operation.get(field)!r})"
+            )
+    return operation
+
+
 def additive_operation_contract(operation: dict[str, Any], resources: dict[str, Any]) -> dict[str, Any]:
+    metadata = additive_operation_metadata(operation, resources)
     request = operation.get("request", {})
     required = set(request.get("required", []))
     request_fields = [
@@ -1611,10 +1758,11 @@ def additive_operation_contract(operation: dict[str, Any], resources: dict[str, 
         "api": operation["api"],
         "method": operation["method"],
         "path": operation["path"],
-        "request_schema": resources["request_schemas_by_operation"].get(operation["operation_id"]),
+        "request_schema": metadata["request_schema"],
         "request_field_set": browser_request,
         "server_only_request_field_set": server_request,
-        "response_schema": operation.get("response"),
+        "response_schema": metadata["response_schema"],
+        "success_status": metadata["success_status"],
         "response_field_set": browser_response,
         "server_only_response_field_set": server_response,
         "browser_boundary": "BFF_PROJECTED" if server_request or server_response else "BROWSER_SAFE_PROJECTION_REQUIRED",
@@ -2257,12 +2405,14 @@ def build_effective_contracts(
     if set(manifest_by) != screen_ids:
         raise ValueError("screen build manifest is not set-equal to screen catalog")
     archetype_by = unique_by_key(archetypes["archetypes"], "id", "page archetypes")
-    data_by = unique_by_key(data["operations"], "operation_id", "screen data operations")
-    additive_by = unique_by_key(
-        addendum_operations["operations"],
-        "operation_id",
-        "additive operations",
+    external_catalog = build_external_operation_catalog(
+        data, addendum_operations, resources
     )
+    additive_by = {
+        operation_id: operation["operation"]
+        for operation_id, operation in external_catalog.items()
+        if operation["scope"] == "ADDITIVE_EXTERNAL"
+    }
     component_by = unique_by_key(
         component_catalog["components"], "id", "component catalog"
     )
@@ -2322,10 +2472,25 @@ def build_effective_contracts(
         if primary_action_id not in action_by and primary_action_id != "NONE":
             raise ValueError(f"{screen_id}: primary action {primary_action_id} is not in the authority catalog")
         primary_action = action_by.get(primary_action_id)
-        operation_rows = sorted([
-            base_operation_contract(data_by[requirement["operation_id"]])
-            for requirement in screen.get("data_requirements", [])
-        ], key=lambda row: row["operation_id"])
+        operation_rows: list[dict[str, Any]] = []
+        additive_screen_operations = {
+            operation_id
+            for operation_id, _section_id in additive_bindings_by_screen.get(
+                screen_id, []
+            )
+        }
+        for requirement in screen.get("data_requirements", []):
+            operation = validate_screen_data_requirement(
+                screen_id, requirement, external_catalog
+            )
+            if operation["scope"] == "BASE":
+                operation_rows.append(base_operation_contract(operation["operation"]))
+            elif operation["operation_id"] not in additive_screen_operations:
+                raise ValueError(
+                    f"{screen_id}:{operation['operation_id']}: additive data requirement "
+                    "has no authored section binding"
+                )
+        operation_rows.sort(key=lambda row: row["operation_id"])
         for operation_id, section_id in sorted(additive_bindings_by_screen.get(screen_id, [])):
             row = additive_operation_contract(additive_by[operation_id], resources)
             row["section_binding"] = section_id
@@ -2485,7 +2650,11 @@ def build_effective_contracts(
             ),
             "semantic_dimensions_per_screen": 6,
             "base_operation_occurrences": sum(
-                len(screen.get("data_requirements", [])) for screen in screens
+                sum(
+                    external_catalog[requirement["operation_id"]]["scope"] == "BASE"
+                    for requirement in screen.get("data_requirements", [])
+                )
+                for screen in screens
             ),
             "additive_operation_section_occurrences": sum(
                 len(value) for value in addendum_operations["operation_screen_bindings"].values()
@@ -2543,7 +2712,7 @@ def build_effective_contracts(
                 "console",
                 "client log",
             ],
-            "set_equality_scan": "all 94 closed screen schemas + all 496 section leaf/nested/array allowlists + all action and journey browser bindings",
+            "set_equality_scan": "all 94 closed screen schemas + all 497 section leaf/nested/array allowlists + all action and journey browser bindings",
             "runtime_status": "OPEN_IMPLEMENTATION",
         },
         "implementation_requirements": [
@@ -2768,7 +2937,14 @@ def build_action_contracts(
                 for row in manifest_by[target_screen]["section_order"]
                 if row["id"] == target_section
             )
-            target_route = screen_by[target_screen]["route"]
+            provider_proposal_destination = (
+                placement_key == "createActionProposal@OPS-005.status"
+            )
+            target_route = (
+                "/internal/my-work?proposalId={proposalId}"
+                if provider_proposal_destination
+                else screen_by[target_screen]["route"]
+            )
             destination_parameters = re.findall(r"\{([^}]+)\}", target_route)
             success_focus_test_id = (
                 f"{snake_screen(target_screen)}__receipt__{handler_id}__heading"
@@ -2813,7 +2989,9 @@ def build_action_contracts(
                     "section_id": target_section,
                     "route": target_route,
                     "required_route_bindings": {
-                        parameter: f"{receipt_source}.destination_bindings.{parameter}"
+                        parameter: f"{receipt_source}.{parameter}"
+                        if provider_proposal_destination
+                        else f"{receipt_source}.destination_bindings.{parameter}"
                         for parameter in destination_parameters
                     },
                     "section_heading_test_id": target_section_test_id,
@@ -2890,23 +3068,44 @@ def build_action_contracts(
         reference.split(".", 1)[0]
         for reference in addendum_operations["operation_screen_bindings"]["createActionProposal"]
     }
+    provider_control_operation_ids = {
+        "disableProviderRouting",
+        "testProviderConnection",
+        "upgradeProviderModel",
+        "setModelAutoUpgrade",
+    }
     legacy_side_door_fences: list[dict[str, Any]] = []
     for screen_id in sorted(proposal_screens):
         screen = screen_by[screen_id]
         for action in screen.get("actions", []):
             if not action.get("operation_id"):
                 continue
-            legacy_side_door_fences.append(
-                {
-                    "screen_id": screen_id,
-                    "legacy_action_id": action["id"],
-                    "legacy_operation_id": action["operation_id"],
-                    "policy": "PROPOSAL_ONLY_UNTIL_AUTHORIZED_EXECUTION",
-                    "required_entry_operation": "createActionProposal",
-                    "direct_effect_forbidden": True,
-                    "completion_requires": "ActionExecutionReceiptV1 with the same proposal/action digest",
+            fence = {
+                "screen_id": screen_id,
+                "legacy_action_id": action["id"],
+                "legacy_operation_id": action["operation_id"],
+                "policy": "PROPOSAL_ONLY_UNTIL_AUTHORIZED_EXECUTION",
+                "required_entry_operation": "createActionProposal",
+                "direct_effect_forbidden": True,
+                "completion_requires": "ActionExecutionReceiptV1 with the same proposal/action digest",
+            }
+            if (
+                screen_id == "OPS-005"
+                and action["operation_id"] in provider_control_operation_ids
+            ):
+                fence["proposal_binding"] = {
+                    "actionKind": "PROVIDER_CONTROL",
+                    "providerControl.operationId": action["operation_id"],
                 }
-            )
+            legacy_side_door_fences.append(fence)
+    provider_control_fences = {
+        fence["legacy_operation_id"]
+        for fence in legacy_side_door_fences
+        if fence["screen_id"] == "OPS-005"
+        and fence.get("proposal_binding", {}).get("actionKind") == "PROVIDER_CONTROL"
+    }
+    if provider_control_fences != provider_control_operation_ids:
+        raise ValueError("OPS-005 provider-control proposal fences are not closed")
 
     journey_actions = copy.deepcopy(JOURNEY_VISIBLE_ACTIONS)
     for screen_id, refinement in PRIORITY_SCREEN_REFINEMENTS.items():

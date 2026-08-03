@@ -1,0 +1,138 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT a.provider_id,a.target_model_id,a.attempt_kind,a.owner_user_id, a.expected_provider_version,a.connection_test_id,a.gateway_receipt_sha256::text AS gateway_receipt_sha256, a.usage_evidence_sha256::text AS usage_evidence_sha256,a.status, p.version AS provider_version,p.routing_policy FROM ops.provider_model_upgrade_attempts a JOIN ops.provider_configs p ON p.id=a.provider_id WHERE a.id=$1 FOR UPDATE OF a,p",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provider_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "provider_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "target_model_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "target_model_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "attempt_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "attempt_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "owner_user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "expected_provider_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "expected_provider_version"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "connection_test_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "connection_test_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "gateway_receipt_sha256",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "usage_evidence_sha256",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_model_upgrade_attempts",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "provider_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "routing_policy",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.provider_configs",
+            "name": "routing_policy"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      null,
+      null,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2e4d8bd737df60f88ebd01f526802aa648bafa19ae8f866eea431a93b5f3bd59"
+}

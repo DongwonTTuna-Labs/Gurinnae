@@ -5995,6 +5995,30 @@ export const SCREEN_PROJECTION_BINDINGS = {
       sectionId: "incidents",
       fieldName: "status",
     },
+    "model-catalog.items": {
+      operationId: "listRelayModels",
+      path: "$.items",
+      sectionId: "model-catalog",
+      fieldName: "items",
+    },
+    "model-catalog.currentProviders": {
+      operationId: "listRelayModels",
+      path: "$.currentProviders",
+      sectionId: "model-catalog",
+      fieldName: "currentProviders",
+    },
+    "model-catalog.syncStatus": {
+      operationId: "listRelayModels",
+      path: "$.syncStatus",
+      sectionId: "model-catalog",
+      fieldName: "syncStatus",
+    },
+    "model-catalog.asOf": {
+      operationId: "listRelayModels",
+      path: "$.asOf",
+      sectionId: "model-catalog",
+      fieldName: "asOf",
+    },
   },
   "OPS-006": {
     "active.active": {

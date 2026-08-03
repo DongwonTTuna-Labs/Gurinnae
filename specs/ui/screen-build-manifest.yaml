@@ -422,7 +422,7 @@ screens:
   section_order:
   - order: 1
     id: status
-    title: 상태·revision·freshness
+    title: 상태·개정·최신성
     component: StatusAndRevisionHeader
     purpose: 정정·철회와 최신성을 가장 먼저 표시한다.
     test_id: pub_004__section__status
@@ -470,7 +470,7 @@ screens:
     test_id: pub_004__section__timeline
   - order: 9
     id: revision
-    title: 정정·revision
+    title: 정정·개정 이력
     component: StatusAndRevisionHeader
     purpose: 불변 revision과 변경 이유.
     test_id: pub_004__section__revision
@@ -602,7 +602,7 @@ screens:
   section_order:
   - order: 1
     id: revision-banner
-    title: revision 안내
+    title: 개정본 안내
     component: StatusAndRevisionHeader
     purpose: 과거본 여부와 최신본 링크.
     test_id: pub_005__section__revision-banner
@@ -731,7 +731,7 @@ screens:
     test_id: pub_006__section__summary
   - order: 2
     id: inputs
-    title: 입력과 digest
+    title: 입력·무결성 요약값
     component: StructuredContentSection
     purpose: 공개 가능한 normalized input.
     test_id: pub_006__section__inputs
@@ -966,19 +966,19 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 기관 identity
+    title: 기관 식별 정보
     component: RevisionTimeline
     purpose: 공식명·유형·관할·변경 이력.
     test_id: pub_008__section__identity
   - order: 2
     id: coverage
-    title: coverage
+    title: 수집 범위
     component: CoverageStatement
     purpose: source·기간·누락.
     test_id: pub_008__section__coverage
   - order: 3
     id: metrics
-    title: 설명 통계
+    title: 계약 현황 통계
     component: StatusAndRevisionHeader
     purpose: 계약 수·금액·상태 분포와 denominator.
     test_id: pub_008__section__metrics
@@ -1229,19 +1229,19 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 업체 identity
+    title: 업체 식별 정보
     component: KnownUnknownResponse
     purpose: 공식명·식별·변경 이력·확인 한계.
     test_id: pub_010__section__identity
   - order: 2
     id: coverage
-    title: coverage
+    title: 수집 범위
     component: CoverageStatement
     purpose: source·기간.
     test_id: pub_010__section__coverage
   - order: 3
     id: metrics
-    title: 설명 통계
+    title: 계약 현황 통계
     component: ComparisonWorkbench
     purpose: 계약·기관 분포와 denominator.
     test_id: pub_010__section__metrics
@@ -1383,7 +1383,7 @@ screens:
   section_order:
   - order: 1
     id: scope
-    title: 계약 coverage
+    title: 계약 관측 범위
     component: CoverageStatement
     purpose: 사건 여부와 무관한 관측 범위.
     test_id: pub_011__section__scope
@@ -1506,7 +1506,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 계약 identity
+    title: 계약 식별 정보
     component: StatusAndRevisionHeader
     purpose: source ID·기관·업체·상태.
     test_id: pub_012__section__identity
@@ -1518,7 +1518,7 @@ screens:
     test_id: pub_012__section__terms
   - order: 3
     id: changes
-    title: 변경 계약
+    title: 계약 변경
     component: StructuredContentSection
     purpose: 금액·기간 변경.
     test_id: pub_012__section__changes
@@ -1530,7 +1530,7 @@ screens:
     test_id: pub_012__section__procurement
   - order: 5
     id: provenance
-    title: 필드 provenance
+    title: 필드 출처 이력
     component: StructuredContentSection
     purpose: raw locator·parser version.
     test_id: pub_012__section__provenance
@@ -1665,7 +1665,7 @@ screens:
     test_id: pub_013__section__rules
   - order: 4
     id: ai
-    title: AI 역할
+    title: 인공지능 역할
     component: AccessManagementPanel
     purpose: 보조·금지 권한.
     test_id: pub_013__section__ai
@@ -1808,7 +1808,7 @@ screens:
     test_id: pub_014__section__evaluation
   - order: 7
     id: versions
-    title: version history
+    title: 버전 이력
     component: StructuredContentSection
     purpose: 변경·retired.
     test_id: pub_014__section__versions
@@ -1903,19 +1903,19 @@ screens:
   section_order:
   - order: 1
     id: summary
-    title: coverage 요약
+    title: 수집 범위 요약
     component: StatusAndRevisionHeader
     purpose: 전체 범위와 current status.
     test_id: pub_015__section__summary
   - order: 2
     id: sources
-    title: source별 범위
+    title: 출처별 범위
     component: CoverageStatement
     purpose: 기간·기관·갱신.
     test_id: pub_015__section__sources
   - order: 3
     id: gaps
-    title: known gaps
+    title: 알려진 누락
     component: StructuredContentSection
     purpose: 미수집·누락·license.
     test_id: pub_015__section__gaps
@@ -2022,13 +2022,13 @@ screens:
   section_order:
   - order: 1
     id: status
-    title: source 상태 요약
+    title: 출처 상태 요약
     component: StatusAndRevisionHeader
     purpose: healthy/stale/incident.
     test_id: pub_016__section__status
   - order: 2
     id: list
-    title: source 목록
+    title: 출처 목록
     component: CoverageStatement
     purpose: owner·type·coverage·last sync.
     test_id: pub_016__section__list
@@ -2120,7 +2120,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: source 설명
+    title: 출처 설명
     component: StructuredContentSection
     purpose: owner·접근 방식.
     test_id: pub_017__section__identity
@@ -2138,13 +2138,13 @@ screens:
     test_id: pub_017__section__coverage
   - order: 4
     id: schema
-    title: schema
+    title: 데이터 구조
     component: RevisionTimeline
     purpose: 현재 version·변경 이력.
     test_id: pub_017__section__schema
   - order: 5
     id: quality
-    title: known quality
+    title: 알려진 품질 이슈
     component: StructuredContentSection
     purpose: 누락·중복·형식.
     test_id: pub_017__section__quality
@@ -2262,7 +2262,7 @@ screens:
     test_id: pub_018__section__records
   - order: 4
     id: feed
-    title: 구독·feed
+    title: 구독·정정 알림
     component: RevisionAndCorrectionPanel
     purpose: 정정 알림.
     test_id: pub_018__section__feed
@@ -2494,13 +2494,13 @@ screens:
     test_id: pub_020__section__datasets
   - order: 2
     id: snapshots
-    title: snapshot
+    title: 시점별 자료
     component: StructuredContentSection
     purpose: 생성 시각·version·checksum.
     test_id: pub_020__section__snapshots
   - order: 3
     id: schemas
-    title: schema
+    title: 데이터 구조
     component: StructuredContentSection
     purpose: field dictionary.
     test_id: pub_020__section__schemas
@@ -2518,7 +2518,7 @@ screens:
     test_id: pub_020__section__corrections
   - order: 6
     id: limits
-    title: rate/size
+    title: 요청량·크기 제한
     component: StructuredContentSection
     purpose: API와 bulk export.
     test_id: pub_020__section__limits
@@ -2627,13 +2627,13 @@ screens:
     test_id: pub_021__section__getting-started
   - order: 2
     id: resources
-    title: resource
+    title: 제공 자원
     component: RevisionAndCorrectionPanel
     purpose: case/contract/entity/method/correction.
     test_id: pub_021__section__resources
   - order: 3
     id: pagination
-    title: pagination
+    title: 페이지 조회
     component: StructuredContentSection
     purpose: cursor·sort.
     test_id: pub_021__section__pagination
@@ -2645,13 +2645,13 @@ screens:
     test_id: pub_021__section__errors
   - order: 5
     id: versioning
-    title: versioning
+    title: 버전 관리
     component: StructuredContentSection
     purpose: OpenAPI와 deprecation.
     test_id: pub_021__section__versioning
   - order: 6
     id: download
-    title: OpenAPI
+    title: 공개 인터페이스 명세
     component: StructuredContentSection
     purpose: JSON 다운로드.
     test_id: pub_021__section__download
@@ -2746,7 +2746,7 @@ screens:
   section_order:
   - order: 1
     id: mission
-    title: 미션
+    title: 운영 목적
     component: StructuredContentSection
     purpose: 제품 정의.
     test_id: pub_022__section__mission
@@ -3625,7 +3625,7 @@ screens:
     test_id: pub_029__section__topic
   - order: 2
     id: events
-    title: event
+    title: 알림 유형
     component: KnownUnknownResponse
     purpose: 공개·소명·정정·공식확인.
     test_id: pub_029__section__events
@@ -3750,7 +3750,7 @@ screens:
     test_id: pub_030__section__preferences
   - order: 4
     id: delivery
-    title: delivery 상태
+    title: 전송 상태
     component: StatusAndRevisionHeader
     purpose: bounce/suppression.
     test_id: pub_030__section__delivery
@@ -4006,7 +4006,7 @@ screens:
     test_id: pub_032__section__content
   - order: 3
     id: data
-    title: 데이터/API
+    title: 데이터·공개 인터페이스
     component: StructuredContentSection
     purpose: license·rate.
     test_id: pub_032__section__data
@@ -4339,7 +4339,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 요청 identity
+    title: 요청 식별 정보
     component: CoverageStatement
     purpose: 요청 ID·조직·사건 공개 범위.
     test_id: rsp_001__section__identity
@@ -5328,7 +5328,7 @@ screens:
     test_id: auth_001__section__environment
   - order: 2
     id: signin
-    title: SSO 로그인
+    title: 조직 계정 로그인
     component: StructuredContentSection
     purpose: OIDC 시작.
     test_id: auth_001__section__signin
@@ -5629,7 +5629,7 @@ screens:
     test_id: auth_004__section__status
   - order: 2
     id: draft
-    title: draft 상태
+    title: 초안 상태
     component: StatusAndRevisionHeader
     purpose: server/local 안전 보존.
     test_id: auth_004__section__draft
@@ -5733,7 +5733,7 @@ screens:
   section_order:
   - order: 1
     id: critical
-    title: 긴급 blocker
+    title: 긴급 차단 요인
     component: RevisionAndCorrectionPanel
     purpose: publication/correction/security.
     test_id: int_001__section__critical
@@ -5745,13 +5745,13 @@ screens:
     test_id: int_001__section__my-work
   - order: 3
     id: incidents
-    title: source/ops incident
+    title: 출처·운영 장애
     component: OperationsStatusPanel
     purpose: 영향.
     test_id: int_001__section__incidents
   - order: 4
     id: queues
-    title: queue health
+    title: 대기열 상태
     component: KnownUnknownResponse
     purpose: review/response/job.
     test_id: int_001__section__queues
@@ -6210,7 +6210,7 @@ screens:
   section_order:
   - order: 1
     id: scope
-    title: queue 상태
+    title: 대기열 상태
     component: StatusAndRevisionHeader
     purpose: SLA·count.
     test_id: sig_001__section__scope
@@ -6228,7 +6228,7 @@ screens:
     test_id: sig_001__section__table
   - order: 4
     id: bulk
-    title: 제한된 bulk
+    title: 제한된 일괄 처리
     component: StructuredContentSection
     purpose: assign/label.
     test_id: sig_001__section__bulk
@@ -6336,7 +6336,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: source·rule·freshness
+    title: 출처·규칙·최신성
     component: CoverageStatement
     purpose: 입력 version.
     test_id: sig_002__section__identity
@@ -6348,7 +6348,7 @@ screens:
     test_id: sig_002__section__calculation
   - order: 3
     id: quality
-    title: blocker·품질
+    title: 차단 요인·품질
     component: StructuredContentSection
     purpose: unit/VAT/bundle.
     test_id: sig_002__section__quality
@@ -6366,19 +6366,19 @@ screens:
     test_id: sig_002__section__provenance
   - order: 6
     id: related
-    title: 관련 signal/case
+    title: 관련 신호·사건
     component: SignalTriagePanel
     purpose: duplicate.
     test_id: sig_002__section__related
   - order: 7
     id: ai
-    title: AI 제안
+    title: 인공지능 제안
     component: AgentSuggestionPanel
     purpose: 보조.
     test_id: sig_002__section__ai
   - order: 8
     id: decision
-    title: triage 결정
+    title: 분류 결정
     component: DecisionReviewPanel
     purpose: reason code.
     test_id: sig_002__section__decision
@@ -6495,7 +6495,7 @@ screens:
   section_order:
   - order: 1
     id: views
-    title: queue 보기
+    title: 업무 대기열
     component: DataCollection
     purpose: investigation/editorial/review/publish.
     test_id: cas_001__section__views
@@ -6620,19 +6620,19 @@ screens:
   section_order:
   - order: 1
     id: header
-    title: identity·state·version
+    title: 식별 정보·상태·버전
     component: StructuredContentSection
     purpose: assignment·due.
     test_id: cas_002__section__header
   - order: 2
     id: known-unknown
-    title: Known/Unknown/Response
+    title: 확인·미확인·소명
     component: KnownUnknownResponse
     purpose: 핵심 요약.
     test_id: cas_002__section__known-unknown
   - order: 3
     id: readiness
-    title: 진행과 gate
+    title: 진행·통과 조건
     component: StructuredContentSection
     purpose: blocking task.
     test_id: cas_002__section__readiness
@@ -6769,7 +6769,7 @@ screens:
     test_id: cas_003__section__summary
   - order: 2
     id: signals
-    title: signal 목록
+    title: 탐지 신호 목록
     component: DataCollection
     purpose: metric·state·link reason.
     test_id: cas_003__section__signals
@@ -6889,7 +6889,7 @@ screens:
   section_order:
   - order: 1
     id: matrix
-    title: evidence matrix
+    title: 근거 관계표
     component: EvidenceLedger
     purpose: hypothesis/claim 관계.
     test_id: cas_004__section__matrix
@@ -6907,7 +6907,7 @@ screens:
     test_id: cas_004__section__list
   - order: 4
     id: gaps
-    title: 근거 gap
+    title: 근거 부족
     component: EvidenceLedger
     purpose: unresolved questions.
     test_id: cas_004__section__gaps
@@ -7027,7 +7027,7 @@ screens:
     test_id: cas_005__section__source
   - order: 2
     id: locator
-    title: locator
+    title: 정확한 위치
     component: StructuredContentSection
     purpose: page/row/field.
     test_id: cas_005__section__locator
@@ -7171,13 +7171,13 @@ screens:
   section_order:
   - order: 1
     id: summary
-    title: claim readiness
+    title: 주장 준비도
     component: ClaimWorkbench
     purpose: invalid/blocking.
     test_id: cas_006__section__summary
   - order: 2
     id: claims
-    title: claim 목록
+    title: 주장 목록
     component: DataCollection
     purpose: type·visibility·review.
     test_id: cas_006__section__claims
@@ -7314,7 +7314,7 @@ screens:
   section_order:
   - order: 1
     id: board
-    title: 가설 board
+    title: 가설 현황판
     component: StructuredContentSection
     purpose: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
     test_id: cas_007__section__board
@@ -7463,13 +7463,13 @@ screens:
     test_id: cas_008__section__verification
   - order: 4
     id: public-copy
-    title: 공개 excerpt
+    title: 공개 발췌문
     component: StructuredContentSection
     purpose: 원문/요약·redaction.
     test_id: cas_008__section__public-copy
   - order: 5
     id: timeline
-    title: 소명 timeline
+    title: 소명 이력
     component: KnownUnknownResponse
     purpose: reminder·extension.
     test_id: cas_008__section__timeline
@@ -7577,7 +7577,7 @@ screens:
   section_order:
   - order: 1
     id: target
-    title: 대상·contact
+    title: 대상·연락처
     component: StructuredContentSection
     purpose: source·latest verification.
     test_id: cas_009__section__target
@@ -7595,19 +7595,19 @@ screens:
     test_id: cas_009__section__deadline
   - order: 4
     id: disclosure
-    title: 공개·privacy 안내
+    title: 공개·개인정보 안내
     component: StatusAndRevisionHeader
     purpose: template.
     test_id: cas_009__section__disclosure
   - order: 5
     id: preview
-    title: 이메일·portal preview
+    title: 이메일·포털 미리보기
     component: DecisionReviewPanel
     purpose: phishing guidance.
     test_id: cas_009__section__preview
   - order: 6
     id: gate
-    title: 발송 gate
+    title: 발송 조건
     component: StructuredContentSection
     purpose: duplicate/legal.
     test_id: cas_009__section__gate
@@ -7832,7 +7832,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 실행 identity
+    title: 실행 식별 정보
     component: StructuredContentSection
     purpose: purpose·version·timestamps.
     test_id: cas_011__section__identity
@@ -7844,25 +7844,25 @@ screens:
     test_id: cas_011__section__inputs
   - order: 3
     id: model
-    title: 모델·policy
+    title: 모델·정책
     component: StructuredContentSection
     purpose: provider·prompt version.
     test_id: cas_011__section__model
   - order: 4
     id: output
-    title: structured output
+    title: 구조화 출력
     component: StructuredContentSection
     purpose: validation.
     test_id: cas_011__section__output
   - order: 5
     id: citations
-    title: citation
+    title: 인용 근거
     component: StructuredContentSection
     purpose: source 존재.
     test_id: cas_011__section__citations
   - order: 6
     id: safety
-    title: safety
+    title: 안전성 검사
     component: StructuredContentSection
     purpose: injection/PII.
     test_id: cas_011__section__safety
@@ -8006,13 +8006,13 @@ screens:
     test_id: cas_012__section__timeline
   - order: 3
     id: public-view
-    title: 공개 timeline preview
+    title: 공개 이력 미리보기
     component: RevisionTimeline
     purpose: 승인된 항목.
     test_id: cas_012__section__public-view
   - order: 4
     id: related
-    title: 관련 receipt
+    title: 관련 확인서
     component: StructuredContentSection
     purpose: event link.
     test_id: cas_012__section__related
@@ -8113,13 +8113,13 @@ screens:
   section_order:
   - order: 1
     id: summary
-    title: readiness
+    title: 준비도
     component: StructuredContentSection
     purpose: complete/blocking.
     test_id: cas_013__section__summary
   - order: 2
     id: gates
-    title: gate checklist
+    title: 통과 조건 점검표
     component: KnownUnknownResponse
     purpose: evidence/response/privacy/language.
     test_id: cas_013__section__gates
@@ -8131,13 +8131,13 @@ screens:
     test_id: cas_013__section__tasks
   - order: 4
     id: reviews
-    title: 기존 review
+    title: 기존 검토
     component: DecisionReviewPanel
     purpose: stale/valid.
     test_id: cas_013__section__reviews
   - order: 5
     id: snapshot
-    title: snapshot 생성
+    title: 스냅샷 생성
     component: StructuredContentSection
     purpose: included version.
     test_id: cas_013__section__snapshot
@@ -8237,7 +8237,7 @@ screens:
   section_order:
   - order: 1
     id: watermark
-    title: preview 상태
+    title: 미리보기 상태
     component: StatusAndRevisionHeader
     purpose: DRAFT·snapshot hash.
     test_id: cas_014__section__watermark
@@ -8255,7 +8255,7 @@ screens:
     test_id: cas_014__section__checks
   - order: 4
     id: variants
-    title: viewport/print
+    title: 화면 유형·인쇄
     component: StructuredContentSection
     purpose: compact/wide/print.
     test_id: cas_014__section__variants
@@ -8370,7 +8370,7 @@ screens:
   section_order:
   - order: 1
     id: history
-    title: revision·정정 이력
+    title: 개정·정정 이력
     component: StatusAndRevisionHeader
     purpose: immutable.
     test_id: cas_015__section__history
@@ -8507,7 +8507,7 @@ screens:
   section_order:
   - order: 1
     id: scope
-    title: audit scope
+    title: 감사 범위
     component: StructuredContentSection
     purpose: case-linked.
     test_id: cas_016__section__scope
@@ -8525,7 +8525,7 @@ screens:
     test_id: cas_016__section__events
   - order: 4
     id: exports
-    title: export
+    title: 내보내기
     component: StructuredContentSection
     purpose: watermark·audit.
     test_id: cas_016__section__exports
@@ -8642,7 +8642,7 @@ screens:
     test_id: rev_001__section__filters
   - order: 3
     id: queue
-    title: snapshot 목록
+    title: 스냅샷 목록
     component: KnownUnknownResponse
     purpose: hash·case·response·changes.
     test_id: rev_001__section__queue
@@ -8747,19 +8747,19 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: snapshot
+    title: 스냅샷 정보
     component: StructuredContentSection
     purpose: hash·version·author·stale.
     test_id: rev_002__section__identity
   - order: 2
     id: preview
-    title: 공개 preview
+    title: 공개 미리보기
     component: DecisionReviewPanel
     purpose: exact content.
     test_id: rev_002__section__preview
   - order: 3
     id: matrix
-    title: claim/evidence/response
+    title: 주장·증거·답변
     component: KnownUnknownResponse
     purpose: coverage.
     test_id: rev_002__section__matrix
@@ -8771,7 +8771,7 @@ screens:
     test_id: rev_002__section__diff
   - order: 5
     id: risks
-    title: risk·blocker
+    title: 위험·차단 요인
     component: StructuredContentSection
     purpose: legal/privacy/source.
     test_id: rev_002__section__risks
@@ -8922,7 +8922,7 @@ screens:
     test_id: rev_003__section__target
   - order: 2
     id: gates
-    title: 최종 gate
+    title: 최종 검증
     component: KnownUnknownResponse
     purpose: review·response·privacy·source.
     test_id: rev_003__section__gates
@@ -9055,7 +9055,7 @@ screens:
   section_order:
   - order: 1
     id: urgent
-    title: 긴급 queue
+    title: 긴급 대기열
     component: DataCollection
     purpose: privacy/identity/legal.
     test_id: cor_001__section__urgent
@@ -9372,7 +9372,7 @@ screens:
     test_id: src_001__section__filters
   - order: 3
     id: registry
-    title: source 목록
+    title: 출처 목록
     component: DataCollection
     purpose: sync·schema·lag·quarantine.
     test_id: src_001__section__registry
@@ -9384,7 +9384,7 @@ screens:
     test_id: src_001__section__impact
   - order: 5
     id: ownership
-    title: owner/runbook
+    title: 담당자·대응 절차
     component: StructuredContentSection
     purpose: 연락·SLA.
     test_id: src_001__section__ownership
@@ -9498,31 +9498,31 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: source identity
+    title: 출처 식별 정보
     component: StructuredContentSection
     purpose: owner·access·terms.
     test_id: src_002__section__identity
   - order: 2
     id: status
-    title: health·SLA
+    title: 상태·서비스 수준 목표
     component: StatusAndRevisionHeader
     purpose: last success·lag.
     test_id: src_002__section__status
   - order: 3
     id: checkpoint
-    title: checkpoint
+    title: 처리 기준점
     component: StructuredContentSection
     purpose: pagination cursor·watermark.
     test_id: src_002__section__checkpoint
   - order: 4
     id: quality
-    title: quality metrics
+    title: 품질 지표
     component: StructuredContentSection
     purpose: duplicate/missing/parser.
     test_id: src_002__section__quality
   - order: 5
     id: schema
-    title: schema version
+    title: 스키마 버전
     component: StructuredContentSection
     purpose: drift.
     test_id: src_002__section__schema
@@ -9534,7 +9534,7 @@ screens:
     test_id: src_002__section__downstream
   - order: 7
     id: runbook
-    title: runbook
+    title: 대응 절차
     component: StructuredContentSection
     purpose: safe action.
     test_id: src_002__section__runbook
@@ -9641,7 +9641,7 @@ screens:
   section_order:
   - order: 1
     id: summary
-    title: run health
+    title: 실행 상태
     component: OperationsStatusPanel
     purpose: success/failure/lag.
     test_id: src_003__section__summary
@@ -9653,13 +9653,13 @@ screens:
     test_id: src_003__section__filters
   - order: 3
     id: runs
-    title: run 목록
+    title: 실행 목록
     component: DataCollection
     purpose: records·checkpoint·duration·error.
     test_id: src_003__section__runs
   - order: 4
     id: schedule
-    title: schedule
+    title: 실행 일정
     component: StructuredContentSection
     purpose: next run.
     test_id: src_003__section__schedule
@@ -9759,19 +9759,19 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: run identity
+    title: 실행 식별 정보
     component: StructuredContentSection
     purpose: trigger·version·time.
     test_id: src_004__section__identity
   - order: 2
     id: scope
-    title: scope
+    title: 실행 범위
     component: StructuredContentSection
     purpose: page/time/checkpoint.
     test_id: src_004__section__scope
   - order: 3
     id: counts
-    title: record flow
+    title: 처리 건수
     component: StructuredContentSection
     purpose: fetched/new/duplicate/quarantined.
     test_id: src_004__section__counts
@@ -9783,13 +9783,13 @@ screens:
     test_id: src_004__section__errors
   - order: 5
     id: artifacts
-    title: artifacts
+    title: 산출물
     component: StructuredContentSection
     purpose: log·schema sample·checksum.
     test_id: src_004__section__artifacts
   - order: 6
     id: impact
-    title: downstream
+    title: 후속 영향
     component: StructuredContentSection
     purpose: jobs/rules/public.
     test_id: src_004__section__impact
@@ -9907,37 +9907,37 @@ screens:
   section_order:
   - order: 1
     id: alert
-    title: drift identity
+    title: 변경 감지 정보
     component: StructuredContentSection
     purpose: detected version/time.
     test_id: src_005__section__alert
   - order: 2
     id: diff
-    title: schema diff
+    title: 스키마 차이
     component: StructuredContentSection
     purpose: add/remove/type.
     test_id: src_005__section__diff
   - order: 3
     id: samples
-    title: redacted samples
+    title: 가림 처리 표본
     component: StructuredContentSection
     purpose: frequency.
     test_id: src_005__section__samples
   - order: 4
     id: impact
-    title: dependency impact
+    title: 의존 관계 영향
     component: StructuredContentSection
     purpose: parser/field/rule/public.
     test_id: src_005__section__impact
   - order: 5
     id: mapping
-    title: proposed mapping
+    title: 제안 매핑
     component: StructuredContentSection
     purpose: code/task.
     test_id: src_005__section__mapping
   - order: 6
     id: shadow
-    title: shadow result
+    title: 병행 검증 결과
     component: DataCollection
     purpose: fixture/records.
     test_id: src_005__section__shadow
@@ -10087,7 +10087,7 @@ screens:
     test_id: src_006__section__downstream
   - order: 5
     id: safety
-    title: safety
+    title: 안전 장치
     component: StructuredContentSection
     purpose: rate/budget/kill.
     test_id: src_006__section__safety
@@ -10325,7 +10325,7 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: version identity
+    title: 버전 식별 정보
     component: StatusAndRevisionHeader
     purpose: status·owner·hash.
     test_id: rule_002__section__identity
@@ -10337,19 +10337,19 @@ screens:
     test_id: rule_002__section__definition
   - order: 3
     id: cohort
-    title: cohort
+    title: 비교 집단
     component: ComparisonWorkbench
     purpose: include/exclude.
     test_id: rule_002__section__cohort
   - order: 4
     id: blockers
-    title: blocker
+    title: 차단 요인
     component: StructuredContentSection
     purpose: quality guard.
     test_id: rule_002__section__blockers
   - order: 5
     id: diff
-    title: version diff
+    title: 버전 차이
     component: StructuredContentSection
     purpose: previous.
     test_id: rule_002__section__diff
@@ -10467,13 +10467,13 @@ screens:
   section_order:
   - order: 1
     id: dataset
-    title: 평가 dataset
+    title: 평가 자료
     component: CoverageStatement
     purpose: version·coverage.
     test_id: rule_003__section__dataset
   - order: 2
     id: metrics
-    title: 품질 metric
+    title: 품질 지표
     component: StructuredContentSection
     purpose: precision/recall where valid.
     test_id: rule_003__section__metrics
@@ -10491,7 +10491,7 @@ screens:
     test_id: rule_003__section__threshold
   - order: 5
     id: shadow
-    title: shadow
+    title: 병행 평가
     component: StructuredContentSection
     purpose: count·cost·diff.
     test_id: rule_003__section__shadow
@@ -10622,7 +10622,7 @@ screens:
     test_id: rule_004__section__target
   - order: 2
     id: gates
-    title: quality gate
+    title: 품질 검증
     component: DecisionReviewPanel
     purpose: eval/shadow/review.
     test_id: rule_004__section__gates
@@ -10640,7 +10640,7 @@ screens:
     test_id: rule_004__section__schedule
   - order: 5
     id: rollback
-    title: rollback
+    title: 되돌리기
     component: StructuredContentSection
     purpose: target/version.
     test_id: rule_004__section__rollback
@@ -10773,25 +10773,25 @@ screens:
   section_order:
   - order: 1
     id: incidents
-    title: active incident
+    title: 진행 중 장애
     component: OperationsStatusPanel
     purpose: 영향·owner·started.
     test_id: ops_001__section__incidents
   - order: 2
     id: services
-    title: 서비스 health
+    title: 서비스 상태
     component: OperationsStatusPanel
     purpose: API/web/worker.
     test_id: ops_001__section__services
   - order: 3
     id: pipelines
-    title: pipeline
+    title: 처리 흐름
     component: StructuredContentSection
     purpose: ingest/analysis/projection.
     test_id: ops_001__section__pipelines
   - order: 4
     id: queues
-    title: queue·DLQ
+    title: 작업 대기열·실패 격리함
     component: DataCollection
     purpose: age/backlog.
     test_id: ops_001__section__queues
@@ -10809,7 +10809,7 @@ screens:
     test_id: ops_001__section__security
   - order: 7
     id: slo
-    title: SLO
+    title: 서비스 수준 목표
     component: StructuredContentSection
     purpose: trend·error budget.
     test_id: ops_001__section__slo
@@ -10909,7 +10909,7 @@ screens:
   section_order:
   - order: 1
     id: summary
-    title: queue health
+    title: 대기열 상태
     component: DataCollection
     purpose: backlog/oldest/DLQ.
     test_id: ops_002__section__summary
@@ -10921,13 +10921,13 @@ screens:
     test_id: ops_002__section__filters
   - order: 3
     id: jobs
-    title: job 목록
+    title: 작업 목록
     component: DataCollection
     purpose: attempt/lease/next retry.
     test_id: ops_002__section__jobs
   - order: 4
     id: bulk
-    title: 제한 bulk
+    title: 제한된 일괄 처리
     component: StructuredContentSection
     purpose: pause/assign category.
     test_id: ops_002__section__bulk
@@ -11049,31 +11049,31 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: job identity
+    title: 작업 식별 정보
     component: StructuredContentSection
     purpose: type·aggregate·created.
     test_id: ops_003__section__identity
   - order: 2
     id: state
-    title: 상태·lease
+    title: 상태·실행 소유권
     component: StatusAndRevisionHeader
     purpose: owner/fencing/heartbeat.
     test_id: ops_003__section__state
   - order: 3
     id: attempts
-    title: attempt history
+    title: 시도 이력
     component: StructuredContentSection
     purpose: error/fingerprint/backoff.
     test_id: ops_003__section__attempts
   - order: 4
     id: payload
-    title: payload reference
+    title: 입력 자료 참조
     component: StructuredContentSection
     purpose: redacted.
     test_id: ops_003__section__payload
   - order: 5
     id: effects
-    title: side effects
+    title: 후속 반영
     component: StructuredContentSection
     purpose: outbox/inbox/projection.
     test_id: ops_003__section__effects
@@ -11085,7 +11085,7 @@ screens:
     test_id: ops_003__section__recovery
   - order: 7
     id: audit
-    title: event
+    title: 이벤트
     component: StructuredContentSection
     purpose: commands.
     test_id: ops_003__section__audit
@@ -11209,7 +11209,7 @@ screens:
   section_order:
   - order: 1
     id: envelope
-    title: 예산 envelope
+    title: 예산 범위
     component: AgentSuggestionPanel
     purpose: daily/monthly.
     test_id: ops_004__section__envelope
@@ -11221,7 +11221,7 @@ screens:
     test_id: ops_004__section__spend
   - order: 3
     id: forecast
-    title: forecast
+    title: 지출 전망
     component: StructuredContentSection
     purpose: confidence/assumption.
     test_id: ops_004__section__forecast
@@ -11353,19 +11353,19 @@ screens:
   section_order:
   - order: 1
     id: status
-    title: provider health
+    title: 공급자 상태
     component: StatusAndRevisionHeader
     purpose: service/status/last checked.
     test_id: ops_005__section__status
   - order: 2
     id: quotas
-    title: quota
+    title: 사용 한도
     component: StructuredContentSection
     purpose: usage/reset.
     test_id: ops_005__section__quotas
   - order: 3
     id: latency
-    title: latency/error
+    title: 지연·오류
     component: StructuredContentSection
     purpose: SLO.
     test_id: ops_005__section__latency
@@ -11377,16 +11377,22 @@ screens:
     test_id: ops_005__section__privacy
   - order: 5
     id: fallback
-    title: fallback
+    title: 대체 경로
     component: StructuredContentSection
     purpose: allowed routing.
     test_id: ops_005__section__fallback
   - order: 6
     id: incidents
-    title: incident
+    title: 장애 이력
     component: OperationsStatusPanel
     purpose: impact/history.
     test_id: ops_005__section__incidents
+  - order: 7
+    id: model-catalog
+    title: 모델 카탈로그
+    component: EvidenceLedger
+    purpose: 'track prefix 내 relay created 최대. 단가 미설정: 비용 0으로 기록.'
+    test_id: ops_005__section__model-catalog
   actions:
   - id: open-provider
     label: 공급자 상세
@@ -11397,18 +11403,38 @@ screens:
     confirmation_required: false
     local_only: true
   - id: disable-routing
-    label: 라우팅 중지
-    capability: kill_switch.execute
+    label: 라우팅 중지 제안
+    capability: actions.propose
     operation_id: disableProviderRouting
     guard: scope + reason
-    interaction_kind: DESTRUCTIVE_CONFIRMATION
-    assurance_level: STEP_UP
-    step_up_required: true
-    confirmation_required: true
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
   - id: test
-    label: 연결 테스트
-    capability: jobs.operate
+    label: 연결 테스트 제안
+    capability: actions.propose
     operation_id: testProviderConnection
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+  - id: upgrade-model
+    label: 모델 업그레이드 제안
+    capability: actions.propose
+    operation_id: upgradeProviderModel
+    expand_request_objects:
+    - dataPolicy
+    guard: connection test + expected version + data policy
+    interaction_kind: COMMAND
+    assurance_level: ACTIVE_SESSION
+    step_up_required: false
+    confirmation_required: false
+  - id: auto-upgrade
+    label: 자동 업그레이드 설정 제안
+    capability: actions.propose
+    operation_id: setModelAutoUpgrade
+    guard: expected version + track
     interaction_kind: COMMAND
     assurance_level: ACTIVE_SESSION
     step_up_required: false
@@ -11420,18 +11446,19 @@ screens:
     path: /v1/internal/queries/list-providers
     blocking: true
     response_schema: ProvidersPage
-  - operation_id: disableProviderRouting
+  - operation_id: createActionProposal
     api: control-api
     method: POST
-    path: /v1/internal/commands/disable-provider-routing
+    path: /v1/internal/action-proposals
     blocking: false
-    response_schema: disableProviderRoutingReceipt
-  - operation_id: testProviderConnection
+    response_schema: ActionProposalReceiptV1
+    success_status: 201
+  - operation_id: listRelayModels
     api: control-api
-    method: POST
-    path: /v1/internal/commands/test-provider-connection
-    blocking: false
-    response_schema: testProviderConnectionReceipt
+    method: GET
+    path: /v1/internal/queries/list-relay-models
+    blocking: true
+    response_schema: RelayModelsPage
   states:
   - loading
   - success
@@ -11497,13 +11524,13 @@ screens:
   section_order:
   - order: 1
     id: active
-    title: 활성 switch
+    title: 활성 비상 중지
     component: StructuredContentSection
     purpose: scope·reason·expiry.
     test_id: ops_006__section__active
   - order: 2
     id: catalog
-    title: switch 목록
+    title: 비상 중지 목록
     component: DataCollection
     purpose: safe fallback.
     test_id: ops_006__section__catalog
@@ -11527,7 +11554,7 @@ screens:
     test_id: ops_006__section__history
   - order: 6
     id: runbook
-    title: runbook
+    title: 대응 절차
     component: StructuredContentSection
     purpose: verification.
     test_id: ops_006__section__runbook
@@ -11655,7 +11682,7 @@ screens:
     test_id: aud_001__section__query
   - order: 2
     id: filters
-    title: risk·surface·result
+    title: 위험·영역·결과
     component: UnifiedSearch
     purpose: high impact.
     test_id: aud_001__section__filters
@@ -11673,7 +11700,7 @@ screens:
     test_id: aud_001__section__integrity
   - order: 5
     id: export
-    title: export
+    title: 내보내기
     component: StructuredContentSection
     purpose: scope·watermark.
     test_id: aud_001__section__export
@@ -11932,43 +11959,43 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: identity
+    title: 신원 정보
     component: StatusAndRevisionHeader
     purpose: IdP·status.
     test_id: adm_002__section__identity
   - order: 2
     id: roles
-    title: role·scope
+    title: 역할·권한 범위
     component: AccessManagementPanel
     purpose: grant/expiry.
     test_id: adm_002__section__roles
   - order: 3
     id: conflicts
-    title: SoD
+    title: 직무 분리
     component: AccessManagementPanel
     purpose: conflicting roles.
     test_id: adm_002__section__conflicts
   - order: 4
     id: sessions
-    title: session
+    title: 세션
     component: StructuredContentSection
     purpose: active/revoke.
     test_id: adm_002__section__sessions
   - order: 5
     id: requests
-    title: pending
+    title: 대기 요청
     component: StructuredContentSection
     purpose: reason/approver.
     test_id: adm_002__section__requests
   - order: 6
     id: activity
-    title: 고위험 audit
+    title: 고위험 감사
     component: CoverageStatement
     purpose: 최소 범위.
     test_id: adm_002__section__activity
   - order: 7
     id: offboarding
-    title: offboarding
+    title: 접근 해제 계획
     component: StructuredContentSection
     purpose: revoke plan.
     test_id: adm_002__section__offboarding
@@ -12105,25 +12132,25 @@ screens:
   section_order:
   - order: 1
     id: catalog
-    title: role catalog
+    title: 역할 목록
     component: StatusAndRevisionHeader
     purpose: description/status.
     test_id: adm_003__section__catalog
   - order: 2
     id: capabilities
-    title: capability matrix
+    title: 권한 행렬
     component: StructuredContentSection
     purpose: read/write/high impact.
     test_id: adm_003__section__capabilities
   - order: 3
     id: conflicts
-    title: SoD
+    title: 직무 분리
     component: AccessManagementPanel
     purpose: conflicting roles.
     test_id: adm_003__section__conflicts
   - order: 4
     id: grants
-    title: grant stats
+    title: 권한 부여 현황
     component: StructuredContentSection
     purpose: count/expiry.
     test_id: adm_003__section__grants
@@ -12242,13 +12269,13 @@ screens:
   section_order:
   - order: 1
     id: identity
-    title: 내 identity
+    title: 신원 정보
     component: StructuredContentSection
     purpose: IdP·조직.
     test_id: acc_001__section__identity
   - order: 2
     id: roles
-    title: 역할·scope
+    title: 역할·권한 범위
     component: AccessManagementPanel
     purpose: read-only.
     test_id: acc_001__section__roles

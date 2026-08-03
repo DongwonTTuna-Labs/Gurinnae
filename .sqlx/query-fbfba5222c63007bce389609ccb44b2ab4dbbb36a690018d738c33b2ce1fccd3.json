@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.relay_model_catalog( model_id,family,track,created_at,first_seen_at,last_seen_at,active,raw) VALUES($1,$2,$3,$4,$5,$6,true,$7) ON CONFLICT(model_id) DO UPDATE SET family=EXCLUDED.family, track=EXCLUDED.track,created_at=EXCLUDED.created_at, first_seen_at=EXCLUDED.first_seen_at,last_seen_at=EXCLUDED.last_seen_at, active=true,raw=EXCLUDED.raw",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fbfba5222c63007bce389609ccb44b2ab4dbbb36a690018d738c33b2ce1fccd3"
+}

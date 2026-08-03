@@ -8,6 +8,22 @@ from .models import Validation
 
 EVENT_RE=re.compile(r'^[a-z][a-z0-9_]*(?:\.[a-z0-9_]+)*\.v[1-9][0-9]*$')
 MUTATING={'INSERT','UPDATE','DELETE','UPSERT','REPLACE_RELATIONS','CALL'}
+PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS={
+    'disableProviderRouting',
+    'setModelAutoUpgrade',
+    'testProviderConnection',
+    'upgradeProviderModel',
+}
+PROVIDER_CONTROL_EXECUTION_FENCE_IDS={
+    'disableProviderRouting',
+    'setModelAutoUpgrade',
+    'upgradeProviderModel',
+}
+PROVIDER_CONTROL_DIRECT_HTTP_EFFECT={
+    'result':'409 ACTION_PROPOSAL_REQUIRED',
+    'state_effect':'UNCHANGED',
+    'authorized_effect_owner':'private.ExecuteProviderControl',
+}
 
 def validate(root: Path, result: Validation) -> None:
     operations=load_yaml(root/'specs/api/operation-contracts.yaml')['operations']; op_by={o['operation_id']:o for o in operations}
@@ -45,6 +61,7 @@ def validate(root: Path, result: Validation) -> None:
             result.require(not p.get('domain_events') and not p.get('integration_events'),f'{oid}: query emits events')
         else:
             c=cmd_by[oid]
+            provider_control_side_door=oid in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS
             policy_record=assurance_by[oid]; auth=c['authorization']; policy=op['assurance_policy']; level=policy['default']
             result.require(policy_record['assurance_policy']==policy==auth['assurance_policy']==trace_by[oid]['assurance_policy'],f'{oid}: assurance policy differs')
             result.require(level==policy_record['assurance_level']==auth['assurance_level']==op.get('assurance_level'),f'{oid}: assurance default level differs')
@@ -53,7 +70,10 @@ def validate(root: Path, result: Validation) -> None:
             step_up_possible=policy.get('step_up_possible') is True or any(condition.get('required_level')=='STEP_UP' for condition in policy.get('conditions',[]))
             recent_possible=level=='RECENT_SESSION' or any(condition.get('required_level')=='RECENT_SESSION' for condition in policy.get('conditions',[]))
             auth_errors=set(op['authorization_errors'])
-            result.require(('STEP_UP_REQUIRED' in auth_errors)==step_up_possible,f'{oid}: STEP_UP_REQUIRED differs from policy branches')
+            if provider_control_side_door:
+                result.require(not auth_errors,f'{oid}: provider-control side-door authorization errors must be empty')
+            else:
+                result.require(('STEP_UP_REQUIRED' in auth_errors)==step_up_possible,f'{oid}: STEP_UP_REQUIRED differs from policy branches')
             result.require(('RECENT_AUTH_REQUIRED' in auth_errors)==recent_possible,f'{oid}: RECENT_AUTH_REQUIRED differs from policy branches')
             if recent_possible:
                 result.require(auth.get('recent_session_max_age_seconds',assurance_doc['recent_session_max_age_seconds'])==assurance_doc['recent_session_max_age_seconds'],f'{oid}: recent-session age differs')
@@ -66,15 +86,38 @@ def validate(root: Path, result: Validation) -> None:
             layer_map={'transport':'transport_errors','authorization':'authorization_errors','concurrency':'concurrency_errors','domain':'domain_errors','provider':'provider_errors','internal':'internal_errors'}
             for key,field in layer_map.items(): result.require(c['errors'][key]==op[field],f'{oid}: {key} errors mismatch')
             for event in c['domain_events']+c['integration_events']: result.require(event in event_by,f'{oid}: unknown event {event}')
+            if provider_control_side_door:
+                result.require(c.get('direct_http_effect')==PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,f'{oid}: command direct HTTP effect differs')
+                result.require(p.get('direct_http_effect')==PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,f'{oid}: persistence direct HTTP effect differs')
+                result.require(matrix_by[oid].get('direct_http_effect')==PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,f'{oid}: matrix direct HTTP effect differs')
+                result.require(trace_by[oid].get('direct_http_effect')==PROVIDER_CONTROL_DIRECT_HTTP_EFFECT,f'{oid}: trace direct HTTP effect differs')
+                result.require(c['transaction']=={'isolation':'NONE','statements':[],'audit_action':'none','outbox_atomic':False},f'{oid}: direct command transaction must be empty')
+                result.require(p['transaction']=='NONE' and not p['statements'],f'{oid}: direct persistence transaction must be empty')
+                result.require(not c['repository_methods'] and not c['domain_events'] and not c['integration_events'],f'{oid}: direct command effects must be empty')
+                result.require(op.get('optimistic_concurrency')=='proposal-execution-fence-only' and op.get('concurrency_contract') is None,f'{oid}: direct HTTP concurrency contract differs')
+                result.require(c.get('concurrency') is None and p.get('concurrency') is None and matrix_by[oid].get('concurrency') is None and trace_by[oid].get('concurrency') is None,f'{oid}: direct mirrors must not claim executor concurrency')
 
     import re as _re
     versioned={}
     for operation in operations:
         fields=[f for f in operation.get('request_fields',[]) if _re.sub(r'[_-]','',f['name']).lower() in {'expectedversion','expectedcaseversion'}]
-        if fields: versioned[operation['operation_id']]=fields[0]['name']
-    result.require(set(concurrency_by)==set(versioned),f'optimistic-concurrency catalog differs from versioned operations: missing={sorted(set(versioned)-set(concurrency_by))[:5]} extra={sorted(set(concurrency_by)-set(versioned))[:5]}')
+        if fields and operation['operation_id'] not in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS: versioned[operation['operation_id']]=fields[0]['name']
+    standard_concurrency_by={oid:item for oid,item in concurrency_by.items() if oid not in PROVIDER_CONTROL_EXECUTION_FENCE_IDS}
+    result.require(set(standard_concurrency_by)==set(versioned),f'optimistic-concurrency catalog differs from versioned operations: missing={sorted(set(versioned)-set(standard_concurrency_by))[:5]} extra={sorted(set(standard_concurrency_by)-set(versioned))[:5]}')
+    provider_control_fences={oid for oid,item in concurrency_by.items() if item.get('mode')=='AUTHORIZED_EXECUTION_FENCE'}
+    result.require(provider_control_fences==PROVIDER_CONTROL_EXECUTION_FENCE_IDS,f'provider-control execution-fence set differs: {sorted(provider_control_fences)}')
+    for oid in PROVIDER_CONTROL_SIDE_DOOR_OPERATION_IDS:
+        request_fields={field['name'] for field in op_by[oid].get('request_fields',[])}
+        result.require('expectedVersion' in request_fields,f'{oid}: private executor version input is missing')
+    for oid in PROVIDER_CONTROL_EXECUTION_FENCE_IDS:
+        contract=concurrency_by[oid]
+        result.require(contract.get('version_field')=='expectedVersion',f'{oid}: execution-fence version field differs')
+        result.require(contract.get('guard_relation')=='ops.provider_configs' and contract.get('mutation_relation')=='ops.provider_configs',f'{oid}: execution-fence relation differs')
+        result.require(contract.get('guard_version_predicate')=='version = :expectedVersion' and contract.get('version_mutation')=='version = version + 1',f'{oid}: execution-fence version semantics differ')
+        result.require(contract.get('request_placeholders')==['expectedVersion','providerId'] and contract.get('context_placeholders')==[],f'{oid}: execution-fence placeholders differ')
+        result.require(contract.get('direct_http_effect')=='NONE' and contract.get('execution_owner')=='private.ExecuteProviderControl',f'{oid}: execution-fence owner/direct effect differs')
     for oid,field in versioned.items():
-        operation=op_by[oid]; command=cmd_by[oid]; persistence_item=per_by[oid]; catalog_record=concurrency_by[oid]; contract={k:v for k,v in catalog_record.items() if k!='operation_id'}
+        operation=op_by[oid]; command=cmd_by[oid]; persistence_item=per_by[oid]; catalog_record=standard_concurrency_by[oid]; contract={k:v for k,v in catalog_record.items() if k!='operation_id'}
         result.require(operation.get('optimistic_concurrency')=='required',f'{oid}: operation does not require optimistic concurrency')
         result.require(operation.get('concurrency_contract')==contract,f'{oid}: operation concurrency contract differs')
         result.require(command.get('concurrency')==contract,f'{oid}: command concurrency contract differs')
@@ -127,6 +170,7 @@ def validate(root: Path, result: Validation) -> None:
 
     runtime_projection=load_json(root/'specs/application/optimistic-concurrency.runtime.json')
     result.require(runtime_projection['specificationVersion']=='13.0.0','runtime concurrency projection version mismatch')
+    result.require(concurrency_doc['contract_count']==len(concurrency_by),'optimistic-concurrency catalog count mismatch')
     result.require(runtime_projection['contractCount']==len(concurrency_by),'runtime concurrency projection count mismatch')
     runtime_by={item['operationId']:item for item in runtime_projection['contracts']}
     result.require(set(runtime_by)==set(concurrency_by),'runtime concurrency projection operation set differs')
@@ -136,6 +180,8 @@ def validate(root: Path, result: Validation) -> None:
         result.require(item['guardRelation']==contract['guard_relation'] and item['guardColumns']==contract['guard_columns'],f'{oid}: runtime guard catalog differs')
         result.require(item['mutationRelation']==contract['mutation_relation'] and item['mutationColumns']==contract['mutation_columns'],f'{oid}: runtime mutation catalog differs')
         result.require(item['requestPlaceholders']==contract['request_placeholders'] and item['contextPlaceholders']==contract['context_placeholders'],f'{oid}: runtime placeholder catalog differs')
+        if oid in PROVIDER_CONTROL_EXECUTION_FENCE_IDS:
+            result.require(item.get('directHttpEffect')=='NONE' and item.get('executionOwner')=='private.ExecuteProviderControl',f'{oid}: runtime execution-fence metadata differs')
 
     # Validate one concrete event envelope and payload per catalog entry.
     registry=Registry()
