@@ -110,6 +110,7 @@ verify-bun: build-ui
 
 verify-codegen:
 	bun run scripts/generate-clients.ts --check
+	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_connector_catalog.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_addendum_samples.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_event_payload_registry.py --check
 	$(PYTHON_ENV) $(PYTHON) -B scripts/generate_journey_registry.py --check

@@ -2,6 +2,7 @@
 
 pub mod authorization;
 pub mod commands;
+pub mod detection;
 pub mod idempotency;
 pub mod ports;
 pub mod queries;

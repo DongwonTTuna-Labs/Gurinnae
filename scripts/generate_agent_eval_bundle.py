@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -32,7 +33,12 @@ def main() -> None:
             "expected": json.loads((directory / "expected-output.json").read_text()),
         })
     output = ROOT / "verification/agent-eval-bundle.json"
-    output.write_text(json.dumps(cases, ensure_ascii=False, separators=(",", ":")) + "\n")
+    output.write_text(json.dumps(cases, ensure_ascii=False, indent=2) + "\n")
+    subprocess.run(
+        ["bunx", "biome", "format", "--write", str(output)],
+        cwd=ROOT,
+        check=True,
+    )
     print(f"bundled {len(cases)} agent evaluations")
 
 

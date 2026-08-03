@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT proposal_id AS \"proposal_id!\",\n                  proposal_version AS \"proposal_version!\",\n                  target_request_encrypted AS \"target_request_encrypted!\",\n                  target_request_sha256::text AS \"target_request_sha256!\"\n             FROM ops.load_approved_hypothesis_execution_v1(\n                 $1::uuid,$2::uuid,$3::bigint,$4::uuid,$5::bigint,$6::jsonb\n             )",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "proposal_id!",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "proposal_version!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "target_request_encrypted!",
+        "type_info": "Bytea",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "target_request_sha256!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "96fdf649bbc5f8b39cc13c722ce623ba8ac2088fe36e595959be2d7819c747fd"
+}

@@ -7,7 +7,9 @@ edition.workspace = true
 base64.workspace = true
 gurine-agent-orchestration = { path = "../../crates/agent-orchestration" }
 gurine-api-contracts = { path = "../../crates/api-contracts" }
+gurine-application = { path = "../../crates/application" }
 gurine-detection = { path = "../../crates/detection" }
+gurine-domain = { path = "../../crates/domain" }
 gurine-jobs = { path = "../../crates/jobs" }
 gurine-observability = { path = "../../crates/observability" }
 gurine-object-store = { path = "../../crates/object-store" }

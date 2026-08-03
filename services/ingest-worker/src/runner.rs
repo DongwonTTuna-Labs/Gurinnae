@@ -1,28 +1,38 @@
 use std::{collections::BTreeMap, path::Path};
 
+use gurine_domain::relationship_graph::{
+    ParsedRelationshipSourceV2, RecordRelationshipGraphEndpointV2, RelationshipEndpointIdentityV2,
+    RelationshipEndpointKindV2, RelationshipGraphParsedRecordId, RelationshipGraphParserRunId,
+    RelationshipGraphSourceAssetId, RelationshipGraphSourceDocumentId, Sha256Digest,
+};
 use gurine_jobs::postgres::{ClaimedJob, JobError, Worker};
 use gurine_object_store::{
     filesystem,
     gateway::GatewayObjectStore,
     port::{ObjectStoreClient, ObjectStoreError},
 };
-use gurine_persistence_postgres::pool::{PoolConfig, connect};
+use gurine_persistence_postgres::{
+    pool::{PoolConfig, connect},
+    relationship_graph::RelationshipGraphRepository,
+};
 use gurine_source_connectors::{ConnectorOperation, operations};
-use reqwest::{Client, StatusCode, Url};
+use reqwest::{Client, Url};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
-use crate::config::{Config, ObjectStoreConfig};
+use crate::config::{Config, ObjectStoreConfig, RuntimeEnvironment};
 
 mod connector_parser;
 mod source_fetch_persistence;
+mod source_request;
 mod structured_records;
 mod supplier_identity;
 
 use source_fetch_persistence::persist_source_fetch;
+use source_request::{SourceFetchRequest, fetch_source, with_operation_parameters};
 
 enum Store {
     Filesystem(ObjectStoreClient),
@@ -65,15 +75,7 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
         .map_err(|_| WorkerError::Initialization)?;
     tracing::info!(worker_id=%config.worker_id,"ingest worker ready");
     loop {
-        let processed = process_one(
-            &pool,
-            &store,
-            &source_client,
-            config.source_egress_url.as_ref(),
-            &config.supplier_identifier_hmac_key,
-            &worker,
-        )
-        .await?;
+        let processed = process_one(&pool, &store, &source_client, &config, &worker).await?;
         if config.once {
             if !processed {
                 return Ok(());
@@ -111,23 +113,13 @@ async fn process_one(
     pool: &PgPool,
     store: &Store,
     source_client: &Client,
-    source_egress_url: Option<&Url>,
-    supplier_identifier_hmac_key: &[u8],
+    config: &Config,
     worker: &Worker,
 ) -> Result<bool, WorkerError> {
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match process_claimed(
-        pool,
-        store,
-        source_client,
-        source_egress_url,
-        supplier_identifier_hmac_key,
-        &job,
-    )
-    .await
-    {
+    match process_claimed(pool, store, source_client, config, &job).await {
         Ok(metrics) => worker
             .complete(pool, &job, metrics)
             .await

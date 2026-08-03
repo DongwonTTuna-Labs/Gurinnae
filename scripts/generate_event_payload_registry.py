@@ -19,7 +19,7 @@ import yaml
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET_MIGRATION = ROOT / "db/migrations/0036_r6b_pipeline_activation.sql"
+TARGET_MIGRATION = ROOT / "db/migrations/0037_r6c_conflict_investigation.sql"
 BASE_CATALOG = ROOT / "specs/events/event-catalog.yaml"
 ADDENDUM_CATALOG = ROOT / "specs/product/addendum-event-contracts.yaml"
 START = "-- BEGIN GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
@@ -27,7 +27,7 @@ END = "-- END GENERATED EVENT PAYLOAD FORWARD OVERRIDES\n"
 
 # Every entry is a separately reviewed forward schema correction.  Keeping this
 # list closed prevents an unrelated catalog edit from silently changing a
-# runtime admission contract in migration 0036.
+# runtime admission contract in migration 0037.
 ATTACHMENT_SCAN_EVENT_TYPE = "attachment.scan_completed.v1"
 AGENT_RUN_CONTROL_EVENT_TYPE = "agent.run_control_changed.v2"
 FORWARD_OVERRIDE_EVENT_TYPES = (
@@ -330,8 +330,15 @@ def render_forward_overrides() -> str:
 
 
 def replace_generated_region(current: str, generated: str) -> str:
-    require(current.count(START) == 1, "0036 forward override start marker missing or duplicated")
-    require(current.count(END) == 1, "0036 forward override end marker missing or duplicated")
+    target = TARGET_MIGRATION.name
+    require(
+        current.count(START) == 1,
+        f"{target} forward override start marker missing or duplicated",
+    )
+    require(
+        current.count(END) == 1,
+        f"{target} forward override end marker missing or duplicated",
+    )
     before, rest = current.split(START, 1)
     _, after = rest.split(END, 1)
     return before + generated + after

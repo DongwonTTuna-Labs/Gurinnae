@@ -3,11 +3,11 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
   base_tables: 107
-  additive_tables: 136
-  final_active_tables: 243
-  migrations: 34
+  additive_tables: 149
+  final_active_tables: 256
+  migrations: 35
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0036, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0037, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -164,6 +164,20 @@ migration_ownership:
   - ops.signal_investigation_initiation_receipts
   0036_r6b_pipeline_activation.sql:
   - core.dataset_snapshot_strong_identifier_facts
+  0037_r6c_conflict_investigation.sql:
+  - raw.research_artifact_review_tiers
+  - core.relationship_graph_endpoints_v2
+  - core.relationship_graph_assertions_v2
+  - core.relationship_graph_assertion_evidence_v2
+  - core.relationship_graph_verification_decisions_v2
+  - core.dataset_snapshot_relationship_assertions_v2
+  - core.dataset_snapshot_conflict_inputs_v2
+  - ops.hypothesis_recursion_policies
+  - ops.hypothesis_recursion_plans
+  - ops.hypothesis_recursion_nodes
+  - ops.hypothesis_recursion_transitions
+  - ops.hypothesis_recursion_receipts
+  - ops.hypothesis_recursion_budget_ledger
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.

@@ -1,0 +1,112 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: BID_ROTATION
+name: 낙찰자 순환
+version: 1.0.0
+operational_status: BLOCKED
+operational_blocker:
+  code: STRUCTURED_PARTICIPANT_SOURCE_UNAVAILABLE
+  reason: 현재 승인된 KONEPS 원천은 업체별 참가·입찰가 행을 구조화해 제공하지 않는다.
+  unlock_requires:
+  - 공식 공개 원천이 공고별 전체 참가업체·입찰가·최종 낙찰자를 구조화된 행으로 제공
+  - 권리 검사와 정규화 계약 승인
+  - 스냅샷 materializer가 STRUCTURED_COMPLETE와 각 coverage flag를 증명
+required:
+- policy.minimum_notice_count
+- policy.window_days
+- policy.minimum_bidders_per_notice
+- policy.minimum_distinct_winners
+- policy.cluster_metric
+- policy.cluster_tolerance_bps
+- policy.currency
+- policy.tie_handling
+- participant_source.status
+- observation_period_complete
+- notices
+- notices[].id
+- notices[].agency_id
+- notices[].noticed_at
+- notices[].participant_set_complete
+- notices[].winner_complete
+- notices[].price_coverage_complete
+- notices[].winner_supplier_id
+- notices[].participants[].supplier_id
+- notices[].participants[].bid_amount
+- notices[].participants[].currency
+policy:
+  authority: INPUT_REQUIRED
+  defaults_allowed: false
+  active_production_seed: false
+  fields:
+    minimum_notice_count: integer >= 3
+    window_days: integer >= 0
+    minimum_bidders_per_notice: integer >= 3
+    minimum_distinct_winners: integer >= 2 and <= minimum bidder count
+    cluster_metric:
+      allowed:
+      - LOSING_BID_RANGE_BPS
+    cluster_tolerance_bps: decimal >= 0
+    currency: nonempty exact currency code; conversion forbidden
+    tie_handling:
+      allowed:
+      - BLOCK
+  test_fixture_only_example:
+    minimum_notice_count: 3
+    window_days: 60
+    minimum_bidders_per_notice: 3
+    minimum_distinct_winners: 3
+    cluster_metric: LOSING_BID_RANGE_BPS
+    cluster_tolerance_bps: 200
+    currency: KRW
+    tie_handling: BLOCK
+formula: >-
+  Within one agency and the configured window, at least minimum_notice_count notices have
+  the exact same complete participant set, consecutive notices have different winners,
+  at least minimum_distinct_winners rotate, and every notice's losing-bid range is within
+  cluster_tolerance_bps. LOSING_BID_RANGE_BPS = (maximum losing bid - minimum losing bid)
+  / minimum losing bid * 10000. The declared winner must be the unique lowest bid.
+blockers:
+- REQUIRED_FIELD_MISSING
+- INVALID_POLICY
+- STRUCTURED_PARTICIPANT_SOURCE_UNAVAILABLE
+- PERIOD_COVERAGE_INCOMPLETE
+- PARTICIPANT_SET_INCOMPLETE
+- PARTICIPANT_IDENTITY_AMBIGUOUS
+- WINNER_INCOMPLETE
+- WINNER_PRICE_INCONSISTENT
+- PRICE_COVERAGE_INCOMPLETE
+- CURRENCY_MISMATCH
+- DUPLICATE_NOTICE_ID
+- BID_TIE
+blocked_semantics:
+  incomplete_participant_set: BLOCKED
+  incomplete_winner: BLOCKED
+  incomplete_price: BLOCKED
+  incomplete_period: BLOCKED
+  ambiguous_winner_tie: BLOCKED
+  alternative_explanation: >-
+    A changed participant set, changed agency, non-rotating winner sequence, insufficient
+    notice/bidder/winner count, out-of-window cohort, or dispersed losing bids is NO_SIGNAL.
+metamorphic:
+- notice input order does not change the result
+- participant row order does not change the result
+- bidder display names are not accepted as identity inputs
+- incomplete coverage never becomes NO_SIGNAL or SIGNAL
+- changing one bidder in any notice breaks exact-set matching
+- a winner-price tie is always BLOCKED
+legal_and_publication:
+  publication_claim_allowed: false
+  natural_person_scoring_allowed: false
+  family_or_kinship_inference_allowed: false
+  output_scope: anomaly triage only
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: policy.currency; conversion forbidden
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/bid_rotation.rs
+reference_evaluator: specs/detection/reference_evaluator.py

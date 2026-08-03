@@ -67,5 +67,76 @@ operation_mappings:
   - canonical: financial.currency
     constant: KRW
     required: true
+  dart-executive-status:
+  - canonical: source.receipt_number
+    path: rcept_no
+    required: true
+  - canonical: supplier.corp_code
+    path: corp_code
+    required: true
+  - canonical: supplier.name
+    path: corp_name
+    required: true
+  - canonical: person.contextual_name
+    path: nm
+    required: true
+  - canonical: person.role_title
+    path: ofcps
+    required: true
+  - canonical: person.source_locator
+    source: exact parsed-record JSON pointer
+    required: true
+  - canonical: person.identifier_digest
+    source: canonical digest of operation, receipt, corp code, contextual name, role title and source locator
+    required: true
+  dart-major-shareholder-status:
+  - canonical: source.receipt_number
+    path: rcept_no
+    required: true
+  - canonical: supplier.corp_code
+    path: corp_code
+    required: true
+  - canonical: supplier.name
+    path: corp_name
+    required: true
+  - canonical: shareholder.holder_name
+    path: nm
+    required: true
+  - canonical: shareholder.source_locator
+    source: exact parsed-record JSON pointer
+    required: true
+  - canonical: shareholder.observation_digest
+    source: canonical digest of operation, receipt, corp code, holder name and source locator
+    required: true
+person_normalization_boundary:
+  stored_fields:
+  - contextual_name
+  - role_title
+  - source_locator
+  - identifier_digest
+  forbidden_fields:
+  - sexdstn
+  - birth_ym
+  - adres
+  - address
+  - tel
+  - phone
+  - mxmm_shrholdr_relate
+  - relate
+  - family
+  - kinship
+  behavior: retain only in immutable raw source bytes; never copy into normalized person, graph, audit, log or analytics rows
+  family_inference: prohibited; no family or kinship relationship kind exists
+  identifier_digest_semantics: observation-scoped locator digest, not a resolved natural-person identity
+  automatic_linking: prohibited; equal names, roles or observation digests never create VERIFIED identity or merge endpoints
+  graph_submission: every observation enters as a distinct PENDING endpoint unless an existing human identity decision explicitly maps it
+  rule_activation: OFFICER_OVERLAP_AWARD reads only human-resolved VERIFIED and APPROVED graph assertions
+major_shareholder_normalization_boundary:
+  stored_fields: [holder_name, source_locator, observation_digest]
+  entity_type_discriminator: unavailable
+  graph_output_rows: 0
+  blocker: OPEN_DART_MAJOR_HOLDER_ENTITY_TYPE_UNAVAILABLE
+  unlock_condition: official entity-type discriminator plus explicit human identity mapping and independently VERIFIED+APPROVED graph decision
+  automatic_person_or_supplier_linking: prohibited
 unknown_field_policy: preserve in raw metadata
 missing_required_policy: quarantine and incident

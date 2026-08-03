@@ -1,0 +1,225 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+connector_id: koneps-bid-results
+authority: https://www.data.go.kr/data/15129397/openapi.do
+operations:
+- id: opening-goods-search
+  remote_operation: getOpengResultListInfoThngPPSSrch
+  path: /getOpengResultListInfoThngPPSSrch
+  business_type: goods
+  kind: opening-metadata
+  method: GET
+  request_parameters: &common_params
+  - name: serviceKey
+    required: true
+    source: credential
+  - name: pageNo
+    required: true
+    type: integer
+    default: 1
+  - name: numOfRows
+    required: true
+    type: integer
+    default: 100
+    maximum: 1000
+  - name: type
+    required: false
+    type: enum:json,xml
+    default: json
+  - name: inqryDiv
+    required: true
+    type: string
+    default: '1'
+  - name: inqryBgnDt
+    required: true
+    type: yyyyMMddHHmm
+  - name: inqryEndDt
+    required: true
+    type: yyyyMMddHHmm
+  pagination: &page_number
+    strategy: page-number
+    page_field: pageNo
+    size_field: numOfRows
+    total_field: body.totalCount
+  remote_identity: &opening_identity
+    strategy: composite
+    primary_fields: [bidNtceNo, bidNtceOrd, bidClsfcNo, rbidNo]
+    composite_separator: '#'
+  remote_revision: &opening_revision
+    strategy: first-non-empty-or-content-hash
+    fields: [inptDt, opengDt]
+  response_envelope: &response_envelope
+    result_code: response.header.resultCode
+    result_message: response.header.resultMsg
+    items_candidates: [response.body.items, response.body.items.item]
+    page: response.body.pageNo
+    page_size: response.body.numOfRows
+    total: response.body.totalCount
+  checkpoint:
+    partition: goods:opening
+    watermark: inqryEndDt
+    overlap_minutes: 10
+  deletion_semantics: immutable opening observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: &opening_boundary
+    admitted_metadata:
+    - bidNtceNo
+    - bidNtceOrd
+    - bidClsfcNo
+    - rbidNo
+    - bidNtceNm
+    - opengDt
+    - prtcptCnum
+    - ntceInsttCd
+    - ntceInsttNm
+    - dminsttCd
+    - dminsttNm
+    - progrsDivCdNm
+    - inptDt
+    - rsrvtnPrceFileExistnceYn
+    raw_evidence_only: [opengRsltNtcCntnts]
+    opaque_never_parse: [opengCorpInfo]
+    output_limit: immutable raw/parsed opening metadata only until mapping activation; no canonical domain, bidder or BID_PARTICIPATION row
+  retry: &retry
+    quota_or_429: honor Retry-After; otherwise bounded exponential backoff with jitter
+    transient_5xx: bounded exponential backoff then source incident
+    auth_or_permission: disable connector and open incident
+    malformed_payload: store raw bytes, quarantine record, open schema-drift incident
+- id: opening-construction-search
+  remote_operation: getOpengResultListInfoCnstwkPPSSrch
+  path: /getOpengResultListInfoCnstwkPPSSrch
+  business_type: construction
+  kind: opening-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *opening_identity
+  remote_revision: *opening_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'construction:opening', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable opening observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *opening_boundary
+  retry: *retry
+- id: opening-service-search
+  remote_operation: getOpengResultListInfoServcPPSSrch
+  path: /getOpengResultListInfoServcPPSSrch
+  business_type: service
+  kind: opening-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *opening_identity
+  remote_revision: *opening_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'service:opening', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable opening observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *opening_boundary
+  retry: *retry
+- id: opening-foreign-search
+  remote_operation: getOpengResultListInfoFrgcptPPSSrch
+  path: /getOpengResultListInfoFrgcptPPSSrch
+  business_type: foreign
+  kind: opening-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *opening_identity
+  remote_revision: *opening_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'foreign:opening', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable opening observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *opening_boundary
+  retry: *retry
+- id: award-goods-search
+  remote_operation: getScsbidListSttusThngPPSSrch
+  path: /getScsbidListSttusThngPPSSrch
+  business_type: goods
+  kind: award-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: &award_identity
+    strategy: composite
+    primary_fields: [bidNtceNo, bidNtceOrd, bidClsfcNo, rbidNo]
+    composite_separator: '#'
+  remote_revision: &award_revision
+    strategy: first-non-empty-or-content-hash
+    fields: [rgstDt, fnlSucsfDate, rlOpengDt]
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'goods:award', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable award observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: &award_boundary
+    admitted_metadata:
+    - bidNtceNo
+    - bidNtceOrd
+    - bidClsfcNo
+    - rbidNo
+    - bidNtceNm
+    - ntceDivCd
+    - prtcptCnum
+    - bidwinnrNm
+    - bidwinnrBizno
+    - sucsfbidAmt
+    - sucsfbidRate
+    - rlOpengDt
+    - fnlSucsfDate
+    - rgstDt
+    - dminsttCd
+    - dminsttNm
+    - linkInsttNm
+    identifier_storage: bidwinnrBizno is HMAC-SHA256; raw value remains only in immutable source bytes
+    forbidden_normalized_fields: [fnlSucsfCorpOfcl, bidwinnrCeoNm, bidwinnrAdrs, bidwinnrTelNo]
+    output_limit: immutable raw/parsed award metadata only until mapping activation; winner is not treated as the complete bidder set
+  retry: *retry
+- id: award-construction-search
+  remote_operation: getScsbidListSttusCnstwkPPSSrch
+  path: /getScsbidListSttusCnstwkPPSSrch
+  business_type: construction
+  kind: award-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *award_identity
+  remote_revision: *award_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'construction:award', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable award observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *award_boundary
+  retry: *retry
+- id: award-service-search
+  remote_operation: getScsbidListSttusServcPPSSrch
+  path: /getScsbidListSttusServcPPSSrch
+  business_type: service
+  kind: award-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *award_identity
+  remote_revision: *award_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'service:award', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable award observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *award_boundary
+  retry: *retry
+- id: award-foreign-search
+  remote_operation: getScsbidListSttusFrgcptPPSSrch
+  path: /getScsbidListSttusFrgcptPPSSrch
+  business_type: foreign
+  kind: award-metadata
+  method: GET
+  request_parameters: *common_params
+  pagination: *page_number
+  remote_identity: *award_identity
+  remote_revision: *award_revision
+  response_envelope: *response_envelope
+  checkpoint: {partition: 'foreign:award', watermark: inqryEndDt, overlap_minutes: 10}
+  deletion_semantics: immutable award observations; absence from a page is never deletion
+  contract_source: official-data-go-kr-15129397-operation-documentation
+  normalization_boundary: *award_boundary
+  retry: *retry

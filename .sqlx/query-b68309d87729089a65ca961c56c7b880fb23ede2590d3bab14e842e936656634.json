@@ -1,0 +1,280 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tier_id,research_artifact_id,research_asset_id,\n                      research_asset_revision,research_artifact_sha256,\n                      research_content_sha256,revision,review_tier,\n                      reviewed_classification,predecessor_revision,\n                      predecessor_receipt_sha256,source_use_agent_run_id,source_use_id,\n                      source_use_sha256,source_locator_digest,\n                      official_source_registry_digest,promotion_id,\n                      promotion_receipt_sha256,reviewed_by,reviewed_at,\n                      receipt_sha256,created_at\n                 FROM raw.research_artifact_review_tiers\n                WHERE research_artifact_id=ANY($1::uuid[])\n                ORDER BY research_artifact_id,revision",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tier_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "tier_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "research_artifact_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "research_artifact_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "research_asset_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "research_asset_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "research_asset_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "research_asset_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "research_artifact_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "research_artifact_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "research_content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "research_content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "review_tier",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "review_tier"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "reviewed_classification",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "reviewed_classification"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "predecessor_revision",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "predecessor_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "predecessor_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "predecessor_receipt_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "source_use_agent_run_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "source_use_agent_run_id"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "source_use_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "source_use_id"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "source_use_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "source_use_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "source_locator_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "source_locator_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "official_source_registry_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "official_source_registry_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "promotion_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "promotion_id"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "promotion_receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "promotion_receipt_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "reviewed_by",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "reviewed_by"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "reviewed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "reviewed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "receipt_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "receipt_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifact_review_tiers",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "b68309d87729089a65ca961c56c7b880fb23ede2590d3bab14e842e936656634"
+}

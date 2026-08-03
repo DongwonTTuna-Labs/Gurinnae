@@ -6,6 +6,9 @@ use uuid::Uuid;
 
 use super::{Failure, canonical_bytes, sha256};
 
+#[path = "analysis_rule_conflict_materializer.rs"]
+pub(super) mod conflict_materializer;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(super) struct SnapshotMember {
     pub ordinal: i64,

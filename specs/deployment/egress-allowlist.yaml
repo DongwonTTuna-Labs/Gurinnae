@@ -18,6 +18,7 @@ channels:
     - https
     hosts:
     - apis.data.go.kr
+    - nopenapi.g2b.go.kr
     - opendart.fss.or.kr
     - ${ALIO_HOST}
     - ${LOCAL_FINANCE_HOST}

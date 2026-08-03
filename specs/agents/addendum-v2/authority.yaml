@@ -48,6 +48,8 @@ normative_documents:
   schema_index: schema-index.yaml
   runtime: runtime-contracts.yaml
   provenance_and_promotion: provenance-promotion.yaml
+  artifact_review_tier: artifact-review-tier.yaml
+  hypothesis_recursion: ../hypothesis-recursion-policy.yaml
   network_and_provider: network-provider.yaml
   parser: ../../parsers/addendum-multimodal.yaml
   acceptance: ../../../tests/acceptance/ai-multimodal-addendum.feature

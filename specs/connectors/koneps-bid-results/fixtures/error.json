@@ -1,0 +1,12 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "award-goods-search",
+  "kind": "error",
+  "response": {
+    "header": {
+      "resultCode": "30",
+      "resultMsg": "SERVICE KEY IS NOT REGISTERED ERROR."
+    }
+  }
+}

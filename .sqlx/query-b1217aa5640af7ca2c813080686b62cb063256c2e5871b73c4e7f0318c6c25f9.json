@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT btrim(source_use.source_use_sha256::text) AS \"source_use_sha256!\",\n                      source_use.locator_value AS \"locator_value!\",\n                      btrim(source_use.selected_content_sha256::text) AS \"content_sha256!\",\n                      btrim(tool.result_transcript_sha256::text) AS \"result_transcript_sha256!\"\n                 FROM ops.agent_source_uses source_use\n                 JOIN ops.agent_tool_calls tool\n                   ON tool.agent_run_id=source_use.agent_run_id\n                  AND tool.tool_call_id=source_use.tool_call_id\n                WHERE source_use.agent_run_id=$1\n                  AND source_use.use_kind='TOOL_QUERY'\n                  AND source_use.source_kind='RESEARCH_ARTIFACT'\n                  AND source_use.research_artifact_id=$2\n                  AND tool.tool_id='source.fetch'\n                  AND tool.status='SUCCEEDED'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_use_sha256!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "locator_value!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "locator_value"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content_sha256!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "result_transcript_sha256!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "b1217aa5640af7ca2c813080686b62cb063256c2e5871b73c4e7f0318c6c25f9"
+}

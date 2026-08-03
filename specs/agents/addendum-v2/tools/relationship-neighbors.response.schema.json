@@ -1,69 +1,168 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://gurinnae.invalid/schemas/agents/v2/tools/relationship-neighbors-response.json",
-  "title": "RelationshipNeighborsResponseV2",
+  "title": "RelationshipNeighborsResponseV2OrV3",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "supplierId", "neighbors"],
+  "required": ["schemaVersion", "neighbors"],
   "properties": {
-    "schemaVersion": { "const": "relationship.neighbors.response.v2" },
+    "schemaVersion": {
+      "enum": [
+        "relationship.neighbors.response.v2",
+        "relationship.neighbors.response.v3"
+      ]
+    },
     "supplierId": { "type": "string", "format": "uuid" },
-    "neighbors": {
-      "type": "array",
-      "maxItems": 50,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "neighborSupplierId",
-          "relationshipKind",
-          "assertionId",
-          "assertionRevision",
-          "assertionDigest",
-          "validFrom",
-          "validTo",
-          "evidenceSetDigest",
-          "subjectSourceUseId",
-          "objectSourceUseId"
-        ],
-        "properties": {
-          "neighborSupplierId": { "type": "string", "format": "uuid" },
-          "relationshipKind": {
-            "enum": [
-              "OWNERSHIP",
-              "BENEFICIAL_OWNERSHIP",
-              "CONTROL",
-              "MANAGEMENT_ROLE",
-              "LEGAL_REPRESENTATIVE",
-              "CONTRACTUAL_RELATIONSHIP"
-            ]
-          },
-          "assertionId": { "type": "string", "format": "uuid" },
-          "assertionRevision": { "type": "integer", "minimum": 1 },
-          "assertionDigest": { "$ref": "#/$defs/sha256" },
-          "validFrom": {
-            "oneOf": [
-              { "type": "string", "format": "date" },
-              { "type": "null" }
-            ]
-          },
-          "validTo": {
-            "oneOf": [
-              { "type": "string", "format": "date" },
-              { "type": "null" }
-            ]
-          },
-          "evidenceSetDigest": { "$ref": "#/$defs/sha256" },
-          "subjectSourceUseId": { "type": "string", "format": "uuid" },
-          "objectSourceUseId": { "type": "string", "format": "uuid" }
+    "queryDigest": { "$ref": "#/$defs/sha256" },
+    "neighbors": { "type": "array", "maxItems": 50 }
+  },
+  "oneOf": [
+    {
+      "required": ["supplierId"],
+      "properties": {
+        "schemaVersion": { "const": "relationship.neighbors.response.v2" },
+        "supplierId": { "type": "string", "format": "uuid" },
+        "neighbors": { "items": { "$ref": "#/$defs/neighborV2" } }
+      },
+      "not": {
+        "required": ["queryDigest"],
+        "properties": { "queryDigest": {} }
+      }
+    },
+    {
+      "required": ["queryDigest"],
+      "properties": {
+        "schemaVersion": { "const": "relationship.neighbors.response.v3" },
+        "queryDigest": { "$ref": "#/$defs/sha256" },
+        "neighbors": { "items": { "$ref": "#/$defs/neighborV3" } }
+      },
+      "not": {
+        "required": ["supplierId"],
+        "properties": { "supplierId": {} }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "relationshipKindV2": {
+      "enum": [
+        "OWNERSHIP",
+        "BENEFICIAL_OWNERSHIP",
+        "CONTROL",
+        "MANAGEMENT_ROLE",
+        "LEGAL_REPRESENTATIVE",
+        "CONTRACTUAL_RELATIONSHIP"
+      ]
+    },
+    "relationshipKindV3": {
+      "enum": [
+        "OWNERSHIP",
+        "BENEFICIAL_OWNERSHIP",
+        "CONTROL",
+        "MANAGEMENT_ROLE",
+        "LEGAL_REPRESENTATIVE",
+        "CONTRACTUAL_RELATIONSHIP",
+        "BID_PARTICIPATION",
+        "SANCTION",
+        "FORMER_OFFICIAL_ROLE"
+      ]
+    },
+    "wireEndpointV3": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "endpointId"],
+          "properties": {
+            "kind": {
+              "enum": ["SUPPLIER", "AGENCY", "PROCUREMENT_NOTICE", "SANCTION"]
+            },
+            "endpointId": { "type": "string", "format": "uuid" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "personNodeRef"],
+          "properties": {
+            "kind": { "const": "PERSON" },
+            "personNodeRef": { "$ref": "#/$defs/sha256" }
+          }
         }
+      ]
+    },
+    "neighborV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "neighborSupplierId",
+        "relationshipKind",
+        "assertionId",
+        "assertionRevision",
+        "assertionDigest",
+        "validFrom",
+        "validTo",
+        "evidenceSetDigest",
+        "subjectSourceUseId",
+        "objectSourceUseId"
+      ],
+      "properties": {
+        "neighborSupplierId": { "type": "string", "format": "uuid" },
+        "relationshipKind": { "$ref": "#/$defs/relationshipKindV2" },
+        "assertionId": { "type": "string", "format": "uuid" },
+        "assertionRevision": { "type": "integer", "minimum": 1 },
+        "assertionDigest": { "$ref": "#/$defs/sha256" },
+        "validFrom": {
+          "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+        },
+        "validTo": {
+          "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+        },
+        "evidenceSetDigest": { "$ref": "#/$defs/sha256" },
+        "subjectSourceUseId": { "type": "string", "format": "uuid" },
+        "objectSourceUseId": { "type": "string", "format": "uuid" }
+      }
+    },
+    "neighborV3": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject",
+        "object",
+        "relationshipKind",
+        "assertionId",
+        "assertionRevision",
+        "assertionDigest",
+        "validFrom",
+        "validTo",
+        "evidenceSetDigest",
+        "subjectSourceUseId",
+        "objectSourceUseId"
+      ],
+      "properties": {
+        "subject": { "$ref": "#/$defs/wireEndpointV3" },
+        "object": { "$ref": "#/$defs/wireEndpointV3" },
+        "relationshipKind": { "$ref": "#/$defs/relationshipKindV3" },
+        "assertionId": { "type": "string", "format": "uuid" },
+        "assertionRevision": { "type": "integer", "minimum": 1 },
+        "assertionDigest": { "$ref": "#/$defs/sha256" },
+        "validFrom": {
+          "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+        },
+        "validTo": {
+          "oneOf": [{ "type": "string", "format": "date" }, { "type": "null" }]
+        },
+        "evidenceSetDigest": { "$ref": "#/$defs/sha256" },
+        "subjectSourceUseId": { "type": "string", "format": "uuid" },
+        "objectSourceUseId": { "type": "string", "format": "uuid" }
       }
     }
   },
-  "$defs": { "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } },
   "x-gurinnae-invariants": [
-    "Rows are sorted by relationshipKind, neighborSupplierId, assertionId, and assertionRevision.",
-    "A row is returned only when verificationStatus is VERIFIED and publicUseStatus is APPROVED.",
-    "Both source-use identifiers bind exact snapshot members and no natural-person field is present."
+    "V2 remains supplier-only; V3 rows are sorted by relationshipKind, opposite endpoint stable key, assertionId, and assertionRevision.",
+    "V3 queryDigest is the SHA-256 of the canonical exact eight-key V3 request and is rejected when it differs from the persisted request.",
+    "The V3 wire never returns a PERSON contextual name, role title, source locator, identifier fact digest, family relation, score, rank, or probability.",
+    "A PERSON endpoint is represented only by a run-and-snapshot-scoped opaque personNodeRef that cannot be replayed against another run or snapshot and is not the hidden endpoint identity or identifier fact digest.",
+    "Every row is independently VERIFIED, publicUseStatus APPROVED, evidence-bound, and linked to exact READY snapshot source uses."
   ]
 }

@@ -32,6 +32,70 @@
     "pagination": "manifest-order"
   },
   {
+    "connector_id": "koneps-bid-results",
+    "id": "opening-goods-search",
+    "method": "GET",
+    "kind": "opening-metadata",
+    "remote_path": "/getOpengResultListInfoThngPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "opening-construction-search",
+    "method": "GET",
+    "kind": "opening-metadata",
+    "remote_path": "/getOpengResultListInfoCnstwkPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "opening-service-search",
+    "method": "GET",
+    "kind": "opening-metadata",
+    "remote_path": "/getOpengResultListInfoServcPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "opening-foreign-search",
+    "method": "GET",
+    "kind": "opening-metadata",
+    "remote_path": "/getOpengResultListInfoFrgcptPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "award-goods-search",
+    "method": "GET",
+    "kind": "award-metadata",
+    "remote_path": "/getScsbidListSttusThngPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "award-construction-search",
+    "method": "GET",
+    "kind": "award-metadata",
+    "remote_path": "/getScsbidListSttusCnstwkPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "award-service-search",
+    "method": "GET",
+    "kind": "award-metadata",
+    "remote_path": "/getScsbidListSttusServcPPSSrch",
+    "pagination": "page-number"
+  },
+  {
+    "connector_id": "koneps-bid-results",
+    "id": "award-foreign-search",
+    "method": "GET",
+    "kind": "award-metadata",
+    "remote_path": "/getScsbidListSttusFrgcptPPSSrch",
+    "pagination": "page-number"
+  },
+  {
     "connector_id": "koneps-contracts",
     "id": "contract-goods-list",
     "method": "GET",
@@ -350,5 +414,37 @@
     "kind": "list",
     "remote_path": "/fnlttSinglAcntAll.json",
     "pagination": "none"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-executive-status",
+    "method": "GET",
+    "kind": "person-context-list",
+    "remote_path": "/exctvSttus.json",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "open-dart",
+    "id": "dart-major-shareholder-status",
+    "method": "GET",
+    "kind": "holder-context-list",
+    "remote_path": "/hyslrSttus.json",
+    "pagination": "none"
+  },
+  {
+    "connector_id": "pps-sanctions",
+    "id": "pps-sanctions-manifest",
+    "method": "GET",
+    "kind": "manifest",
+    "remote_path": "",
+    "pagination": "manifest-documents-array"
+  },
+  {
+    "connector_id": "pps-sanctions",
+    "id": "pps-sanctions-csv",
+    "method": "GET",
+    "kind": "document",
+    "remote_path": "",
+    "pagination": "manifest-order"
   }
 ]

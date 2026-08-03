@@ -2,20 +2,11 @@ async fn process_claimed(
     pool: &PgPool,
     store: &Store,
     source_client: &Client,
-    source_egress_url: Option<&Url>,
-    supplier_identifier_hmac_key: &[u8],
+    config: &Config,
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     if job.job_type == "SOURCE_RUN" {
-        return process_source_run(
-            pool,
-            store,
-            source_client,
-            source_egress_url,
-            supplier_identifier_hmac_key,
-            job,
-        )
-        .await;
+        return process_source_run(pool, store, source_client, config, job).await;
     }
     if job.job_type != "EVENT_DELIVERY"
         || job.payload.get("eventType").and_then(Value::as_str) != Some("source.document_parsed.v1")
@@ -206,6 +197,7 @@ struct ManifestDocument {
     revision: String,
     target: String,
     content_type: String,
+    sha256: Option<String>,
     published_at: Option<String>,
 }
 
@@ -218,22 +210,31 @@ async fn process_source_run(
     pool: &PgPool,
     store: &Store,
     source_client: &Client,
-    source_egress_url: Option<&Url>,
-    supplier_identifier_hmac_key: &[u8],
+    config: &Config,
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     let run_id = uuid(&job.payload, "sourceRunId")
         .ok_or_else(|| Failure::Terminal("INVALID_SOURCE_RUN_JOB", "sourceRunId".into()))?;
-    let gateway = source_egress_url
+    let gateway = config
+        .source_egress_url
+        .as_ref()
         .ok_or_else(|| Failure::Terminal("SOURCE_EGRESS_MISSING", run_id.to_string()))?;
+    let pps_test_fixture = pps_test_fixture_admission(config.environment, gateway, &job.payload);
+    let enabled_source_ids = config.source_enablement.enabled_source_ids();
     let row = sqlx::query!(
         "UPDATE ops.source_runs r SET status='RUNNING',started_at=COALESCE(started_at,clock_timestamp()), \
            checkpoint_before=COALESCE(checkpoint_before,(SELECT COALESCE(jsonb_object_agg(c.partition_key,c.cursor_payload),'{}'::jsonb) \
              FROM ops.source_checkpoints c WHERE c.source_id=r.source_id)) \
          FROM ops.source_registry s WHERE r.id=$1 AND r.source_id=s.source_id \
            AND r.status IN ('QUEUED','RUNNING') AND s.enabled AND s.legal_status='APPROVED' \
+           AND s.source_id=ANY($3::text[]) \
+           AND (s.source_id <> 'pps-sanctions' OR ( \
+             $2 AND s.configuration->>'fixtureMode'='TEST_FIXTURE_ONLY' \
+             AND s.configuration->>'manifestUrl' LIKE 'https://fixture.invalid/%')) \
          RETURNING r.source_id,r.mode,r.requested_from,r.requested_to,s.base_url,s.configuration",
         run_id,
+        pps_test_fixture,
+        &enabled_source_ids,
     )
     .fetch_optional(pool)
     .await
@@ -268,7 +269,7 @@ async fn process_source_run(
         catalog,
         job.id,
         job.fence.fencing_token,
-        supplier_identifier_hmac_key,
+        &config.supplier_identifier_hmac_key,
     )
     .await?;
     finish_source_run(
@@ -282,6 +283,20 @@ async fn process_source_run(
         fingerprints,
     )
     .await
+}
+
+fn pps_test_fixture_admission(
+    environment: RuntimeEnvironment,
+    gateway: &Url,
+    payload: &Value,
+) -> bool {
+    environment == RuntimeEnvironment::Test
+        && gateway.scheme() == "http"
+        && gateway.host_str() == Some("127.0.0.1")
+        && gateway.port().is_some()
+        && gateway.path() == "/source"
+        && payload.get("sourceId").and_then(Value::as_str) == Some("pps-sanctions")
+        && payload.get("fixtureMode").and_then(Value::as_str) == Some("TEST_FIXTURE_ONLY")
 }
 
 #[expect(
@@ -318,6 +333,7 @@ async fn collect_source_run(
                 revision: "runtime".to_owned(),
                 target: operation_target(operation, base_url.as_deref(), &configuration)?,
                 content_type: "application/json".to_owned(),
+                sha256: None,
                 published_at: None,
             }]
         };
@@ -384,7 +400,8 @@ async fn process_source_target(
         requested_from,
         requested_to,
     )?;
-    let response = match fetch_source(source_client, gateway, source_id, &target_url).await {
+    let source_request = SourceFetchRequest::get(source_id, &target_url);
+    let response = match fetch_source(source_client, gateway, &source_request).await {
         Ok(response) => response,
         Err(Failure::Terminal(code, detail)) => {
             mark_source_terminal(pool, run_id, source_id, code).await?;
@@ -393,6 +410,7 @@ async fn process_source_target(
         Err(error @ Failure::Retryable(_, _)) => return Err(error),
     };
     let digest = sha256(&response.bytes);
+    validate_declared_document_response(operation.kind, target, &response, &digest)?;
     let manifest_documents =
         validate_source_payload(source_id, operation.kind, operation.id, &response)?;
     let object_key = format!("raw/{source_id}/{run_id}/{}/{digest}", operation.id);
@@ -427,7 +445,13 @@ fn validate_source_payload(
     response: &SourceResponse,
 ) -> Result<Option<Vec<ManifestDocument>>, Failure> {
     if operation_kind == "manifest" {
-        return Ok(Some(validate_manifest(&response.bytes)?));
+        if response.content_type != "application/json" {
+            return Err(Failure::Terminal(
+                "SOURCE_MANIFEST_INVALID",
+                "content_type".to_owned(),
+            ));
+        }
+        return Ok(Some(validate_manifest(source_id, &response.bytes)?));
     }
     if source_id.starts_with("koneps-") {
         let value: Value = serde_json::from_slice(&response.bytes)
@@ -516,4 +540,42 @@ async fn finish_source_run(
     Ok(
         json!({"sourceRunId":run_id,"recordsSeen":seen,"recordsChanged":changed,"reportObjectKey":report_key}),
     )
+}
+
+#[cfg(test)]
+mod source_fixture_admission_tests {
+    use reqwest::Url;
+    use serde_json::json;
+
+    use super::{RuntimeEnvironment, pps_test_fixture_admission};
+
+    #[test]
+    fn pps_fixture_requires_test_runtime_exact_marker_and_loopback_gateway() {
+        let loopback = Url::parse("http://127.0.0.1:24567/source").expect("loopback URL");
+        let payload = json!({
+            "sourceId":"pps-sanctions",
+            "fixtureMode":"TEST_FIXTURE_ONLY"
+        });
+        assert!(pps_test_fixture_admission(
+            RuntimeEnvironment::Test,
+            &loopback,
+            &payload,
+        ));
+        assert!(!pps_test_fixture_admission(
+            RuntimeEnvironment::Production,
+            &loopback,
+            &payload,
+        ));
+        let non_loopback = Url::parse("https://fixture.invalid/source").expect("non-loopback URL");
+        assert!(!pps_test_fixture_admission(
+            RuntimeEnvironment::Test,
+            &non_loopback,
+            &payload,
+        ));
+        assert!(!pps_test_fixture_admission(
+            RuntimeEnvironment::Test,
+            &loopback,
+            &json!({"sourceId":"pps-sanctions"}),
+        ));
+    }
 }

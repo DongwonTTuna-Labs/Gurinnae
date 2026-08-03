@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH bound_snapshot AS (\n              SELECT snapshot.id,snapshot.snapshot_kind,snapshot.producer_generation,\n                     snapshot.contract_version\n                FROM ops.agent_runs run\n                JOIN core.dataset_snapshots snapshot\n                  ON snapshot.id=run.dataset_snapshot_id\n                 AND snapshot.snapshot_sha256=run.input_snapshot_hash\n               WHERE run.id=$1 AND run.case_id=$2 AND run.run_contract_version=2\n                 AND run.evidence_scope_ids='[]'::jsonb AND run.dataset_snapshot_id=$3\n                 AND run.input_snapshot_hash=CAST($4 AS char(64))\n                 AND snapshot.snapshot_kind='AGENT_CASE' AND snapshot.state='READY'\n                 AND snapshot.selection_spec->>'caseId'=$2::text\n            ), expected AS (\n              SELECT source.id,source.source_document_id,source.source_asset_id,\n                     source.source_asset_revision,source.source_content_sha256\n                FROM bound_snapshot snapshot\n                JOIN core.dataset_snapshot_members member\n                  ON member.dataset_snapshot_id=snapshot.id\n                 AND member.snapshot_kind=snapshot.snapshot_kind\n                 AND member.producer_generation=snapshot.producer_generation\n                 AND member.snapshot_contract_version=snapshot.contract_version\n                 AND member.object_type IN (\n                   'AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM',\n                   'CONTRACT_CHANGE','PRICE_OBSERVATION',\n                   'TYPED_RELATIONSHIP_ASSERTION'\n                 )\n                JOIN core.dataset_snapshot_member_sources source\n                  ON source.dataset_snapshot_id=member.dataset_snapshot_id\n                 AND source.snapshot_member_id=member.id\n                 AND source.snapshot_member_digest=member.member_digest\n                 AND source.source_kind='SOURCE_DOCUMENT'\n            ), rights_valid AS (\n              SELECT expected.id\n                FROM expected\n                JOIN LATERAL (\n                  SELECT decision.decision_kind,decision.expires_at,\n                         decision.access_right,decision.private_storage_right,\n                         decision.model_egress_right,decision.model_use_right,\n                         decision.derivative_creation_right,decision.excerpt_right,\n                         decision.redistribution_right,decision.commercial_use_right,\n                         decision.public_display_right\n                    FROM raw.asset_rights_decisions decision\n                   WHERE decision.asset_kind='SOURCE_DOCUMENT'\n                     AND decision.source_document_id=expected.source_document_id\n                     AND decision.asset_id=expected.source_asset_id\n                     AND decision.asset_revision=expected.source_asset_revision\n                     AND decision.asset_sha256=expected.source_content_sha256\n                     AND decision.effective_at<=transaction_timestamp()\n                   ORDER BY decision.decision_version DESC,decision.id DESC\n                   LIMIT 1\n                ) decision ON true\n               WHERE decision.decision_kind='GRANT'\n                 AND (decision.expires_at IS NULL OR decision.expires_at>transaction_timestamp())\n                 AND decision.access_right='ALLOW'\n                 AND decision.private_storage_right='ALLOW'\n                 AND decision.model_egress_right='ALLOW'\n                 AND decision.model_use_right='ALLOW'\n                 AND decision.derivative_creation_right='ALLOW'\n                 AND decision.excerpt_right='ALLOW'\n                 AND decision.redistribution_right='ALLOW'\n                 AND decision.commercial_use_right='ALLOW'\n                 AND decision.public_display_right='ALLOW'\n            )\n            SELECT EXISTS(SELECT 1 FROM bound_snapshot) AS snapshot_valid,\n                   (SELECT count(*) FROM expected) AS expected_count,\n                   (SELECT count(*) FROM rights_valid) AS rights_valid_count,\n                   (SELECT count(*) FROM ops.agent_source_uses source_use\n                     WHERE source_use.agent_run_id=$1 AND source_use.use_kind='TOOL_QUERY'\n                       AND source_use.source_kind='DATASET_MEMBER'\n                       AND source_use.provider_turn_id IS NULL\n                       AND source_use.tool_call_id IS NULL) AS existing_count,\n                   (SELECT count(*) FROM ops.agent_source_uses source_use\n                     WHERE source_use.agent_run_id=$1 AND source_use.use_kind='TOOL_QUERY'\n                       AND source_use.provider_turn_id IS NULL\n                       AND source_use.tool_call_id IS NULL\n                       AND source_use.source_kind<>'DATASET_MEMBER') AS fabricated_root_count\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "snapshot_valid",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "expected_count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "rights_valid_count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "existing_count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "fabricated_root_count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "11ea7336e04cc825f0b856d5fbb1b89b5faaf50472d05117cbceef5bf17d64c5"
+}

@@ -16,6 +16,8 @@ mod adapters;
 mod control;
 #[path = "runtime_dispatch.rs"]
 mod dispatch;
+#[path = "runtime_relationship.rs"]
+mod relationship;
 #[path = "runtime_source.rs"]
 mod source;
 #[path = "runtime_turn.rs"]
@@ -23,14 +25,19 @@ mod turn;
 
 pub use adapters::{
     AgencyProfileRecord, ComparableRecord, ContractCorpusRecord, EntityRecord, EvidenceRecord,
-    RelationshipNeighborRecord, ResponseRecord, RuleRecord, SourceArtifactRecord,
-    SupplierProfileRecord, ToolSnapshot,
+    RelationshipEndpointRecordV3, RelationshipNeighborRecord, RelationshipNeighborRecordV3,
+    ResponseRecord, RuleRecord, SourceArtifactRecord, SupplierProfileRecord, ToolSnapshot,
 };
 pub use control::{
     CancelReason, ControlReceipt, ControlState, ProofKind, ReconciliationProof, RunControl,
     RunStatus, RuntimeError,
 };
 pub use dispatch::{DispatchError, ToolAdapter, TypedDispatcher};
+pub use relationship::{
+    RelationshipEndpointKindV3, RelationshipEndpointSelectorV3, RelationshipEndpointV3,
+    RelationshipKindV3, RelationshipNeighborV3, RelationshipNeighborsRequestV3,
+    RelationshipNeighborsResponseV3,
+};
 pub use source::{
     DiscoveryReceiptV2, GatewayDecisionV2, LocatorVerification, SearchResultV2, SourceArtifactV2,
     SourceFetchResponseV2, SourceLocatorVerifyResponse,

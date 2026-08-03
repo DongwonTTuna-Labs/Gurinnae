@@ -1,9 +1,14 @@
+use gurine_application::detection::{
+    BuildConflictDatasetSnapshot, BuildGeneralDatasetSnapshot, DatasetSnapshotUseCase,
+};
+use gurine_detection::snapshot::ConflictRuleId;
 use gurine_jobs::postgres::ClaimedJob;
+use gurine_persistence_postgres::dataset_snapshots::PostgresDatasetSnapshotRepository;
 use serde_json::{Value, json};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use super::{Failure, database, required};
+use super::{Failure, database};
 
 const JOB_SCHEMA_VERSION: &str = "detection-snapshot-build-job.v1";
 
@@ -14,24 +19,10 @@ struct SnapshotBuildClaim<'a> {
     payload: &'a Value,
 }
 
-#[derive(Clone)]
-struct BuildOwnerRow {
-    snapshot_id: Option<Uuid>,
-    snapshot_sha256: Option<String>,
-    member_count: Option<i64>,
-    strong_identifier_fact_count: Option<i64>,
-    strong_identifier_fact_set_sha256: Option<String>,
-    replayed: Option<bool>,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-struct BuildOwnerResult {
-    snapshot_id: Uuid,
-    snapshot_sha256: String,
-    member_count: i64,
-    strong_identifier_fact_count: i64,
-    strong_identifier_fact_set_sha256: String,
-    replayed: bool,
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum SnapshotBuildRoute {
+    GeneralV1,
+    ConflictV2,
 }
 
 pub(super) async fn build_detection_dataset_snapshot(
@@ -39,43 +30,65 @@ pub(super) async fn build_detection_dataset_snapshot(
     job: &ClaimedJob,
 ) -> Result<Value, Failure> {
     let claim = snapshot_build_claim(job);
-    validate_claim(&claim)?;
+    let route = validate_claim(&claim)?;
     let mut tx = pool.begin().await.map_err(database)?;
     sqlx::query!("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
         .execute(&mut *tx)
         .await
         .map_err(database)?;
-    let built = sqlx::query!(
-        "SELECT snapshot_id, \
-                btrim(snapshot_sha256::text) AS \"snapshot_sha256?: String\", \
-                member_count, strong_identifier_fact_count, \
-                btrim(strong_identifier_fact_set_sha256::text) \
-                  AS \"strong_identifier_fact_set_sha256?: String\", \
-                replayed \
-           FROM core.build_detection_dataset_snapshot_v1($1,$2,$3)",
-        claim.job_id,
-        claim.lease_token,
-        claim.fencing_token,
-    )
-    .fetch_one(&mut *tx)
-    .await
-    .map_err(database)?;
-    let result = build_owner_result(BuildOwnerRow {
-        snapshot_id: built.snapshot_id,
-        snapshot_sha256: built.snapshot_sha256,
-        member_count: built.member_count,
-        strong_identifier_fact_count: built.strong_identifier_fact_count,
-        strong_identifier_fact_set_sha256: built.strong_identifier_fact_set_sha256,
-        replayed: built.replayed,
-    })?;
+    let result = match route {
+        SnapshotBuildRoute::GeneralV1 => build_general_snapshot(&mut tx, &claim).await?,
+        SnapshotBuildRoute::ConflictV2 => build_conflict_snapshot(&mut tx, &claim).await?,
+    };
     tx.commit().await.map_err(database)?;
+    Ok(result)
+}
+
+async fn build_general_snapshot(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    claim: &SnapshotBuildClaim<'_>,
+) -> Result<Value, Failure> {
+    let request =
+        BuildGeneralDatasetSnapshot::new(claim.job_id, claim.lease_token, claim.fencing_token)
+            .map_err(|_| authority_invalid("job fence"))?;
+    let result = {
+        let mut repository = PostgresDatasetSnapshotRepository::new(&mut **tx);
+        DatasetSnapshotUseCase::new(&mut repository)
+            .build_general(&request)
+            .await
+            .map_err(repository_failure)?
+    };
     Ok(json!({
-        "snapshotId": result.snapshot_id,
-        "snapshotSha256": result.snapshot_sha256,
-        "memberCount": result.member_count,
-        "strongIdentifierFactCount": result.strong_identifier_fact_count,
-        "strongIdentifierFactSetSha256": result.strong_identifier_fact_set_sha256,
-        "replayed": result.replayed,
+        "snapshotId": result.snapshot_id(),
+        "snapshotSha256": result.snapshot_sha256().as_str(),
+        "memberCount": result.member_count(),
+        "strongIdentifierFactCount": result.strong_identifier_fact_count(),
+        "strongIdentifierFactSetSha256": result.strong_identifier_fact_set_sha256().as_str(),
+        "replayed": result.replayed(),
+    }))
+}
+
+async fn build_conflict_snapshot(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    claim: &SnapshotBuildClaim<'_>,
+) -> Result<Value, Failure> {
+    let request =
+        BuildConflictDatasetSnapshot::new(claim.job_id, claim.lease_token, claim.fencing_token)
+            .map_err(|_| authority_invalid("job fence"))?;
+    let result = {
+        let mut repository = PostgresDatasetSnapshotRepository::new(&mut **tx);
+        DatasetSnapshotUseCase::new(&mut repository)
+            .build(&request)
+            .await
+            .map_err(repository_failure)?
+    };
+    Ok(json!({
+        "snapshotId": result.snapshot_id(),
+        "snapshotSha256": result.snapshot_sha256().as_str(),
+        "memberCount": 0,
+        "conflictInputCount": 1,
+        "conflictInputSetSha256": result.conflict_input_set_sha256().as_str(),
+        "replayed": result.replayed(),
     }))
 }
 
@@ -88,14 +101,14 @@ fn snapshot_build_claim(job: &ClaimedJob) -> SnapshotBuildClaim<'_> {
     }
 }
 
-fn validate_claim(claim: &SnapshotBuildClaim<'_>) -> Result<(), Failure> {
+fn validate_claim(claim: &SnapshotBuildClaim<'_>) -> Result<SnapshotBuildRoute, Failure> {
     if claim.fencing_token < 1 {
         return Err(authority_invalid("job fence"));
     }
     validate_request(claim.payload)
 }
 
-fn validate_request(payload: &Value) -> Result<(), Failure> {
+fn validate_request(payload: &Value) -> Result<SnapshotBuildRoute, Failure> {
     let object = payload
         .as_object()
         .ok_or_else(|| authority_invalid("job payload"))?;
@@ -117,7 +130,7 @@ fn validate_request(payload: &Value) -> Result<(), Failure> {
         .and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| authority_invalid("ruleVersionId"))?;
-    object
+    let rule_id = object
         .get("ruleId")
         .and_then(Value::as_str)
         .filter(|value| !value.is_empty() && value.trim() == *value)
@@ -132,43 +145,20 @@ fn validate_request(payload: &Value) -> Result<(), Failure> {
         .and_then(Value::as_i64)
         .filter(|value| *value >= 0)
         .ok_or_else(|| authority_invalid("contractCount"))?;
-    Ok(())
+    Ok(if ConflictRuleId::parse(rule_id).is_ok() {
+        SnapshotBuildRoute::ConflictV2
+    } else {
+        // The v1 owner routine is the authority for every non-conflict rule:
+        // it requires an ACTIVE rule version and an exact rule id/version pair.
+        SnapshotBuildRoute::GeneralV1
+    })
 }
 
-fn build_owner_result(row: BuildOwnerRow) -> Result<BuildOwnerResult, Failure> {
-    let result = BuildOwnerResult {
-        snapshot_id: required(row.snapshot_id).map_err(database)?,
-        snapshot_sha256: required(row.snapshot_sha256).map_err(database)?,
-        member_count: required(row.member_count).map_err(database)?,
-        strong_identifier_fact_count: required(row.strong_identifier_fact_count)
-            .map_err(database)?,
-        strong_identifier_fact_set_sha256: required(row.strong_identifier_fact_set_sha256)
-            .map_err(database)?,
-        replayed: required(row.replayed).map_err(database)?,
-    };
-    validate_build_result(
-        &result.snapshot_sha256,
-        result.member_count,
-        result.strong_identifier_fact_count,
-        &result.strong_identifier_fact_set_sha256,
-    )?;
-    Ok(result)
-}
-
-fn validate_build_result(
-    snapshot_sha256: &str,
-    member_count: i64,
-    fact_count: i64,
-    fact_set_sha256: &str,
-) -> Result<(), Failure> {
-    if member_count < 0
-        || fact_count < 0
-        || !is_lower_sha256(snapshot_sha256)
-        || !is_lower_sha256(fact_set_sha256)
-    {
-        return Err(authority_invalid("owner result"));
+fn repository_failure(error: sqlx::Error) -> Failure {
+    match error {
+        sqlx::Error::Decode(_) => authority_invalid("owner result"),
+        other => database(other),
     }
-    Ok(())
 }
 
 fn is_lower_sha256(value: &str) -> bool {
@@ -193,7 +183,7 @@ mod tests {
         json!({
             "schemaVersion": JOB_SCHEMA_VERSION,
             "ruleVersionId": Uuid::from_u128(1),
-            "ruleId": "PRICE_OUTLIER",
+            "ruleId": "OFFICER_OVERLAP_AWARD",
             "contractIdentitySetSha256": SHA,
             "contractCount": 0,
         })
@@ -215,23 +205,6 @@ mod tests {
         }
     }
 
-    fn valid_owner_row() -> BuildOwnerRow {
-        BuildOwnerRow {
-            snapshot_id: Some(Uuid::from_u128(5)),
-            snapshot_sha256: Some(SHA.to_owned()),
-            member_count: Some(6),
-            strong_identifier_fact_count: Some(7),
-            strong_identifier_fact_set_sha256: Some(SHA.to_owned()),
-            replayed: Some(false),
-        }
-    }
-
-    fn assert_owner_row_invalid(mutate: impl FnOnce(&mut BuildOwnerRow)) {
-        let mut row = valid_owner_row();
-        mutate(&mut row);
-        assert!(build_owner_result(row).is_err());
-    }
-
     #[test]
     fn request_is_validated_without_reconstructing_owner_payload() {
         let valid = valid_payload();
@@ -242,7 +215,10 @@ mod tests {
         assert_eq!(claim.job_id, job.id);
         assert_eq!(claim.lease_token, job.fence.lease_token);
         assert_eq!(claim.fencing_token, job.fence.fencing_token);
-        assert!(validate_claim(&claim).is_ok());
+        assert!(matches!(
+            validate_claim(&claim),
+            Ok(SnapshotBuildRoute::ConflictV2)
+        ));
         let mut extra = valid;
         extra["untrusted"] = json!(true);
         assert!(validate_request(&extra).is_err());
@@ -253,27 +229,43 @@ mod tests {
     }
 
     #[test]
-    fn owner_result_requires_all_fields_and_canonical_values() {
+    fn legacy_general_rule_keeps_the_v1_owner_route() {
+        let mut payload = valid_payload();
+        payload["ruleId"] = json!("CONTRACT_AMENDMENT_ESCALATION");
         assert!(matches!(
-            build_owner_result(valid_owner_row()),
-            Ok(BuildOwnerResult {
-                member_count: 6,
-                strong_identifier_fact_count: 7,
-                replayed: false,
-                ..
-            })
+            validate_request(&payload),
+            Ok(SnapshotBuildRoute::GeneralV1)
         ));
-        assert_owner_row_invalid(|row| row.snapshot_id = None);
-        assert_owner_row_invalid(|row| row.snapshot_sha256 = None);
-        assert_owner_row_invalid(|row| row.member_count = None);
-        assert_owner_row_invalid(|row| row.strong_identifier_fact_count = None);
-        assert_owner_row_invalid(|row| row.strong_identifier_fact_set_sha256 = None);
-        assert_owner_row_invalid(|row| row.replayed = None);
-        assert_owner_row_invalid(|row| row.member_count = Some(-1));
-        assert_owner_row_invalid(|row| row.strong_identifier_fact_count = Some(-1));
-        assert_owner_row_invalid(|row| row.snapshot_sha256 = Some("A".repeat(64)));
-        assert_owner_row_invalid(|row| {
-            row.strong_identifier_fact_set_sha256 = Some("short".to_owned());
-        });
+
+        // Unknown but syntactically valid ids also reach the v1 owner, which
+        // rejects any id/version pair that is not exact and ACTIVE.
+        payload["ruleId"] = json!("UNKNOWN_RULE");
+        assert!(matches!(
+            validate_request(&payload),
+            Ok(SnapshotBuildRoute::GeneralV1)
+        ));
+
+        payload["ruleId"] = json!(" UNKNOWN_RULE");
+        assert!(validate_request(&payload).is_err());
+        payload["ruleId"] = json!("");
+        assert!(validate_request(&payload).is_err());
+    }
+
+    #[test]
+    fn exactly_the_five_conflict_rules_use_the_v2_owner_route() {
+        let mut payload = valid_payload();
+        for rule_id in [
+            "OFFICER_OVERLAP_AWARD",
+            "OWNERSHIP_LINKED_COMPETITORS",
+            "BID_ROTATION",
+            "REVOLVING_DOOR_CONTRACT",
+            "SANCTIONED_SUCCESSOR",
+        ] {
+            payload["ruleId"] = json!(rule_id);
+            assert!(matches!(
+                validate_request(&payload),
+                Ok(SnapshotBuildRoute::ConflictV2)
+            ));
+        }
     }
 }

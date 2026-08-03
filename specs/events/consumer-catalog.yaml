@@ -21,6 +21,7 @@ consumers:
 - id: audit-indexer
   accepted_event_types:
   - action.execution_authorized.v1
+  - action.execution_completed.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -38,6 +39,7 @@ consumers:
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
 - id: notification-worker
   accepted_event_types:
+  - action.execution_completed.v1
   - attachment.scan_completed.v1
   - intake.contact_received.v1
   - notification.correction_received.v1
@@ -49,6 +51,12 @@ consumers:
   - notification.subscription_verification_requested.v1
   - notification.user_invitation_requested.v1
   - projection.publication_applied.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: product-fact-projector
+  accepted_event_types:
+  - action.execution_completed.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -74,6 +82,7 @@ consumers:
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
 - id: workflow-worker
   accepted_event_types:
+  - action.execution_completed.v1
   - agent.run_completed.v1
   - attachment.correction_scan_requested.v1
   - attachment.response_scan_requested.v1

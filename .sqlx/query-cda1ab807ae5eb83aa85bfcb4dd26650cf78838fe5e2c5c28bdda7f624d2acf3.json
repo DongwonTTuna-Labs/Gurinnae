@@ -1,0 +1,35 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM ops.agent_suggestions\n           WHERE agent_run_id=$1 AND citation_validation_id=$2\n             AND suggestion_type=$3 AND proposal_contract_version=2\n             AND payload=$4 AND payload_sha256=CAST($5 AS char(64))\n             AND input_snapshot_sha256=CAST($6 AS char(64))\n             AND target_schema_version=$7\n             AND evidence_ids='[]'::jsonb AND citation_checks='[]'::jsonb\n             AND payload_canonical=$8\n             AND convert_from(payload_canonical,'UTF8')::jsonb=payload",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Bytea"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cda1ab807ae5eb83aa85bfcb4dd26650cf78838fe5e2c5c28bdda7f624d2acf3"
+}

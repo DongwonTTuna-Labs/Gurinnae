@@ -1,0 +1,73 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            SELECT\n              decision_id AS \"decision_id!: Uuid\",\n              assertion_id AS \"assertion_id!: Uuid\",\n              assertion_revision AS \"assertion_revision!: i64\",\n              btrim(assertion_digest::text) AS \"assertion_digest!: String\",\n              verification_status AS \"verification_status!: String\",\n              public_use_status AS \"public_use_status!: String\",\n              btrim(receipt_sha256::text) AS \"receipt_sha256!: String\",\n              replayed AS \"replayed!: bool\"\n            FROM core.decide_typed_relationship_assertion_v2($1,$2::jsonb)\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "decision_id!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "assertion_id!: Uuid",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "assertion_revision!: i64",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "assertion_digest!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "verification_status!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "public_use_status!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "receipt_sha256!: String",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "replayed!: bool",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "039776a2fba7427370b22caaef49a12d7871da27573ee88e5188a4d7d6e04df2"
+}

@@ -1685,7 +1685,9 @@ dependencies = [
  "base64 0.22.1",
  "gurine-agent-orchestration",
  "gurine-api-contracts",
+ "gurine-application",
  "gurine-detection",
+ "gurine-domain",
  "gurine-jobs",
  "gurine-object-store",
  "gurine-observability",
@@ -1720,6 +1722,7 @@ name = "gurine-application"
 version = "0.1.0"
 dependencies = [
  "gurine-auth",
+ "gurine-detection",
  "gurine-domain",
  "serde",
  "serde_json",
@@ -1906,6 +1909,7 @@ name = "gurine-ingest-worker"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "gurine-domain",
  "gurine-identity-resolution",
  "gurine-jobs",
  "gurine-object-store",
@@ -2049,16 +2053,21 @@ dependencies = [
 name = "gurine-persistence-postgres"
 version = "0.1.0"
 dependencies = [
+ "gurine-agent-orchestration",
+ "gurine-application",
  "gurine-auth",
+ "gurine-detection",
  "gurine-domain",
  "rust_decimal",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "sqlx",
  "thiserror 2.0.18",
  "time",
  "tokio",
  "tracing",
+ "url",
  "uuid",
 ]
 
@@ -2186,6 +2195,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "gurine-auth",
+ "gurine-domain",
  "gurine-jobs",
  "gurine-object-store",
  "gurine-persistence-postgres",

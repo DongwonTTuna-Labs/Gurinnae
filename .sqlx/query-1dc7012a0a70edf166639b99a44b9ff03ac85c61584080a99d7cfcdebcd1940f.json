@@ -21,7 +21,8 @@
                 "PUBLIC",
                 "RESTRICTED",
                 "PERSONAL_DATA",
-                "LEGAL_HOLD"
+                "LEGAL_HOLD",
+                "INTERNAL"
               ]
             }
           }

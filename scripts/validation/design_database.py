@@ -9,6 +9,8 @@ from .design_database_approval import _validate_approval_option_b
 from .design_database_journeys import validate_journey_database
 from .design_database_support import (
     PHYSICAL_TABLE_PATHS,
+    R6C_FORWARD_CANDIDATE_KEY_PATH,
+    _added_candidate_keys,
     _candidate_keys,
     _check_expressions,
     _column_names,
@@ -81,6 +83,12 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
         for document in documents.values()
         for relation, row in _rows(document).items()
     }
+    forward_document = documents.get(R6C_FORWARD_CANDIDATE_KEY_PATH)
+    forward_candidate_keys = (
+        _added_candidate_keys(forward_document, rows, result)
+        if isinstance(forward_document, dict)
+        else {}
+    )
     _validate_approval_option_b(
         root,
         documents["specs/database/addendum/0026-agent-action-approval.yaml"],
@@ -181,12 +189,19 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
                 )
 
     foreign_key_names: set[str] = set()
-    constraint_names: set[str] = set()
+    constraint_names = {
+        name
+        for keys in forward_candidate_keys.values()
+        for name, _columns in keys
+    }
     generated_constraint_count = 0
     parsed_expression_count = 0
     for relation, row in rows.items():
         columns = set(_column_names(row))
-        candidates = _candidate_keys(row)
+        candidates = _candidate_keys(row) | {
+            columns
+            for _name, columns in forward_candidate_keys.get(relation, ())
+        }
         result.require(
             all(set(candidate) <= columns for candidate in candidates),
             f"{relation}: primary or unique candidate references a missing source column",
@@ -240,8 +255,14 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
                 set(target_columns) <= set(_column_names(target_row)),
                 f"{relation}: foreign key {name or source_columns} targets missing columns on {target_relation}",
             )
+            target_candidates = _candidate_keys(target_row) | {
+                columns
+                for _name, columns in forward_candidate_keys.get(
+                    target_relation, ()
+                )
+            }
             result.require(
-                target_columns in _candidate_keys(target_row),
+                target_columns in target_candidates,
                 f"{relation}: foreign key {name or source_columns} target is not an exact nonpartial candidate key on {target_relation}",
             )
 
@@ -264,6 +285,9 @@ def validate_physical_contracts(root: Path, result: Validation) -> None:
     )
     result.stats["additive_sql_expressions_parsed"] = parsed_expression_count
     result.stats["generated_constraint_names"] = generated_constraint_count
+    result.stats["forward_candidate_keys_validated"] = sum(
+        len(keys) for keys in forward_candidate_keys.values()
+    )
     result.stats["public_projector_direct_relation_grants"] = len(
         actual_projector_grants
     )

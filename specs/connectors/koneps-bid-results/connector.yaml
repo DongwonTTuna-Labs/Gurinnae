@@ -1,0 +1,38 @@
+schema_version: 2
+specification_version: 13.0.0-r6c
+id: koneps-bid-results
+display_name: 나라장터 개찰·낙찰 메타데이터
+status: FINAL
+source_kind: OFFICIAL_REST_API
+official_reference: https://www.data.go.kr/data/15129397/openapi.do
+base_url: https://nopenapi.g2b.go.kr/as/ScsbidInfoService
+credential_env: DATA_GO_KR_SERVICE_KEY
+formats:
+- json
+- xml
+network: egress-gateway-only
+schedule: ops.source_registry
+activation:
+  requires_credentialed_preflight: true
+  requires_recorded_response_fingerprint: true
+  requires_quota_probe: true
+  requires_terms_review: true
+  no_html_scraping: true
+  failure_mode: connector remains DISABLED; unrelated connectors continue
+operations:
+- opening-goods-search
+- opening-construction-search
+- opening-service-search
+- opening-foreign-search
+- award-goods-search
+- award-construction-search
+- award-service-search
+- award-foreign-search
+activation_mode: KEY_ONLY_REST
+operator_responsibility: provide credential/config and pass live preflight
+participant_boundary:
+  structured_participant_rows: false
+  opaque_fields:
+  - opengCorpInfo
+  blocker: KONEPS_STRUCTURED_BIDDER_PARTICIPATION_UNAVAILABLE
+  rule: opening result text and participant counts are metadata; neither creates BID_PARTICIPATION edges

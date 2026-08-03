@@ -1,3 +1,8 @@
+#[path = "analysis_provider_persistence/research_artifact.rs"]
+mod research_artifact;
+
+use research_artifact::ensure_source_fetch_result_is_metadata_only;
+
 #[expect(
     clippy::too_many_arguments,
     reason = "provider turn persistence records the immutable request provenance tuple"
@@ -110,12 +115,12 @@ fn pinned_prompt_contract(agent_type: &str) -> Option<(&'static str, &'static st
         "market-researcher" => Some((
             "market-researcher",
             "13.0.0+agent-multimodal.1",
-            "d6cd7cff54efab4febf4673694b585cc74e74498b3820df7844887cca05f2c11",
+            "2faa26aa8a2cb8301ba0397d4e8863a2fa03e0c24c77aeb67ec1fefcc7047357",
         )),
         "investigator" => Some((
             "investigator",
-            "13.0.0+agent-multimodal.1",
-            "e7654bb7abf2cad997118ac649544ea20ef23ba1e7b5598df7ec45d54a9322f6",
+            "13.0.0+r6c.1",
+            "f9ef8798beedf3aed0121616ec23e08f2c9f120334e52034d3d96713e82e5963",
         )),
         "skeptic" => Some((
             "skeptic",
@@ -141,32 +146,32 @@ fn output_schema_contract(agent_type: &str) -> (&'static str, &'static str, &'st
         "market-researcher" => (
             "MarketResearchOutputV2",
             "market-research-output.v2",
-            "af49da181ef6e5bf37aa43245cd2ea44e2a71a1e41ac475e4f04c17137864577",
+            "737431cfb03f7dc3b7fa59d3561d7c3c56049375b42899725f493b794cdd323b",
         ),
         "investigator" => (
             "InvestigatorOutputV2",
             "investigator-output.v2",
-            "d1385cb045bfdffb8e49322019b735c5cf813e6207664c2ff8219f088b0c13df",
+            "c9f4536c3d8f6ae58a66cc830fb1a71745fad01e370c69ef799511a21bc4f1f0",
         ),
         "skeptic" => (
             "SkepticOutputV2",
             "skeptic-output.v2",
-            "6df71038d32529334413d7c1757a67fc0c1eba9e19d8ea9bdb6ae5d1cd1197d1",
+            "125edbaa752492ea31291ddf3c9950233d9a48262574820490d782e6db40f0eb",
         ),
         "claim-drafter" => (
             "ClaimDraftOutputV2",
             "claim-draft-output.v2",
-            "1b8118e9e01c6277863900f1bad315539a0618685ee431f1fa2ce181388272ec",
+            "8fcde3825a0c2ce3fc6587e7899997f67fe8d13b499c3869d310548f4a8d64a8",
         ),
         "citation-verifier" => (
             "CitationVerificationOutputV2",
             "citation-verification-output.v2",
-            "9a76c04dcbca76018b5dba2eb837a80fae3fbeb3360cba4e740913de0096be94",
+            "79a697c684205333918e575989021daa021ab7b6fa6c2963f0efb5131df12294",
         ),
         _ => (
             "InvestigatorOutputV2",
             "investigator-output.v2",
-            "d1385cb045bfdffb8e49322019b735c5cf813e6207664c2ff8219f088b0c13df",
+            "c9f4536c3d8f6ae58a66cc830fb1a71745fad01e370c69ef799511a21bc4f1f0",
         ),
     }
 }
@@ -231,7 +236,7 @@ async fn provider_wire_request(
     base: &Value,
     evidence: &Value,
     object_store: Option<&GatewayObjectStore>,
-    pool: &sqlx::PgPool,
+    _pool: &sqlx::PgPool,
     objective: &str,
     prior_tool_result: Option<&Value>,
 ) -> Result<Value, Failure> {
@@ -245,8 +250,8 @@ async fn provider_wire_request(
             "selected source bytes".into(),
         )
     })?;
-    let mut refs = selected_content_wire_refs(evidence, store).await?;
-    append_research_artifact_refs(&mut refs, prior_tool_result, store, pool).await?;
+    let refs = selected_content_wire_refs(evidence, store).await?;
+    ensure_source_fetch_result_is_metadata_only(prior_tool_result)?;
     object.insert("selectedContentRefs".to_owned(), Value::Array(refs));
     // The durable request remains redacted and hash-bound. The short-lived gateway capsule carries
     // the objective and prior tool result covered by the receipt, but never persists either value.
@@ -294,94 +299,6 @@ async fn selected_content_wire_refs(
         refs.push(Value::Object(wire));
     }
     Ok(refs)
-}
-
-async fn append_research_artifact_refs(
-    refs: &mut Vec<Value>,
-    prior_tool_result: Option<&Value>,
-    store: &GatewayObjectStore,
-    pool: &sqlx::PgPool,
-) -> Result<(), Failure> {
-    let Some(result) = prior_tool_result else {
-        return Ok(());
-    };
-    let artifacts = result
-        .pointer("/response/artifacts")
-        .or_else(|| result.pointer("/artifacts"))
-        .and_then(Value::as_array)
-        .map_or(&[][..], |value| value.as_slice());
-    for artifact in artifacts {
-        refs.push(research_artifact_wire_ref(artifact, store, pool).await?);
-    }
-    Ok(())
-}
-
-async fn research_artifact_wire_ref(
-    artifact: &Value,
-    store: &GatewayObjectStore,
-    pool: &sqlx::PgPool,
-) -> Result<Value, Failure> {
-    let digest = artifact
-        .get("contentSha256")
-        .and_then(Value::as_str)
-        .filter(|v| v.len() == 64 && v.bytes().all(|b| b.is_ascii_hexdigit()))
-        .ok_or_else(|| {
-            Failure::Terminal("AGENT_RESEARCH_ARTIFACT_INVALID", "contentSha256".into())
-        })?;
-    let fetch_id = artifact
-        .get("sourceFetchId")
-        .and_then(Value::as_str)
-        .and_then(|value| Uuid::parse_str(value).ok())
-        .ok_or_else(|| {
-            Failure::Terminal("AGENT_RESEARCH_ARTIFACT_INVALID", "sourceFetchId".into())
-        })?;
-    let key: String = sqlx::query_scalar!(
-        "SELECT object_key FROM raw.research_artifacts WHERE source_fetch_id=$1",
-        fetch_id,
-    )
-    .fetch_optional(pool)
-    .await
-    .map_err(database)?
-    .ok_or_else(|| Failure::Terminal("AGENT_RESEARCH_ARTIFACT_MISSING", fetch_id.to_string()))?;
-    let bytes = store
-        .get(&key, Some(digest))
-        .await
-        .map_err(|_| Failure::Terminal("OBJECT_STORE_READ_FAILED", key))?;
-    let mut wire = serde_json::Map::new();
-    for field in [
-        "researchArtifactId",
-        "assetId",
-        "assetRevision",
-        "sourceFetchId",
-        "artifactOrdinal",
-        "sourceAuthority",
-        "finalOrigin",
-        "retrievedAt",
-        "httpStatus",
-        "contentMediaType",
-        "contentSizeBytes",
-        "contentSha256",
-        "artifactSha256",
-        "sourceUseId",
-        "sourceUseSha256",
-    ] {
-        if let Some(value) = artifact.get(field) {
-            wire.insert(field.to_owned(), value.clone());
-        }
-    }
-    wire.insert(
-        "selectedContentSizeBytes".into(),
-        Value::from(bytes.len() as u64),
-    );
-    wire.insert(
-        "selectedContentBytesBase64".into(),
-        Value::String(BASE64.encode(bytes)),
-    );
-    wire.insert(
-        "selectedContentSha256".into(),
-        Value::String(digest.to_owned()),
-    );
-    Ok(Value::Object(wire))
 }
 
 fn selected_content_capsule(evidence: &Value) -> Result<Vec<Value>, Failure> {
@@ -561,18 +478,46 @@ async fn existing_provider_turn(
 
 #[cfg(test)]
 mod tests {
-    use super::pinned_prompt_contract;
+    use sha2::{Digest, Sha256};
+
+    use super::{output_schema_contract, pinned_prompt_contract};
+
+    const MARKET_RESEARCHER_PROMPT: &[u8] =
+        include_bytes!("../../../specs/agents/market-researcher/prompt.md");
+    const INVESTIGATOR_PROMPT: &[u8] =
+        include_bytes!("../../../specs/agents/investigator/prompt.md");
+    const SKEPTIC_PROMPT: &[u8] = include_bytes!("../../../specs/agents/skeptic/prompt.md");
+    const CLAIM_DRAFTER_PROMPT: &[u8] =
+        include_bytes!("../../../specs/agents/claim-drafter/prompt.md");
+    const CITATION_VERIFIER_PROMPT: &[u8] =
+        include_bytes!("../../../specs/agents/citation-verifier/prompt.md");
+    const MARKET_RESEARCHER_OUTPUT_SCHEMA: &[u8] = include_bytes!(
+        "../../../specs/agents/addendum-v2/schemas/market-research-output.schema.json"
+    );
+    const INVESTIGATOR_OUTPUT_SCHEMA: &[u8] =
+        include_bytes!("../../../specs/agents/addendum-v2/schemas/investigator-output.schema.json");
+    const SKEPTIC_OUTPUT_SCHEMA: &[u8] =
+        include_bytes!("../../../specs/agents/addendum-v2/schemas/skeptic-output.schema.json");
+    const CLAIM_DRAFTER_OUTPUT_SCHEMA: &[u8] =
+        include_bytes!("../../../specs/agents/addendum-v2/schemas/claim-draft-output.schema.json");
+    const CITATION_VERIFIER_OUTPUT_SCHEMA: &[u8] = include_bytes!(
+        "../../../specs/agents/addendum-v2/schemas/citation-verification-output.schema.json"
+    );
+
+    fn digest(bytes: &[u8]) -> String {
+        format!("{:x}", Sha256::digest(bytes))
+    }
 
     #[test]
     fn authority_prompt_registry_is_closed_and_pinned() {
         let expected = [
             (
                 "market-researcher",
-                "d6cd7cff54efab4febf4673694b585cc74e74498b3820df7844887cca05f2c11",
+                "2faa26aa8a2cb8301ba0397d4e8863a2fa03e0c24c77aeb67ec1fefcc7047357",
             ),
             (
                 "investigator",
-                "e7654bb7abf2cad997118ac649544ea20ef23ba1e7b5598df7ec45d54a9322f6",
+                "f9ef8798beedf3aed0121616ec23e08f2c9f120334e52034d3d96713e82e5963",
             ),
             (
                 "skeptic",
@@ -587,12 +532,67 @@ mod tests {
                 "a97a37302de9e5a230f1f33ca580ddab49bb93b1ed899de72c275d7770c53492",
             ),
         ];
-        for (agent, digest) in expected {
+        let prompt_bytes = [
+            MARKET_RESEARCHER_PROMPT,
+            INVESTIGATOR_PROMPT,
+            SKEPTIC_PROMPT,
+            CLAIM_DRAFTER_PROMPT,
+            CITATION_VERIFIER_PROMPT,
+        ];
+        for ((agent, expected_digest), bytes) in expected.into_iter().zip(prompt_bytes) {
             let (id, version, actual) = pinned_prompt_contract(agent).expect("pinned agent");
             assert_eq!(id, agent);
-            assert_eq!(version, "13.0.0+agent-multimodal.1");
-            assert_eq!(actual, digest);
+            let expected_version = if agent == "investigator" {
+                "13.0.0+r6c.1"
+            } else {
+                "13.0.0+agent-multimodal.1"
+            };
+            assert_eq!(version, expected_version);
+            assert_eq!(actual, expected_digest);
+            assert_eq!(actual, digest(bytes));
         }
         assert!(pinned_prompt_contract("unknown").is_none());
+    }
+
+    #[test]
+    fn output_schema_registry_matches_exact_authority_bytes() {
+        let expected = [
+            (
+                "market-researcher",
+                "MarketResearchOutputV2",
+                "market-research-output.v2",
+                MARKET_RESEARCHER_OUTPUT_SCHEMA,
+            ),
+            (
+                "investigator",
+                "InvestigatorOutputV2",
+                "investigator-output.v2",
+                INVESTIGATOR_OUTPUT_SCHEMA,
+            ),
+            (
+                "skeptic",
+                "SkepticOutputV2",
+                "skeptic-output.v2",
+                SKEPTIC_OUTPUT_SCHEMA,
+            ),
+            (
+                "claim-drafter",
+                "ClaimDraftOutputV2",
+                "claim-draft-output.v2",
+                CLAIM_DRAFTER_OUTPUT_SCHEMA,
+            ),
+            (
+                "citation-verifier",
+                "CitationVerificationOutputV2",
+                "citation-verification-output.v2",
+                CITATION_VERIFIER_OUTPUT_SCHEMA,
+            ),
+        ];
+        for (agent, expected_id, expected_version, bytes) in expected {
+            let (schema_id, schema_version, schema_digest) = output_schema_contract(agent);
+            assert_eq!(schema_id, expected_id);
+            assert_eq!(schema_version, expected_version);
+            assert_eq!(schema_digest, digest(bytes));
+        }
     }
 }

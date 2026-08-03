@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT suggestion.case_id,suggestion.suggestion_type,suggestion.payload, suggestion.payload_sha256,suggestion.input_snapshot_sha256, suggestion.version AS suggestion_version, current_case.version AS case_version FROM ops.agent_suggestions AS suggestion JOIN editorial.cases AS current_case ON current_case.id=suggestion.case_id WHERE suggestion.id=$1 AND suggestion.status='PENDING' FOR UPDATE OF suggestion FOR SHARE OF current_case",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "suggestion_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "suggestion_type"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "payload"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "payload_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "payload_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "input_snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "input_snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "suggestion_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_suggestions",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "case_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "cc4a64f13b495f7fcf853d5b45c40cf86b1d0694f2f294bd5b097b856927c67d"
+}

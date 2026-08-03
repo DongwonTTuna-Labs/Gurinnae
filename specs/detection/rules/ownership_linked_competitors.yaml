@@ -1,0 +1,101 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: OWNERSHIP_LINKED_COMPETITORS
+name: 소유·지배 관계 경쟁 입찰자
+version: 1.0.0
+operational_state: BLOCKED
+operational_blocker:
+  code: STRUCTURED_BIDDER_SOURCE_UNAVAILABLE
+  deferred_source_id: koneps-structured-bidder-participation
+  source_contract_blocker: KONEPS_STRUCTURED_BIDDER_PARTICIPATION_UNAVAILABLE
+  reason: KONEPS does not currently expose authoritative structured participant rows per procurement.
+  unblock_condition: >-
+    An official KONEPS operation must expose per-procurement participant rows with stable supplier
+    identity, bid amount, status, withdrawal and rank semantics, and the connector, normalization,
+    and frozen DETECTION_DATASET materializer must prove complete coverage for those rows.
+required:
+- policy.minimum_linked_participants
+- policy.maximum_relationship_hops
+- procurement.id
+- procurement.bid_opened_at
+- procurement.structured_participant_source.authority
+- procurement.structured_participant_source.status
+- procurement.structured_participant_source.coverage_complete
+- procurement.participants
+- relationship_coverage_complete
+- relationships
+immutable_policy:
+  required_fields:
+  - minimum_linked_participants
+  - maximum_relationship_hops
+  defaults_forbidden: true
+  production_seed_forbidden: true
+  constraints:
+    minimum_linked_participants: 2
+    maximum_relationship_hops:
+      minimum: 1
+      maximum: 2
+test_fixture_policy:
+  authority: TEST_FIXTURE_ONLY
+  operational_seed: false
+  minimum_linked_participants: 2
+  maximum_relationship_hops: 2
+formula: >-
+  signal when two distinct VALID and VERIFIED participants in the same procurement are joined
+  at bid opening by a one- or two-hop path consisting only of VERIFIED, APPROVED OWNERSHIP or
+  CONTROL assertions with complete endpoint identity and validity-period coverage
+blockers:
+- POLICY_MISSING
+- POLICY_INVALID
+- STRUCTURED_BIDDER_SOURCE_UNAVAILABLE
+- STRUCTURED_BIDDER_COVERAGE_INCOMPLETE
+- PARTICIPANT_RECORD_INCOMPLETE
+- PARTICIPANT_IDENTITY_INCOMPLETE
+- RELATIONSHIP_COVERAGE_INCOMPLETE
+- RELATIONSHIP_PATH_INCOMPLETE
+- RELATIONSHIP_KIND_UNKNOWN
+- RELATIONSHIP_IDENTITY_INCOMPLETE
+- RELATIONSHIP_PERIOD_INCOMPLETE
+false_positive_guards:
+- participants must belong to the same procurement and have participation_status VALID
+- participant and relationship endpoint identities must be VERIFIED
+- only relationship assertions with verification_status VERIFIED and public_use_status APPROVED count
+- only OWNERSHIP and CONTROL assertions count; no family or kinship relation exists in this rule
+- every counted relationship must cover procurement.bid_opened_at
+- paths longer than policy.maximum_relationship_hops do not count
+source_contract:
+  complete_status: STRUCTURED_COMPLETE
+  authority_required: true
+  test_fixture_authority: TEST_FIXTURE_ONLY
+  opaque_participant_strings_forbidden: true
+  validation_precedence: >-
+    Validate source authority, status, and coverage immediately after the procurement object;
+    when unavailable, return STRUCTURED_BIDDER_SOURCE_UNAVAILABLE without requiring or inventing
+    bid_opened_at or participant rows.
+closed_input_vocabulary:
+  participation_status:
+  - VALID
+  - WITHDRAWN
+  - DISQUALIFIED
+  - INVALID
+  counted_relationship_kinds:
+  - OWNERSHIP
+  - CONTROL
+  family_or_kinship_kind_exists: false
+metamorphic:
+- participant and relationship input order does not change the result
+- relationship direction does not change connectivity
+- adding an unapproved, unverified, inactive, or unrelated edge cannot create a signal
+- a missing structured participant source always blocks evaluation
+- source-unavailable blocks before bid_opened_at and participant-row validation
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  ratio_precision: 4
+  money_unit: KRW integer
+  publication_claim_allowed: false
+implementation: crates/detection/src/rules/ownership_linked_competitors.rs
+reference_evaluator: specs/detection/reference_evaluator.py

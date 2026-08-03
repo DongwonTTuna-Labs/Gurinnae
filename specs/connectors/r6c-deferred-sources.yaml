@@ -1,0 +1,30 @@
+schema_version: 1
+specification_version: 13.0.0-r6c
+status: FINAL
+deferred_sources:
+- id: koneps-structured-bidder-participation
+  state: BLOCKED
+  blocker: KONEPS_STRUCTURED_BIDDER_PARTICIPATION_UNAVAILABLE
+  reason: the official opening metadata exposes participant count and opaque opengCorpInfo, not a closed bidder record schema
+  unlock_condition: an official structured operation with bidder identity, bid amount, status, withdrawal and rank semantics
+  prohibited_workaround: delimiter or regex parsing of opengCorpInfo and winner-as-complete-participant-set inference
+- id: open-dart-affiliates
+  state: BLOCKED
+  blocker: OPEN_DART_AFFILIATE_OPERATION_UNAVAILABLE
+  reason: no exact official OpenDART affiliate-company API operation was found in the approved inventory
+  unlock_condition: official operation documentation with exact request and response schemas plus recorded preflight
+- id: open-dart-major-holder-identity
+  state: BLOCKED
+  blocker: OPEN_DART_MAJOR_HOLDER_ENTITY_TYPE_UNAVAILABLE
+  reason: the hyslrSttus name field does not authoritatively distinguish a natural person from a legal entity
+  unlock_condition: official entity-type discriminator plus explicit human identity mapping and independently VERIFIED+APPROVED graph decision
+  prohibited_workaround: name-shape inference or automatic PERSON/SUPPLIER endpoint creation
+- id: alio-officer-normalization
+  state: BLOCKED
+  blocker: ALIO_OFFICER_COLUMNS_NOT_PINNED
+  reason: the official report item is known but a stable closed normalized column contract is not pinned
+  unlock_condition: versioned official schema or approved file fingerprint and mapping receipt
+cross_cutting_rules:
+- blocked sources emit zero typed relationship or rule-input rows
+- raw official artifacts may be retained only after the existing rights gate succeeds
+- no family, kinship, sensitive-attribute, natural-person scoring or weak-identifier merge inference is permitted

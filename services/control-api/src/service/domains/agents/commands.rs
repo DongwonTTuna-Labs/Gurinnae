@@ -6,6 +6,7 @@ struct SuggestionContext {
     stored_payload_sha256: String,
     suggestion_type: String,
     case_id: Uuid,
+    case_version: i64,
     payload: Value,
     input_snapshot_sha256: String,
 }
@@ -55,7 +56,10 @@ pub(super) async fn arm_acceptagentsuggestion_rejectagentsuggestion(
     } else {
         "REJECT"
     };
-    let audit = append_audit(request_id, actor, session_id, &input, decision, tx).await?;
+    let audit = append_audit(
+        request_id, actor, session_id, &context, &input, decision, tx,
+    )
+    .await?;
     if decision == "ACCEPT" {
         materialize_accept(&context, &input.reason, actor, audit, field_keys, tx).await?;
     } else {
@@ -69,8 +73,14 @@ async fn load_context(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<SuggestionContext, ServiceError> {
     let row = sqlx::query!(
-        "SELECT case_id,suggestion_type,payload,payload_sha256,input_snapshot_sha256,version \
-           FROM ops.agent_suggestions WHERE id=$1 AND status='PENDING' FOR UPDATE",
+        "SELECT suggestion.case_id,suggestion.suggestion_type,suggestion.payload, \
+                suggestion.payload_sha256,suggestion.input_snapshot_sha256, \
+                suggestion.version AS suggestion_version, \
+                current_case.version AS case_version \
+           FROM ops.agent_suggestions AS suggestion \
+           JOIN editorial.cases AS current_case ON current_case.id=suggestion.case_id \
+          WHERE suggestion.id=$1 AND suggestion.status='PENDING' \
+          FOR UPDATE OF suggestion FOR SHARE OF current_case",
         input.id,
     )
     .fetch_optional(&mut **tx)
@@ -78,11 +88,7 @@ async fn load_context(
     .map_err(db)?
     .ok_or(ServiceError::VersionConflict)?;
     let payload = row.payload;
-    let stored_payload_sha256 = row.payload_sha256.unwrap_or_else(|| {
-        serde_json::to_vec(&payload)
-            .map(|canonical| sha256(&canonical))
-            .unwrap_or_else(|_| sha256(b"null"))
-    });
+    let stored_payload_sha256 = require_stored_payload_sha256(row.payload_sha256)?;
     let input_snapshot_sha256 = row
         .input_snapshot_sha256
         .unwrap_or_else(|| stored_payload_sha256.clone());
@@ -92,11 +98,27 @@ async fn load_context(
         stored_payload_sha256,
         suggestion_type: row.suggestion_type,
         case_id: row.case_id,
+        case_version: row.case_version,
         payload,
         input_snapshot_sha256,
     };
-    let version = row.version;
-    if version != input.expected_version
+    let version = row.suggestion_version;
+    validate_suggestion_binding(version, input, &context)?;
+    Ok(context)
+}
+
+fn require_stored_payload_sha256(value: Option<String>) -> Result<String, ServiceError> {
+    value
+        .filter(|digest| is_sha256(digest))
+        .ok_or(ServiceError::Persistence)
+}
+
+fn validate_suggestion_binding(
+    stored_version: i64,
+    input: &SuggestionInput,
+    context: &SuggestionContext,
+) -> Result<(), ServiceError> {
+    if stored_version != input.expected_version
         || input
             .payload_sha256
             .as_deref()
@@ -104,13 +126,14 @@ async fn load_context(
     {
         return Err(ServiceError::VersionConflict);
     }
-    Ok(context)
+    Ok(())
 }
 
 async fn append_audit(
     request_id: Uuid,
     actor: Uuid,
     session_id: Uuid,
+    context: &SuggestionContext,
     input: &SuggestionInput,
     decision: &str,
     tx: &mut Transaction<'_, Postgres>,
@@ -128,7 +151,7 @@ async fn append_audit(
         input.id.to_string(),
         &input.reason,
         request_id,
-        json!({"suggestionId":input.id,"version":input.expected_version,"payloadSha256":input.payload_sha256,"decision":decision,"reason":input.reason}),
+        suggestion_audit_details(context, input, decision),
     )
     .fetch_one(&mut **tx)
     .await
@@ -137,6 +160,20 @@ async fn append_audit(
         db(sqlx::Error::Decode(Box::new(
             sqlx::error::UnexpectedNullError,
         )))
+    })
+}
+
+fn suggestion_audit_details(
+    context: &SuggestionContext,
+    input: &SuggestionInput,
+    decision: &str,
+) -> Value {
+    json!({
+        "suggestionId": input.id,
+        "version": input.expected_version,
+        "payloadSha256": context.stored_payload_sha256,
+        "decision": decision,
+        "reason": input.reason,
     })
 }
 
@@ -154,7 +191,6 @@ async fn materialize_accept(
         }
         _ => return Err(ServiceError::InvalidRequest),
     };
-    let object_scope_digest = sha256(context.case_id.to_string().as_bytes());
     let target_type = match action_kind {
         "COMMUNICATION" => "COMMUNICATION_INTENT",
         "TASK" => "TASK",
@@ -163,28 +199,7 @@ async fn materialize_accept(
     // The action-approval tables are intentionally write-protected from the
     // Control API role.  Use the migration-owned SECURITY DEFINER boundary so
     // the proposal, version, audit, and outbox rows are created atomically.
-    let action_request = json!({
-        "actionKind": action_kind,
-        "origin": {
-            "kind": "AGENT_PROPOSAL",
-            "id": context.id,
-            "version": context.expected_version,
-            "digest": context.stored_payload_sha256,
-        },
-        "rationale": reason,
-        "draft": {
-            "kind": action_kind,
-            "target": {
-                "type": target_type,
-                "id": context.case_id,
-                "version": 1,
-                "digest": context.input_snapshot_sha256,
-            },
-            "objectScopeDigest": object_scope_digest,
-            "contentDigest": context.stored_payload_sha256,
-            "proposal": context.payload,
-        },
-    });
+    let action_request = materialized_action_request(context, action_kind, target_type, reason);
     let action_request = seal_action_request("createActionProposal", action_request, field_keys)?;
     let action_receipt: Value = sqlx::query_scalar!(
         "SELECT ops.execute_action_approval_v1('createActionProposal',$1,$2)",
@@ -222,6 +237,42 @@ async fn materialize_accept(
     .await
     .map_err(db)?;
     Ok(())
+}
+
+fn materialized_action_request(
+    context: &SuggestionContext,
+    action_kind: &str,
+    target_type: &str,
+    reason: &str,
+) -> Value {
+    let object_scope_digest = sha256(context.case_id.to_string().as_bytes());
+    let target_version = if action_kind == "HYPOTHESIS" {
+        context.case_version
+    } else {
+        1
+    };
+    json!({
+        "actionKind": action_kind,
+        "origin": {
+            "kind": "AGENT_PROPOSAL",
+            "id": context.id,
+            "version": context.expected_version,
+            "digest": context.stored_payload_sha256,
+        },
+        "rationale": reason,
+        "draft": {
+            "kind": action_kind,
+            "target": {
+                "type": target_type,
+                "id": context.case_id,
+                "version": target_version,
+                "digest": context.input_snapshot_sha256,
+            },
+            "objectScopeDigest": object_scope_digest,
+            "contentDigest": context.stored_payload_sha256,
+            "proposal": context.payload,
+        },
+    })
 }
 
 fn parse_action_receipt(action_receipt: &Value) -> Result<(Uuid, String, String), ServiceError> {
@@ -357,3 +408,6 @@ pub(super) async fn arm_startagentrun(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests;

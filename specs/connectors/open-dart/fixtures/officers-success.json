@@ -1,0 +1,22 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "open-dart",
+  "operation_id": "dart-executive-status",
+  "kind": "success",
+  "response": {
+    "status": "000",
+    "message": "정상",
+    "list": [
+      {
+        "rcept_no": "20260731000001",
+        "corp_code": "00990001",
+        "corp_name": "가상 투명조달 주식회사",
+        "nm": "가상 임원",
+        "ofcps": "사외이사",
+        "sexdstn": "여",
+        "birth_ym": "198001",
+        "mxmm_shrholdr_relate": "해당 없음"
+      }
+    ]
+  }
+}

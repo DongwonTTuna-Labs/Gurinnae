@@ -1,0 +1,84 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT citation.source_kind,\n                      citation.provider_turn_id,\n                      citation.research_artifact_id AS \"research_artifact_id!\",\n                      source_use.source_kind AS \"source_use_kind!\",\n                      source_use.provider_turn_id AS \"source_use_provider_turn_id!\",\n                      convert_from(source_use.source_use_canonical,'UTF8')::jsonb AS \"source_use_canonical!\"\n                 FROM ops.agent_proposal_citations citation\n                 JOIN ops.agent_source_uses source_use\n                   ON source_use.agent_run_id=citation.agent_run_id\n                  AND source_use.source_use_id=citation.source_use_id\n                  AND source_use.source_use_sha256=citation.source_use_sha256\n                WHERE citation.agent_run_id=$1 AND citation.provider_turn_id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "source_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_proposal_citations",
+            "name": "source_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "provider_turn_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_proposal_citations",
+            "name": "provider_turn_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "research_artifact_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_proposal_citations",
+            "name": "research_artifact_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "source_use_kind!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "source_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "source_use_provider_turn_id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "provider_turn_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "source_use_canonical!",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      true,
+      null
+    ]
+  },
+  "hash": "3e3c05a81aea5b1313fb276be240d2ea0e495ec80d479ca726beac84a3e1c646"
+}

@@ -24,6 +24,15 @@ connectors:
   synthetic_fixture_evidence: STRUCTURAL_ONLY
   production_activation_owner: operations
   failure_behavior: disable-only-this-connector
+- connector_id: koneps-bid-results
+  activation_mode: KEY_ONLY_REST
+  credential_or_manifest_inputs:
+  - official base URL
+  - credential/API key
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations
+  failure_behavior: disable-only-this-connector
 - connector_id: local-finance
   activation_mode: OFFICIAL_FIXED_LINK_OR_KEY
   credential_or_manifest_inputs:
@@ -51,6 +60,17 @@ connectors:
   synthetic_fixture_evidence: STRUCTURAL_ONLY
   production_activation_owner: operations
   failure_behavior: disable-only-this-connector
+- connector_id: pps-sanctions
+  activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
+  credential_or_manifest_inputs:
+  - operator-managed manifest containing only the official CSV URL
+  - manifest signature/checksum
+  - recorded reuse-rights approval
+  - exact CSV schema fingerprint approval
+  - live preflight receipt
+  synthetic_fixture_evidence: STRUCTURAL_ONLY
+  production_activation_owner: operations-and-legal
+  failure_behavior: remain-disabled-and-open-blocker
 - connector_id: audit-results
   activation_mode: OPERATOR_MANAGED_OFFICIAL_MANIFEST
   credential_or_manifest_inputs:

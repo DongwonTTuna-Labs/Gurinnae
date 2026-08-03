@@ -33,13 +33,56 @@ struct EncryptedRendering {
     ciphertext: Vec<u8>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum ApprovedExecutionKind {
+    Communication,
+    Hypothesis,
+}
+
+#[derive(Debug)]
+struct ApprovedExecution {
+    execution_id: Uuid,
+    generation: i64,
+    event_payload: Value,
+    kind: ApprovedExecutionKind,
+}
+
 async fn execute_approved_action(
     pool: &PgPool,
     field_keys: &EnvelopeKeyRing,
+    producer_job_id: Uuid,
+    producer_job_lease_token: Uuid,
+    producer_job_fencing_token: i64,
     aggregate_id: Uuid,
     payload: &serde_json::Map<String, Value>,
 ) -> Result<Value, Failure> {
-    let (execution_id, generation, event_payload) = approved_execution(payload, aggregate_id)?;
+    let approved_execution = approved_execution(payload, aggregate_id)?;
+    if approved_execution.kind == ApprovedExecutionKind::Hypothesis {
+        let producer_job = ProducerJobFence {
+            id: producer_job_id,
+            lease_token: producer_job_lease_token,
+            fencing_token: producer_job_fencing_token,
+        };
+        return execute_approved_hypothesis(
+            pool,
+            field_keys,
+            producer_job,
+            &approved_execution,
+        )
+        .await;
+    }
+    let ApprovedExecution {
+        execution_id,
+        generation,
+        event_payload,
+        kind: ApprovedExecutionKind::Communication,
+    } = approved_execution
+    else {
+        return Err(Failure::Terminal(
+            "ACTION_EXECUTOR_UNSUPPORTED",
+            "execution kind".to_owned(),
+        ));
+    };
     let approved =
         load_approved_action(pool, field_keys, execution_id, generation, event_payload).await?;
     let endpoint =
@@ -63,7 +106,7 @@ async fn execute_approved_action(
 fn approved_execution(
     payload: &serde_json::Map<String, Value>,
     aggregate_id: Uuid,
-) -> Result<(Uuid, i64, Value), Failure> {
+) -> Result<ApprovedExecution, Failure> {
     let execution_id = object_uuid(payload, "executionId")?;
     if execution_id != aggregate_id {
         return Err(Failure::Terminal(
@@ -76,20 +119,36 @@ fn approved_execution(
         .and_then(Value::as_i64)
         .filter(|value| *value > 0)
         .ok_or_else(|| Failure::Terminal("INVALID_ACTION_EXECUTION", "generation".to_owned()))?;
-    if payload.get("actionKind").and_then(Value::as_str) != Some("COMMUNICATION")
-        || payload.get("targetCommand").and_then(Value::as_str)
-            != Some("private.DispatchCommunicationIntent")
-    {
+    let action_kind = payload.get("actionKind").and_then(Value::as_str);
+    let target_command = payload.get("targetCommand").and_then(Value::as_str);
+    let kind = match (action_kind, target_command) {
+        (Some("COMMUNICATION"), Some("private.DispatchCommunicationIntent")) => {
+            ApprovedExecutionKind::Communication
+        }
+        (Some("HYPOTHESIS"), Some("createHypothesis")) => ApprovedExecutionKind::Hypothesis,
+        _ => {
+            return Err(Failure::Terminal(
+                "ACTION_EXECUTOR_UNSUPPORTED",
+                format!(
+                    "{}:{}",
+                    action_kind.unwrap_or("missing"),
+                    target_command.unwrap_or("missing")
+                ),
+            ));
+        }
+    };
+    if kind == ApprovedExecutionKind::Hypothesis && generation != 1 {
         return Err(Failure::Terminal(
-            "ACTION_EXECUTOR_UNSUPPORTED",
-            payload
-                .get("actionKind")
-                .and_then(Value::as_str)
-                .unwrap_or("missing")
-                .to_owned(),
+            "INVALID_ACTION_EXECUTION",
+            "hypothesis generation".to_owned(),
         ));
     }
-    Ok((execution_id, generation, Value::Object(payload.clone())))
+    Ok(ApprovedExecution {
+        execution_id,
+        generation,
+        event_payload: Value::Object(payload.clone()),
+        kind,
+    })
 }
 
 async fn load_approved_action(

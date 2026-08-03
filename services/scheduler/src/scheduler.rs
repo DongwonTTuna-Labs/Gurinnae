@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::consumer_catalog::consumers_for;
+use crate::event_delivery_payload::event_occurred_at;
 use crate::relay_model_catalog_sync::schedule_relay_model_catalog_sync;
 
 #[derive(Debug, Error)]
@@ -22,6 +23,8 @@ pub enum SchedulerError {
     Database(#[source] sqlx::Error),
     #[error("scheduler event routing failed: {0}")]
     EventRouting(&'static str),
+    #[error("scheduler event timestamp formatting failed")]
+    EventTimestamp,
 }
 
 struct Event {
@@ -531,6 +534,8 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
     };
     let consumers =
         consumers_for(&event.event_type, &event.payload).map_err(SchedulerError::EventRouting)?;
+    let occurred_at =
+        event_occurred_at(event.occurred_at).map_err(|_| SchedulerError::EventTimestamp)?;
     for (consumer, queue) in consumers {
         let job_id = Uuid::new_v4();
         let inserted = sqlx::query!(
@@ -559,7 +564,7 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
                 "aggregateType": event.aggregate_type,
                 "aggregateId": event.aggregate_id,
                 "aggregateVersion": event.aggregate_version,
-                "occurredAt": event.occurred_at,
+                "occurredAt": occurred_at,
                 "payload": event.payload,
             }),
             format!("event:{}:{consumer}", event.id),

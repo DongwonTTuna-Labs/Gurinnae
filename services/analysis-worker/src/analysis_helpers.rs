@@ -350,6 +350,18 @@ mod source_use_tests {
     }
 
     #[test]
+    fn research_artifact_is_never_a_direct_provider_content_source() {
+        let mut evidence = evidence_with_rights("ALLOW");
+        evidence[0]["sourceUses"][0]["sourceKind"] = json!("RESEARCH_ARTIFACT");
+        evidence[0]["sourceUses"][0]["classification"] = json!("PUBLIC");
+        assert!(matches!(
+            ordered_source_use_bindings(&evidence),
+            Err(Failure::Terminal("AGENT_SOURCE_USE_INVALID", detail))
+                if detail.ends_with(":sourceKind")
+        ));
+    }
+
+    #[test]
     fn missing_source_use_fails_closed() {
         let result = ordered_source_use_bindings(&json!([{
             "id": "00000000-0000-0000-0000-000000000001",

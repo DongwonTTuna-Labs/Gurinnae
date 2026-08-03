@@ -43,6 +43,7 @@ pub enum ToolRequest {
     EvidenceRead(EvidenceReadRequest),
     EvidenceSearch(EvidenceSearchRequest),
     RelationshipNeighbors(RelationshipNeighborsRequest),
+    RelationshipNeighborsV3(RelationshipNeighborsRequestV3),
     ResponseRead(ResponseReadRequest),
     RuleReproduce(RuleReproduceRequest),
     SourceFetch(SourceFetchRequest),
@@ -61,6 +62,7 @@ impl ToolRequest {
             Self::EvidenceRead(_) => ToolId::EvidenceRead,
             Self::EvidenceSearch(_) => ToolId::EvidenceSearch,
             Self::RelationshipNeighbors(_) => ToolId::RelationshipNeighbors,
+            Self::RelationshipNeighborsV3(_) => ToolId::RelationshipNeighbors,
             Self::ResponseRead(_) => ToolId::ResponseRead,
             Self::RuleReproduce(_) => ToolId::RuleReproduce,
             Self::SourceFetch(_) => ToolId::SourceFetch,
@@ -78,6 +80,7 @@ impl ToolRequest {
             Self::EvidenceRead(value) => &value.binding,
             Self::EvidenceSearch(value) => &value.binding,
             Self::RelationshipNeighbors(value) => &value.binding,
+            Self::RelationshipNeighborsV3(value) => &value.binding,
             Self::ResponseRead(value) => &value.binding,
             Self::RuleReproduce(value) => &value.binding,
             Self::SourceFetch(value) => &value.binding,
@@ -95,11 +98,31 @@ impl ToolRequest {
             Self::EvidenceRead(_) => "evidence.read.request.v2",
             Self::EvidenceSearch(_) => "evidence.search.request.v2",
             Self::RelationshipNeighbors(_) => "relationship.neighbors.request.v2",
+            Self::RelationshipNeighborsV3(_) => "relationship.neighbors.request.v3",
             Self::ResponseRead(_) => "response.read.request.v2",
             Self::RuleReproduce(_) => "rule.reproduce.request.v2",
             Self::SourceFetch(_) => "source.fetch.request.v2",
             Self::SourceLocatorVerify(_) => "source.locator_verify.request.v2",
             Self::SupplierProfile(_) => "supplier.profile.request.v2",
+        }
+    }
+
+    pub const fn response_schema_version(&self) -> &'static str {
+        match self {
+            Self::RelationshipNeighborsV3(_) => "relationship.neighbors.response.v3",
+            Self::AgencyProfile(_) => "agency.profile.response.v2",
+            Self::ClaimLanguageCheck(_) => "claim.language_check.response.v2",
+            Self::ContractSearch(_) => "contract.search.response.v2",
+            Self::ContractFindComparables(_) => "contract.find_comparables.response.v2",
+            Self::EntityLookup(_) => "entity.lookup.response.v2",
+            Self::EvidenceRead(_) => "evidence.read.response.v2",
+            Self::EvidenceSearch(_) => "evidence.search.response.v2",
+            Self::RelationshipNeighbors(_) => "relationship.neighbors.response.v2",
+            Self::ResponseRead(_) => "response.read.response.v2",
+            Self::RuleReproduce(_) => "rule.reproduce.response.v2",
+            Self::SourceFetch(_) => "source.fetch.response.v2",
+            Self::SourceLocatorVerify(_) => "source.locator_verify.response.v2",
+            Self::SupplierProfile(_) => "supplier.profile.response.v2",
         }
     }
 }
@@ -341,6 +364,7 @@ pub enum ToolResponse {
     EvidenceRead(EvidenceReadResponse),
     EvidenceSearch(EvidenceSearchResponse),
     RelationshipNeighbors(RelationshipNeighborsResponse),
+    RelationshipNeighborsV3(RelationshipNeighborsResponseV3),
     ResponseRead(ResponseReadResponse),
     RuleReproduce(RuleReproduceResponse),
     /// Source fetch always uses the closed V2 response.  Keeping the legacy
@@ -362,6 +386,7 @@ impl ToolResponse {
             Self::EvidenceRead(_) => ToolId::EvidenceRead,
             Self::EvidenceSearch(_) => ToolId::EvidenceSearch,
             Self::RelationshipNeighbors(_) => ToolId::RelationshipNeighbors,
+            Self::RelationshipNeighborsV3(_) => ToolId::RelationshipNeighbors,
             Self::ResponseRead(_) => ToolId::ResponseRead,
             Self::RuleReproduce(_) => ToolId::RuleReproduce,
             Self::SourceFetch(_) => ToolId::SourceFetch,
@@ -379,6 +404,7 @@ impl ToolResponse {
             Self::EvidenceRead(_) => "evidence.read.response.v2",
             Self::EvidenceSearch(_) => "evidence.search.response.v2",
             Self::RelationshipNeighbors(_) => "relationship.neighbors.response.v2",
+            Self::RelationshipNeighborsV3(_) => "relationship.neighbors.response.v3",
             Self::ResponseRead(_) => "response.read.response.v2",
             Self::RuleReproduce(_) => "rule.reproduce.response.v2",
             Self::SourceFetch(_) => "source.fetch.response.v2",
@@ -400,6 +426,16 @@ impl ToolResponse {
                 .map(|contract| contract.source_use_id)
                 .collect(),
             Self::RelationshipNeighbors(response) => response
+                .neighbors
+                .iter()
+                .flat_map(|neighbor| {
+                    [
+                        neighbor.subject_source_use_id,
+                        neighbor.object_source_use_id,
+                    ]
+                })
+                .collect(),
+            Self::RelationshipNeighborsV3(response) => response
                 .neighbors
                 .iter()
                 .flat_map(|neighbor| {

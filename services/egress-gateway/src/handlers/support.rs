@@ -101,6 +101,11 @@ pub(super) fn hop_or_internal(name: &str) -> bool {
             | "x-gurine-egress-target"
             | "x-gurine-egress-caller"
             | "x-gurine-source-id"
+            | "x-gurine-source-fetch-request-sha256"
+            | "x-gurine-source-fetch-max-bytes"
+            | "x-gurine-source-fetch-expected-media-types"
+            | "x-gurine-allow-redirects"
+            | "x-gurine-idempotency-key"
             | "x-gurine-ai-provider"
             | "x-gurine-object-key"
             | "x-gurine-object-sha256"
@@ -244,12 +249,22 @@ mod tests {
     }
 
     #[test]
-    fn source_header_policy_is_unchanged() {
+    fn source_header_policy_strips_transport_and_caller_credentials() {
         assert!(outbound_header_allowed(Channel::Source, "accept"));
         assert!(!outbound_header_allowed(Channel::Source, "authorization"));
-        assert!(!outbound_header_allowed(
-            Channel::Source,
-            "x-gurine-egress-target"
-        ));
+        for header in [
+            "x-gurine-egress-target",
+            "x-gurine-source-id",
+            "x-gurine-source-fetch-request-sha256",
+            "x-gurine-source-fetch-max-bytes",
+            "x-gurine-source-fetch-expected-media-types",
+            "x-gurine-allow-redirects",
+            "x-gurine-idempotency-key",
+        ] {
+            assert!(
+                !outbound_header_allowed(Channel::Source, header),
+                "{header}"
+            );
+        }
     }
 }

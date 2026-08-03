@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.execute_approved_hypothesis_v1(\n                 $1::uuid,$2::uuid,$3::bigint,$4::uuid,$5::bigint,$6::jsonb,$7::jsonb\n             )\n             AS \"receipt!: Value\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "receipt!: Value",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Uuid",
+        "Int8",
+        "Jsonb",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "284b471424610b6691218366f004da3726319b3a94804b0ea5d67d69ffc410b5"
+}

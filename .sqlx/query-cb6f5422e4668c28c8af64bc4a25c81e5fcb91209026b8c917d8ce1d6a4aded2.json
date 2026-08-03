@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT status,output_payload,run_contract_version AS \"run_contract_version!\" FROM ops.agent_runs WHERE id=$1 AND case_id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "output_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "output_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "run_contract_version!",
+        "type_info": "Int2",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_runs",
+            "name": "run_contract_version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "cb6f5422e4668c28c8af64bc4a25c81e5fcb91209026b8c917d8ce1d6a4aded2"
+}

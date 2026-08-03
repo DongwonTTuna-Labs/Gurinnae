@@ -8,11 +8,17 @@ pub(super) enum RuntimeSnapshotContract {
     V2,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(super) struct ValidatedRuntimeSnapshot {
+    pub contract: RuntimeSnapshotContract,
+    pub producer_generation: i64,
+}
+
 pub(super) async fn validate(
     executor: &mut Transaction<'_, Postgres>,
     turn: &ProviderTurnIdentity,
     binding: &SnapshotBinding,
-) -> Result<RuntimeSnapshotContract, Failure> {
+) -> Result<ValidatedRuntimeSnapshot, Failure> {
     if binding.run_id != turn.run_id || binding.input_snapshot_sha256 != turn.input_snapshot_sha256
     {
         return Err(invalid_binding());
@@ -26,6 +32,7 @@ pub(super) async fn validate(
                run.case_id AS "case_id!", snapshot.id AS snapshot_id,
                btrim(snapshot.snapshot_sha256::text) AS snapshot_sha256,
                snapshot.snapshot_kind, snapshot.state AS snapshot_state,
+               snapshot.producer_generation,
                snapshot.selection_spec->>'caseId' AS selection_case_id
           FROM ops.agent_runs run
           LEFT JOIN core.dataset_snapshots snapshot ON snapshot.id = $2
@@ -63,8 +70,15 @@ pub(super) async fn validate(
         return Err(invalid_binding());
     }
     let expected_case_id = run.case_id.to_string();
+    let producer_generation = required(run.producer_generation).map_err(database)?;
+    if producer_generation < 1 {
+        return Err(invalid_binding());
+    }
     match run.run_contract_version {
-        1 => Ok(RuntimeSnapshotContract::V1),
+        1 => Ok(ValidatedRuntimeSnapshot {
+            contract: RuntimeSnapshotContract::V1,
+            producer_generation,
+        }),
         2 if run.dataset_snapshot_id == Some(binding.input_snapshot_id)
             && run.evidence_scope_ids == serde_json::json!([])
             && turn.dataset_snapshot_id == Some(binding.input_snapshot_id)
@@ -72,7 +86,10 @@ pub(super) async fn validate(
             && run.selection_case_id.as_deref() == Some(expected_case_id.as_str()) =>
         {
             validate_source_use_set(executor, turn.run_id, binding.input_snapshot_id).await?;
-            Ok(RuntimeSnapshotContract::V2)
+            Ok(ValidatedRuntimeSnapshot {
+                contract: RuntimeSnapshotContract::V2,
+                producer_generation,
+            })
         }
         _ => Err(invalid_binding()),
     }
@@ -92,7 +109,7 @@ async fn validate_source_use_set(
                         ON source.dataset_snapshot_id=member.dataset_snapshot_id AND source.snapshot_member_id=member.id
                        AND source.snapshot_member_digest=member.member_digest AND source.source_kind='SOURCE_DOCUMENT'
                      WHERE member.dataset_snapshot_id=$2
-                       AND member.object_type IN ('AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM','CONTRACT_CHANGE','PRICE_OBSERVATION')
+                       AND member.object_type IN ('AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM','CONTRACT_CHANGE','PRICE_OBSERVATION','TYPED_RELATIONSHIP_ASSERTION')
                    )
                AND NOT EXISTS(
                      SELECT 1 FROM core.dataset_snapshot_members member
@@ -100,7 +117,7 @@ async fn validate_source_use_set(
                         ON source.dataset_snapshot_id=member.dataset_snapshot_id AND source.snapshot_member_id=member.id
                        AND source.snapshot_member_digest=member.member_digest AND source.source_kind='SOURCE_DOCUMENT'
                      WHERE member.dataset_snapshot_id=$2
-                       AND member.object_type IN ('AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM','CONTRACT_CHANGE','PRICE_OBSERVATION')
+                       AND member.object_type IN ('AGENCY','SUPPLIER','CONTRACT','CONTRACT_LINE_ITEM','CONTRACT_CHANGE','PRICE_OBSERVATION','TYPED_RELATIONSHIP_ASSERTION')
                        AND 1<>(SELECT count(*) FROM ops.agent_source_uses source_use
                                 WHERE source_use.agent_run_id=$1 AND source_use.use_kind='TOOL_QUERY'
                                   AND source_use.source_kind='DATASET_MEMBER'

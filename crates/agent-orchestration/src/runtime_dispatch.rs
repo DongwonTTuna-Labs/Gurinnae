@@ -53,6 +53,9 @@ impl TypedDispatcher {
                 Err(DispatchError::ToolDenied)
             };
         }
+        if !request_kind_allowed_for_agent(agent, request) {
+            return Err(DispatchError::ToolDenied);
+        }
         let binding = request.binding();
         if binding.run_id.is_nil()
             || binding.input_snapshot_id.is_nil()
@@ -70,6 +73,19 @@ impl TypedDispatcher {
         }
         Ok(response)
     }
+}
+
+fn request_kind_allowed_for_agent(agent: &str, request: &ToolRequest) -> bool {
+    !matches!(
+        (agent, request),
+        (
+            "investigator",
+            ToolRequest::SourceFetch(SourceFetchRequest {
+                request_kind: SourceRequestKind::SearchPublicWeb,
+                ..
+            })
+        )
+    )
 }
 impl Default for TypedDispatcher {
     fn default() -> Self {
@@ -95,6 +111,7 @@ pub(super) fn allowed_tools(agent: &str) -> Option<&'static [ToolId]> {
         ToolId::ContractFindComparables,
         ToolId::EntityLookup,
         ToolId::RelationshipNeighbors,
+        ToolId::SourceFetch,
         ToolId::SupplierProfile,
     ];
     const SKEPTIC: &[ToolId] = &[

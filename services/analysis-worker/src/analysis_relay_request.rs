@@ -27,6 +27,8 @@ pub(super) fn relay_chat_request(
         .ok_or_else(|| {
             Failure::Terminal("PROVIDER_REQUEST_INVALID", "selectedContentRefs".into())
         })?;
+    let prior_tool_result = wire.get("priorToolResult").cloned().unwrap_or(Value::Null);
+    validate_relationship_person_wire(&prior_tool_result)?;
     let user = json!({
         "bindings": {
             "agentRunId": run_id,
@@ -41,7 +43,7 @@ pub(super) fn relay_chat_request(
             "turnSequence": turn.turn_sequence,
         },
         "objective": objective,
-        "priorToolResult": wire.get("priorToolResult").cloned().unwrap_or(Value::Null),
+        "priorToolResult": prior_tool_result,
         "selectedContentRefs": selected_refs,
     });
     let user_content = String::from_utf8(canonical_bytes(&user)?)
@@ -71,6 +73,71 @@ pub(super) fn relay_chat_request(
     })
 }
 
+fn validate_relationship_person_wire(value: &Value) -> Result<(), Failure> {
+    let response = value.get("response");
+    if response
+        .and_then(|item| item.get("schemaVersion"))
+        .and_then(Value::as_str)
+        != Some("relationship.neighbors.response.v3")
+    {
+        return Ok(());
+    }
+    const FORBIDDEN: [&str; 14] = [
+        "contextualName",
+        "roleTitle",
+        "sourceLocator",
+        "identifierDigest",
+        "personNodeDigest",
+        "endpointDigest",
+        "hiddenEndpointId",
+        "familyRelationship",
+        "kinship",
+        "address",
+        "birthDate",
+        "score",
+        "rank",
+        "probability",
+    ];
+    let response = response.unwrap_or(&Value::Null);
+    if contains_forbidden_key(response, &FORBIDDEN) || !person_endpoints_are_closed(response) {
+        return Err(Failure::Terminal(
+            "AGENT_SOURCE_CLASSIFICATION_BLOCKED",
+            "PERSONAL_DATA".to_owned(),
+        ));
+    }
+    Ok(())
+}
+
+fn person_endpoints_are_closed(value: &Value) -> bool {
+    match value {
+        Value::Object(object) => {
+            if object.get("kind").and_then(Value::as_str) == Some("PERSON") {
+                return object.len() == 2
+                    && object.contains_key("kind")
+                    && object
+                        .get("personNodeRef")
+                        .and_then(Value::as_str)
+                        .is_some_and(is_sha256_text);
+            }
+            object.values().all(person_endpoints_are_closed)
+        }
+        Value::Array(values) => values.iter().all(person_endpoints_are_closed),
+        _ => true,
+    }
+}
+
+fn contains_forbidden_key(value: &Value, forbidden: &[&str]) -> bool {
+    match value {
+        Value::Object(object) => object.iter().any(|(key, child)| {
+            forbidden.contains(&key.as_str()) || contains_forbidden_key(child, forbidden)
+        }),
+        Value::Array(values) => values
+            .iter()
+            .any(|child| contains_forbidden_key(child, forbidden)),
+        _ => false,
+    }
+}
+
 fn pinned_prompt_bytes(agent_type: &str) -> Option<&'static str> {
     match agent_type {
         "market-researcher" => Some(include_str!(
@@ -98,7 +165,7 @@ fn relay_tools(agent_type: &str) -> Result<Vec<Value>, Failure> {
                     "name": relay_tool_name(tool_id).ok_or_else(|| {
                         Failure::Terminal("AGENT_REGISTRY_DRIFT", (*tool_id).to_owned())
                     })?,
-                    "parameters": relay_tool_schema(tool_id).ok_or_else(|| {
+                    "parameters": relay_tool_schema_for_agent(agent_type, tool_id).ok_or_else(|| {
                         Failure::Terminal("AGENT_REGISTRY_DRIFT", (*tool_id).to_owned())
                     })?,
                     "strict": true,
@@ -127,6 +194,7 @@ pub(super) fn relay_allowed_tool_ids(agent_type: &str) -> &'static [&'static str
             "contract.find_comparables",
             "entity.lookup",
             "relationship.neighbors",
+            "source.fetch",
             "supplier.profile",
         ],
         "skeptic" => &["evidence.search", "evidence.read", "rule.reproduce"],
@@ -163,6 +231,18 @@ fn relay_tool_schema(tool_id: &str) -> Option<Value> {
             "languagePolicySha256".to_owned(),
             json!({"const": language_policy_sha256()}),
         );
+    }
+    Some(schema)
+}
+
+fn relay_tool_schema_for_agent(agent_type: &str, tool_id: &str) -> Option<Value> {
+    let mut schema = relay_tool_schema(tool_id)?;
+    if agent_type == "investigator" && tool_id == "source.fetch" {
+        schema["oneOf"] = json!([{"$ref":"#/$defs/fetchUrl"}]);
+        schema
+            .get_mut("$defs")?
+            .as_object_mut()?
+            .remove("searchPublicWeb");
     }
     Some(schema)
 }
@@ -279,6 +359,17 @@ mod tests {
     }
 
     #[test]
+    fn investigator_relay_exposes_fetch_url_only() {
+        let investigator = relay_tool_schema_for_agent("investigator", "source.fetch")
+            .expect("investigator source.fetch schema");
+        assert_eq!(investigator["oneOf"], json!([{"$ref":"#/$defs/fetchUrl"}]));
+        assert!(investigator["$defs"].get("searchPublicWeb").is_none());
+        let market = relay_tool_schema_for_agent("market-researcher", "source.fetch")
+            .expect("market source.fetch schema");
+        assert_eq!(market["oneOf"].as_array().map(Vec::len), Some(2));
+    }
+
+    #[test]
     fn relay_user_binding_includes_agent_type() {
         let turn = provider_turn();
         let request = relay_chat_request(
@@ -301,6 +392,104 @@ mod tests {
             .expect("user content");
         let user: Value = serde_json::from_str(user_content).expect("canonical user JSON");
         assert_eq!(user["bindings"]["agentType"], "investigator");
+    }
+
+    #[test]
+    fn relationship_person_context_is_blocked_before_relay_serialization() {
+        let turn = provider_turn();
+        let request = relay_chat_request(
+            "investigator",
+            "relay-model-v1",
+            &json!({
+                "maxOutputUnits": 128,
+                "objective": "검증",
+                "selectedContentRefs": [],
+                "priorToolResult": {
+                    "callId": Uuid::from_u128(8),
+                    "response": {
+                        "schemaVersion": "relationship.neighbors.response.v3",
+                        "queryDigest": sha256(b"query"),
+                        "neighbors": [{
+                            "subject": {
+                                "kind": "PERSON",
+                                "personNodeRef": sha256(b"person-ref"),
+                                "contextualName": "외부 전송 금지 이름"
+                            },
+                            "object": {
+                                "kind": "SUPPLIER",
+                                "endpointId": Uuid::from_u128(9)
+                            }
+                        }]
+                    }
+                }
+            }),
+            &turn,
+            Uuid::from_u128(2),
+            Uuid::from_u128(3),
+            Uuid::from_u128(4),
+            &sha256(b"semantic"),
+        );
+        assert!(matches!(
+            request,
+            Err(Failure::Terminal("AGENT_SOURCE_CLASSIFICATION_BLOCKED", detail))
+                if detail == "PERSONAL_DATA"
+        ));
+    }
+
+    #[test]
+    fn relationship_stable_person_digest_is_blocked_before_relay_serialization() {
+        let turn = provider_turn();
+        let request = relay_chat_request(
+            "investigator",
+            "relay-model-v1",
+            &json!({
+                "maxOutputUnits": 128,
+                "objective": "검증",
+                "selectedContentRefs": [],
+                "priorToolResult": {
+                    "callId": Uuid::from_u128(8),
+                    "response": {
+                        "schemaVersion": "relationship.neighbors.response.v3",
+                        "queryDigest": sha256(b"query"),
+                        "neighbors": [{
+                            "subject": {
+                                "kind": "PERSON",
+                                "personNodeDigest": sha256(b"stable-person")
+                            },
+                            "object": {
+                                "kind": "SUPPLIER",
+                                "endpointId": Uuid::from_u128(9)
+                            }
+                        }]
+                    }
+                }
+            }),
+            &turn,
+            Uuid::from_u128(2),
+            Uuid::from_u128(3),
+            Uuid::from_u128(4),
+            &sha256(b"semantic"),
+        );
+        assert!(matches!(
+            request,
+            Err(Failure::Terminal("AGENT_SOURCE_CLASSIFICATION_BLOCKED", detail))
+                if detail == "PERSONAL_DATA"
+        ));
+    }
+
+    #[test]
+    fn scoped_person_ref_is_the_only_person_wire_shape_allowed() {
+        let value = json!({
+            "response": {
+                "schemaVersion": "relationship.neighbors.response.v3",
+                "queryDigest": sha256(b"query"),
+                "neighbors": [{
+                    "subject": {"kind":"PERSON","personNodeRef":sha256(b"scoped-ref")},
+                    "object": {"kind":"SUPPLIER","endpointId":Uuid::from_u128(9)}
+                }]
+            }
+        });
+        assert!(validate_relationship_person_wire(&value).is_ok());
     }
 
     fn provider_turn() -> ProviderTurnIdentity {

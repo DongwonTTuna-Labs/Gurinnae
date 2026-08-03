@@ -378,11 +378,11 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 10
-  final_migrations: 34
+  additive_migrations: 11
+  final_migrations: 35
   base_active_tables: 107
-  additive_table_count: 136
-  final_active_tables: 243
+  additive_table_count: 149
+  final_active_tables: 256
   migrations:
     - 0025_evidence_snapshots_and_search.sql
     - 0026_agent_action_approval.sql
@@ -394,6 +394,7 @@ database_delta:
     - 0033_provider_control_execution.sql
     - 0035_r6b_agent_runtime_activation.sql
     - 0036_r6b_pipeline_activation.sql
+    - 0037_r6c_conflict_investigation.sql
   additive_tables:
     - raw.evidence_segments
     - raw.research_artifacts
@@ -531,6 +532,19 @@ database_delta:
     - ops.signal_investigation_policies
     - ops.signal_investigation_initiation_receipts
     - core.dataset_snapshot_strong_identifier_facts
+    - raw.research_artifact_review_tiers
+    - core.relationship_graph_endpoints_v2
+    - core.relationship_graph_assertions_v2
+    - core.relationship_graph_assertion_evidence_v2
+    - core.relationship_graph_verification_decisions_v2
+    - core.dataset_snapshot_relationship_assertions_v2
+    - core.dataset_snapshot_conflict_inputs_v2
+    - ops.hypothesis_recursion_policies
+    - ops.hypothesis_recursion_plans
+    - ops.hypothesis_recursion_nodes
+    - ops.hypothesis_recursion_transitions
+    - ops.hypothesis_recursion_receipts
+    - ops.hypothesis_recursion_budget_ledger
   renamed_tables:
     - from: ops.email_deliveries
       to: ops.outbound_deliveries

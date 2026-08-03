@@ -1,6 +1,19 @@
 use super::*;
 use std::collections::BTreeSet;
 
+mod citations;
+mod hypotheses;
+mod proposal_persistence;
+
+use citations::{persist_citation, resolve_citations};
+use hypotheses::HypothesisMaterialization;
+use proposal_persistence::persist_output_proposals;
+
+struct PersistedValidation {
+    id: Uuid,
+    replayed: bool,
+}
+
 pub(super) async fn insert_output_validation(
     executor: &mut sqlx::PgConnection,
     turn: &ProviderTurnIdentity,
@@ -43,7 +56,7 @@ pub(super) async fn insert_output_validation(
         "summary": output.get("summary"),
         "citations": output.get("citations").cloned().unwrap_or_else(|| json!([]))
     });
-    let validation_id = persist_validation(
+    let validation = persist_validation(
         executor,
         turn,
         output,
@@ -56,34 +69,7 @@ pub(super) async fn insert_output_validation(
         &validated,
     )
     .await?;
-    for (proposal_type, payload) in proposals {
-        let payload_canonical = canonical_bytes(&payload)?;
-        let payload_sha256 = sha256(&payload_canonical);
-        let proposal_id: Uuid = sqlx::query_scalar(
-            r#"INSERT INTO ops.agent_suggestions(
-               agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status,
-               proposal_contract_version,target_schema_version,payload_sha256,payload_canonical,
-               input_snapshot_sha256,citation_validation_id,expires_at)
-             SELECT $1,(SELECT case_id FROM ops.agent_runs WHERE id=$1),$2,$3,'[]'::jsonb,'[]'::jsonb,'PENDING',2,$4,CAST($5 AS char(64)),$6,
-                    $7,$8,clock_timestamp()+interval '7 days'
-             WHERE NOT EXISTS (SELECT 1 FROM ops.agent_suggestions WHERE agent_run_id=$1 AND citation_validation_id=$9 AND payload_sha256=CAST($5 AS char(64)))
-             RETURNING id"#,
-        )
-        .bind(turn.run_id).bind(proposal_type).bind(&payload).bind(&turn.output_schema_id)
-        .bind(&payload_sha256).bind(payload_canonical).bind(&turn.input_snapshot_sha256)
-        .bind(validation_id).fetch_one(&mut *executor).await.map_err(database)?;
-        insert_proposal_citations(
-            executor,
-            turn,
-            validation_id,
-            proposal_id,
-            &payload,
-            output,
-            &payload_sha256,
-        )
-        .await?;
-    }
-    Ok(())
+    persist_output_proposals(executor, turn, validation, proposals, output).await
 }
 
 async fn persist_validation(
@@ -97,9 +83,12 @@ async fn persist_validation(
     proposal_set_sha256: &str,
     validation_sha256: &str,
     validated: &Value,
-) -> Result<Uuid, Failure> {
-    let output_status = output.get("status").or_else(|| output.get("outcome"))
-        .and_then(Value::as_str).unwrap_or("COMPLETED");
+) -> Result<PersistedValidation, Failure> {
+    let output_status = output
+        .get("status")
+        .or_else(|| output.get("outcome"))
+        .and_then(Value::as_str)
+        .unwrap_or("COMPLETED");
     let inserted: Option<Uuid> = sqlx::query_scalar!(
         r#"INSERT INTO ops.agent_output_validations(
           agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,validator_version,validator_sha256,
@@ -129,15 +118,100 @@ async fn persist_validation(
         validation_sha256,
     )
     .fetch_optional(&mut *executor).await.map_err(database)?;
-    if let Some(id) = inserted { return Ok(id); }
-    sqlx::query_scalar!(
-        "SELECT validation_id FROM ops.agent_output_validations WHERE agent_run_id=$1 AND provider_turn_id=$2",
+    if let Some(id) = inserted {
+        return Ok(PersistedValidation {
+            id,
+            replayed: false,
+        });
+    }
+    let id = sqlx::query_scalar!(
+        r#"SELECT validation_id FROM ops.agent_output_validations
+           WHERE agent_run_id=$1 AND provider_turn_id=$2
+             AND input_snapshot_sha256=CAST($3 AS char(64))
+             AND provider_output_sha256=CAST($4 AS char(64))
+             AND validator_version='agent-output-validator-v2'
+             AND validator_sha256=CAST($14 AS char(64))
+             AND output_schema_id=$5 AND output_schema_version=$6
+             AND output_schema_sha256=CAST($7 AS char(64))
+             AND validation_policy_version='agent-output-policy-v2'
+             AND validation_policy_sha256=CAST($15 AS char(64))
+             AND validation_status='VALID' AND schema_status='PASS'
+             AND citation_status='PASS' AND policy_status='PASS'
+             AND run_terminal_status='SUCCEEDED' AND output_status=$8
+             AND failure_code IS NULL AND failure_details_redacted='{}'::jsonb
+             AND validated_outcome=$16
+             AND validated_outcome_sha256=CAST($4 AS char(64))
+             AND citation_count=$9 AND proposal_count=$10
+             AND citation_set_sha256=CAST($11 AS char(64))
+             AND proposal_set_sha256=CAST($12 AS char(64))
+             AND validation_sha256=CAST($13 AS char(64))"#,
         turn.run_id,
         turn.turn_id,
+        &turn.input_snapshot_sha256,
+        output_sha256,
+        &turn.output_schema_id,
+        &turn.output_schema_version,
+        &turn.output_schema_sha256,
+        output_status,
+        citations as i32,
+        proposal_count,
+        citation_set_sha256,
+        proposal_set_sha256,
+        validation_sha256,
+        sha256(b"agent-output-validator-v2"),
+        sha256(b"agent-output-policy-v2"),
+        validated,
     )
-    .fetch_one(&mut *executor)
+    .fetch_optional(&mut *executor)
     .await
-    .map_err(database)
+    .map_err(database)?
+    .ok_or_else(|| {
+        Failure::Terminal(
+            "AGENT_OUTPUT_VALIDATION_REPLAY_MISMATCH",
+            turn.run_id.to_string(),
+        )
+    })?;
+    Ok(PersistedValidation { id, replayed: true })
+}
+
+async fn load_exact_proposal(
+    executor: &mut sqlx::PgConnection,
+    turn: &ProviderTurnIdentity,
+    validation_id: Uuid,
+    proposal_type: &str,
+    payload: &Value,
+    payload_sha256: &str,
+) -> Result<Uuid, Failure> {
+    let payload_canonical = canonical_bytes(payload)?;
+    let proposal_ids = sqlx::query_scalar!(
+        r#"SELECT id FROM ops.agent_suggestions
+           WHERE agent_run_id=$1 AND citation_validation_id=$2
+             AND suggestion_type=$3 AND proposal_contract_version=2
+             AND payload=$4 AND payload_sha256=CAST($5 AS char(64))
+             AND input_snapshot_sha256=CAST($6 AS char(64))
+             AND target_schema_version=$7
+             AND evidence_ids='[]'::jsonb AND citation_checks='[]'::jsonb
+             AND payload_canonical=$8
+             AND convert_from(payload_canonical,'UTF8')::jsonb=payload"#,
+        turn.run_id,
+        validation_id,
+        proposal_type,
+        payload,
+        payload_sha256,
+        &turn.input_snapshot_sha256,
+        &turn.output_schema_id,
+        payload_canonical,
+    )
+    .fetch_all(&mut *executor)
+    .await
+    .map_err(database)?;
+    match proposal_ids.as_slice() {
+        [proposal_id] => Ok(*proposal_id),
+        _ => Err(Failure::Terminal(
+            "AGENT_PROPOSAL_REPLAY_MISMATCH",
+            format!("{proposal_type}:{}", proposal_ids.len()),
+        )),
+    }
 }
 
 fn output_proposals(output: &Value) -> Result<Vec<(&'static str, Value)>, Failure> {
@@ -245,11 +319,15 @@ fn validate_communication_fields(object: &serde_json::Map<String, Value>) -> Res
 }
 
 fn validate_communication_envelope(payload: &Value) -> Result<(), Failure> {
-    if payload.get("schemaVersion").and_then(Value::as_str) != Some("communication-proposal-payload.v1")
+    if payload.get("schemaVersion").and_then(Value::as_str)
+        != Some("communication-proposal-payload.v1")
         || payload.get("kind").and_then(Value::as_str) != Some("COMMUNICATION")
         || payload.get("requiresApproval").and_then(Value::as_bool) != Some(true)
     {
-        return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "communication payload envelope".to_owned()));
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication payload envelope".to_owned(),
+        ));
     }
     Ok(())
 }
@@ -259,7 +337,10 @@ fn require_communication_enum(
     field: &'static str,
     allowed: &[&str],
 ) -> Result<(), Failure> {
-    let value = payload.get(field).and_then(Value::as_str).unwrap_or_default();
+    let value = payload
+        .get(field)
+        .and_then(Value::as_str)
+        .unwrap_or_default();
     if !allowed.contains(&value) {
         return Err(Failure::Terminal(
             "AGENT_OUTPUT_INVALID",
@@ -312,9 +393,21 @@ fn validate_communication_citations(payload: &Value) -> Result<(), Failure> {
 }
 
 fn validate_recipient_binding(payload: &Value) -> Result<(), Failure> {
-    let binding = payload.get("recipientBinding").and_then(Value::as_object)
-        .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "communication recipientBinding".to_owned()))?;
-    let binding_fields = ["subjectId", "endpointId", "endpointVersion", "endpointDigest"];
+    let binding = payload
+        .get("recipientBinding")
+        .and_then(Value::as_object)
+        .ok_or_else(|| {
+            Failure::Terminal(
+                "AGENT_OUTPUT_INVALID",
+                "communication recipientBinding".to_owned(),
+            )
+        })?;
+    let binding_fields = [
+        "subjectId",
+        "endpointId",
+        "endpointVersion",
+        "endpointDigest",
+    ];
     if binding.len() != binding_fields.len()
         || binding
             .keys()
@@ -338,8 +431,15 @@ fn validate_recipient_binding(payload: &Value) -> Result<(), Failure> {
             ));
         }
     }
-    if binding.get("endpointVersion").and_then(Value::as_i64).is_none_or(|value| value < 1) {
-        return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "communication endpointVersion".to_owned()));
+    if binding
+        .get("endpointVersion")
+        .and_then(Value::as_i64)
+        .is_none_or(|value| value < 1)
+    {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "communication endpointVersion".to_owned(),
+        ));
     }
     if binding
         .get("endpointDigest")
@@ -359,109 +459,36 @@ async fn insert_proposal_citations(
     turn: &ProviderTurnIdentity,
     validation_id: Uuid,
     proposal_id: Uuid,
+    proposal_type: &str,
     payload: &Value,
     output: &Value,
     payload_sha256: &str,
+    hypothesis: Option<&HypothesisMaterialization>,
 ) -> Result<(), Failure> {
     let citations = resolve_citations(payload, output)?;
+    let expected_ids = hypothesis.map(|value| value.citation_ids.as_slice());
+    if expected_ids.is_some_and(|ids| ids.len() != citations.len()) {
+        return Err(Failure::Terminal(
+            "AGENT_OUTPUT_INVALID",
+            "hypothesis citation identifier count".to_owned(),
+        ));
+    }
     for (ordinal, citation, source_use_sha256) in citations {
         persist_citation(
             executor,
             turn,
             validation_id,
             proposal_id,
+            proposal_type,
             ordinal,
             citation.get("supports").and_then(Value::as_str),
             payload_sha256,
             &source_use_sha256,
+            expected_ids.and_then(|ids| ids.get(ordinal)).copied(),
         )
         .await?;
     }
     Ok(())
-}
-
-fn resolve_citations(payload: &Value, output: &Value) -> Result<Vec<(usize, Value, String)>, Failure> {
-    let output_citations = output.get("citations").and_then(Value::as_array)
-        .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "citations".to_owned()))?;
-    let mut refs = Vec::new();
-    for key in ["citationIndexes", "supportingCitationIndexes", "contradictingCitationIndexes", "citationRefs", "citations"] {
-        if let Some(value) = payload.get(key) {
-            let items = value.as_array().ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", format!("{key} must be an array")))?;
-            refs.extend(items.iter().cloned());
-        }
-    }
-    if let Some(items) = payload.get("citationIds").or_else(|| payload.get("payload").and_then(|value| value.get("citationIds"))) {
-        let items = items.as_array().ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "citationIds must be an array".to_owned()))?;
-        for id in items {
-            let id = id.as_str().ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "citationId".to_owned()))?;
-            refs.push(output_citations_placeholder(output, id).ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", format!("unknown citationId: {id}")))?);
-        }
-    }
-    if refs.is_empty() { return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "proposal citation missing".to_owned())); }
-    let mut seen = std::collections::BTreeSet::new();
-    refs.into_iter().enumerate().map(|(ordinal, reference)| {
-        let citation = if let Some(index) = reference.as_u64() {
-            output_citations.get(usize::try_from(index).map_err(|_| Failure::Terminal("AGENT_OUTPUT_INVALID", "citation index".to_owned()))?).cloned()
-                .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", format!("citation index out of range: {index}")))?
-        } else if let Some(value) = reference.as_str() { json!({"sourceUseSha256": value}) } else { reference };
-        if !citation.is_object() { return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "citation object".to_owned())); }
-        let source = citation.get("sourceUseSha256").and_then(Value::as_str).or_else(|| citation.get("source_use_sha256").and_then(Value::as_str))
-            .filter(|value| value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit()))
-            .ok_or_else(|| Failure::Terminal("AGENT_OUTPUT_INVALID", "citation sourceUseSha256".to_owned()))?;
-        if citation.get("supports").and_then(Value::as_str).is_none()
-            || (citation.get("supportsSha256").and_then(Value::as_str).is_none()
-                && citation.get("supports_sha256").and_then(Value::as_str).is_none())
-        { return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "citation supports".to_owned())); }
-        if !seen.insert(source.to_ascii_lowercase()) { return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "duplicate citation".to_owned())); }
-        let source = source.to_owned();
-        Ok((ordinal, citation, source))
-    }).collect()
-}
-
-async fn persist_citation(
-    executor: &mut sqlx::PgConnection,
-    turn: &ProviderTurnIdentity,
-    validation_id: Uuid,
-    proposal_id: Uuid,
-    ordinal: usize,
-    supports: Option<&str>,
-    payload_sha256: &str,
-    source_use_sha256: &str,
-) -> Result<(), Failure> {
-    let ordinal = i32::try_from(ordinal)
-        .map_err(|_| Failure::Terminal("AGENT_OUTPUT_INVALID", "citation ordinal".to_owned()))?;
-    let result = sqlx::query(
-        "INSERT INTO ops.agent_proposal_citations(\
-          proposal_id,agent_run_id,provider_turn_id,validation_id,dataset_snapshot_id,snapshot_member_id,snapshot_member_digest,\
-          citation_ordinal,input_snapshot_sha256,proposal_payload_sha256,source_kind,source_use_id,source_use_sha256,\
-          evidence_segment_id,source_id,locator_kind,locator_value,locator_digest,content_sha256,supports_redacted,supports_sha256,citation_digest)\
-         SELECT $1,s.agent_run_id,s.provider_turn_id,$2,s.dataset_snapshot_id,s.snapshot_member_id,s.snapshot_member_digest,$3,\
-                $4,CAST($5 AS char(64)),s.source_kind,s.source_use_id,s.source_use_sha256,s.evidence_segment_id,\
-                COALESCE(s.source_document_id,s.research_artifact_id),s.locator_kind,s.locator_value,\
-                s.locator_sha256,s.selected_content_sha256,$6,encode(extensions.digest(convert_to($6,'UTF8'),'sha256'),'hex'),\
-                encode(extensions.digest(convert_to($1::text||':'||$3::text||':'||s.source_use_sha256,'UTF8'),'sha256'),'hex')\
-           FROM ops.agent_source_uses s WHERE s.agent_run_id=$7 AND s.use_kind='CITATION'\
-            AND s.parent_source_use_sha256=CAST($8 AS char(64))\
-            AND s.locator_kind IS NOT NULL AND s.locator_value IS NOT NULL AND s.locator_sha256 IS NOT NULL\
-            AND s.selected_content_sha256 IS NOT NULL LIMIT 1\
-         ON CONFLICT (proposal_id,citation_ordinal) DO NOTHING",
-    )
-    .bind(proposal_id).bind(validation_id).bind(ordinal).bind(&turn.input_snapshot_sha256)
-    .bind(payload_sha256).bind(supports).bind(turn.run_id).bind(source_use_sha256)
-    .execute(&mut *executor).await.map_err(database)?;
-    if result.rows_affected() != 1 {
-        return Err(Failure::Terminal("AGENT_OUTPUT_INVALID", "citation source use not found".to_owned()));
-    }
-    Ok(())
-}
-
-fn output_citations_placeholder(output: &Value, citation_id: &str) -> Option<Value> {
-    output
-        .get("citations")?
-        .as_array()?
-        .iter()
-        .find(|citation| citation.get("citationId").and_then(Value::as_str) == Some(citation_id))
-        .cloned()
 }
 
 #[cfg(test)]

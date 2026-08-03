@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 gurine-auth = { path = "../auth" }
+gurine-detection = { path = "../detection" }
 gurine-domain = { path = "../domain" }
 sha2.workspace = true
 serde.workspace = true

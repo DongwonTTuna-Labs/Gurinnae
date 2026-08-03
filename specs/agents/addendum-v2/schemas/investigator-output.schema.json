@@ -229,6 +229,7 @@
             "contract.find_comparables",
             "entity.lookup",
             "relationship.neighbors",
+            "source.fetch",
             "supplier.profile"
           ]
         },

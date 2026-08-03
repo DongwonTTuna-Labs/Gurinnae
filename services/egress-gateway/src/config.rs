@@ -135,21 +135,7 @@ fn base_environment() -> Result<(String, String, String), ConfigError> {
 )]
 fn source_config()
 -> Result<(BTreeSet<String>, BTreeMap<String, String>, BTreeSet<String>), ConfigError> {
-    let mut hosts = BTreeSet::from([
-        "apis.data.go.kr".to_owned(),
-        "opendart.fss.or.kr".to_owned(),
-        "api.search.brave.com".to_owned(),
-    ]);
-    let mut bindings = BTreeMap::from([
-        ("koneps-contracts".to_owned(), "apis.data.go.kr".to_owned()),
-        ("koneps-notices".to_owned(), "apis.data.go.kr".to_owned()),
-        ("open-dart".to_owned(), "opendart.fss.or.kr".to_owned()),
-        (
-            "brave-search-web-v1".to_owned(),
-            "api.search.brave.com".to_owned(),
-        ),
-        ("public-research".to_owned(), "*".to_owned()),
-    ]);
+    let (mut hosts, mut bindings) = default_source_policy();
     let public_research_hosts = host_list("PUBLIC_RESEARCH_HOSTS")?;
     hosts.extend(public_research_hosts.iter().cloned());
     for (name, source_id) in [
@@ -164,6 +150,30 @@ fn source_config()
         }
     }
     Ok((hosts, bindings, public_research_hosts))
+}
+
+fn default_source_policy() -> (BTreeSet<String>, BTreeMap<String, String>) {
+    let hosts = BTreeSet::from([
+        "apis.data.go.kr".to_owned(),
+        "nopenapi.g2b.go.kr".to_owned(),
+        "opendart.fss.or.kr".to_owned(),
+        "api.search.brave.com".to_owned(),
+    ]);
+    let bindings = BTreeMap::from([
+        ("koneps-contracts".to_owned(), "apis.data.go.kr".to_owned()),
+        ("koneps-notices".to_owned(), "apis.data.go.kr".to_owned()),
+        (
+            "koneps-bid-results".to_owned(),
+            "nopenapi.g2b.go.kr".to_owned(),
+        ),
+        ("open-dart".to_owned(), "opendart.fss.or.kr".to_owned()),
+        (
+            "brave-search-web-v1".to_owned(),
+            "api.search.brave.com".to_owned(),
+        ),
+        ("public-research".to_owned(), "*".to_owned()),
+    ]);
+    (hosts, bindings)
 }
 
 fn host_list(name: &'static str) -> Result<BTreeSet<String>, ConfigError> {
@@ -244,5 +254,33 @@ fn normalize_host(value: &str) -> Result<String, ConfigError> {
         Err(ConfigError::Invalid)
     } else {
         Ok(host)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_source_policy;
+
+    #[test]
+    fn source_policy_binds_bid_results_to_the_exact_koneps_host() {
+        let (hosts, bindings) = default_source_policy();
+
+        assert!(hosts.contains("nopenapi.g2b.go.kr"));
+        assert_eq!(
+            bindings.get("koneps-bid-results").map(String::as_str),
+            Some("nopenapi.g2b.go.kr")
+        );
+        assert_eq!(
+            bindings.get("open-dart").map(String::as_str),
+            Some("opendart.fss.or.kr")
+        );
+    }
+
+    #[test]
+    fn sanctions_host_is_not_part_of_the_default_source_policy() {
+        let (hosts, bindings) = default_source_policy();
+
+        assert!(!hosts.contains("data.g2b.go.kr"));
+        assert!(!bindings.contains_key("pps-sanctions"));
     }
 }

@@ -23,6 +23,11 @@ PHYSICAL_TABLE_PATHS = (
     "specs/database/addendum/0033-provider-control-execution.yaml",
     "specs/database/addendum/0035-r6b-agent-runtime-activation.yaml",
     "specs/database/addendum/0036-r6b-pipeline-activation.yaml",
+    "specs/database/addendum/0037-r6c-conflict-investigation.yaml",
+)
+
+R6C_FORWARD_CANDIDATE_KEY_PATH = (
+    "specs/database/addendum/0037-r6c-conflict-investigation.yaml"
 )
 
 APPROVAL_BINDING_V1_FIELDS = (
@@ -143,6 +148,129 @@ def _candidate_keys(row: dict[str, Any]) -> set[tuple[str, ...]]:
         if columns and not unique.get("where") and not unique.get("predicate"):
             candidates.add(columns)
     return candidates
+
+
+def _added_candidate_keys(
+    document: dict[str, Any],
+    rows: dict[str, dict[str, Any]],
+    result: Validation,
+) -> dict[str, tuple[tuple[str, tuple[str, ...]], ...]]:
+    """Parse only explicit forward candidate keys from the R6c addendum."""
+
+    changes = document.get("existing_relation_changes")
+    result.require(
+        isinstance(changes, list),
+        "R6c existing_relation_changes must be a list",
+    )
+    if not isinstance(changes, list):
+        return {}
+
+    additions: dict[str, list[tuple[str, tuple[str, ...]]]] = {}
+    seen_relations: set[str] = set()
+    seen_names: set[str] = set()
+    seen_keys: set[tuple[str, tuple[str, ...]]] = set()
+
+    for change_index, change in enumerate(changes, 1):
+        if not isinstance(change, dict):
+            result.require(
+                False,
+                f"R6c existing relation change {change_index} must be a mapping",
+            )
+            continue
+        raw_keys = change.get("added_candidate_keys")
+        if raw_keys is None:
+            continue
+        relation = change.get("relation")
+        relation_valid = (
+            isinstance(relation, str)
+            and re.fullmatch(r"[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*", relation)
+            is not None
+            and relation in rows
+        )
+        result.require(
+            relation_valid,
+            f"R6c existing relation change {change_index} targets an unknown relation {relation!r}",
+        )
+        keys_valid = isinstance(raw_keys, list) and bool(raw_keys)
+        result.require(
+            keys_valid,
+            f"R6c added_candidate_keys for {relation!r} must be a nonempty list",
+        )
+        if not relation_valid or not keys_valid or not isinstance(relation, str):
+            continue
+        result.require(
+            relation not in seen_relations,
+            f"R6c added candidate-key relation is declared more than once: {relation}",
+        )
+        seen_relations.add(relation)
+        existing_candidates = _candidate_keys(rows[relation])
+        relation_columns = set(_column_names(rows[relation]))
+
+        for key_index, raw_key in enumerate(raw_keys, 1):
+            exact_shape = isinstance(raw_key, dict) and set(raw_key) == {
+                "name",
+                "columns",
+            }
+            result.require(
+                exact_shape,
+                f"{relation}: added candidate key {key_index} must contain exactly name and columns",
+            )
+            if not exact_shape or not isinstance(raw_key, dict):
+                continue
+            name = raw_key.get("name")
+            raw_columns = raw_key.get("columns")
+            name_valid = (
+                isinstance(name, str)
+                and len(name.encode()) <= 63
+                and re.fullmatch(r"[a-z][a-z0-9_]*", name) is not None
+            )
+            columns_valid = (
+                isinstance(raw_columns, list)
+                and bool(raw_columns)
+                and all(
+                    isinstance(column, str)
+                    and re.fullmatch(r"[a-z][a-z0-9_]*", column) is not None
+                    for column in raw_columns
+                )
+                and len(raw_columns) == len(set(raw_columns))
+            )
+            result.require(
+                name_valid,
+                f"{relation}: added candidate key {key_index} has an invalid name",
+            )
+            result.require(
+                columns_valid,
+                f"{relation}: added candidate key {key_index} has invalid or duplicate columns",
+            )
+            if not name_valid or not columns_valid or not isinstance(name, str):
+                continue
+            columns = tuple(str(column) for column in raw_columns)
+            columns_exist = set(columns) <= relation_columns
+            result.require(
+                columns_exist,
+                f"{relation}: added candidate key {name} references unknown columns",
+            )
+            key_identity = (relation, columns)
+            key_is_new = columns not in existing_candidates and key_identity not in seen_keys
+            result.require(
+                key_is_new,
+                f"{relation}: added candidate key {name} duplicates an existing or forward key",
+            )
+            name_is_new = name not in seen_names
+            result.require(
+                name_is_new,
+                f"R6c added candidate-key name is duplicated: {name}",
+            )
+            if not columns_exist or not key_is_new or not name_is_new:
+                continue
+            seen_names.add(name)
+            seen_keys.add(key_identity)
+            additions.setdefault(relation, []).append((name, columns))
+
+    return {
+        relation: tuple(keys)
+        for relation, keys in additions.items()
+    }
 
 
 def _foreign_keys(row: dict[str, Any]) -> list[dict[str, Any]]:

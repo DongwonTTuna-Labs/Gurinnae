@@ -1,7 +1,9 @@
 mod analysis_source_fetch;
+mod analysis_tool_claim;
 mod analysis_tool_dispatch;
 mod analysis_tool_persistence;
 use analysis_source_fetch::{PendingSourceFetch, persist_research_fetch};
+use analysis_tool_claim::claim_tool_call;
 use analysis_tool_dispatch::{DispatchedTool, execute_tool, tool_result_and_transcript};
 
 /// The HTTP gateway is the transport boundary. The bridge decodes the
@@ -18,7 +20,8 @@ async fn validate_typed_provider_output(
         input_snapshot_id: resolve_snapshot_id(state, turn).await?,
         input_snapshot_sha256: turn.input_snapshot_sha256.clone(),
     };
-    let snapshot = analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding).await?;
+    let snapshot =
+        analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding, None).await?;
     let final_output = typed_final_output(output, &snapshot.evidence)?;
     let cost_micros = u64::try_from(actual_cost_krw)
         .ok()
@@ -214,6 +217,7 @@ async fn parse_tool_call(
     Ok(gurine_agent_orchestration::runtime::ToolCall {
         call_id: stable_uuid(call_id.as_bytes()),
         request,
+        request_wire: provider_arguments,
         request_sha256,
     })
 }
@@ -232,12 +236,13 @@ async fn dispatch_tool_call(
         input_snapshot_id: resolve_snapshot_id(state, turn).await?,
         input_snapshot_sha256: turn.input_snapshot_sha256.clone(),
     };
-    let snapshot = analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding).await?;
-    let dispatcher = TypedDispatcher::from_snapshot(snapshot);
     // Claim is durable before any tool code runs.  A crash or cancellation
     // therefore leaves a CLAIMED lease that reconciliation can settle instead
     // of an untracked external side effect.
     let tool_call_id = claim_tool_call(state, turn, agent_type, &call).await?;
+    let snapshot =
+        analysis_runtime_snapshot::load_tool_snapshot(state, turn, binding, Some(&call)).await?;
+    let dispatcher = TypedDispatcher::from_snapshot(snapshot);
     let DispatchedTool {
         response_json,
         pending_source_fetch,
@@ -266,101 +271,6 @@ fn is_sha256_text(value: &str) -> bool {
         && value
             .bytes()
             .all(|byte| matches!(byte, b'0'..=b'9' | b'a'..=b'f'))
-}
-
-async fn claim_tool_call(
-    state: &State,
-    turn: &ProviderTurnIdentity,
-    agent_type: &str,
-    call: &gurine_agent_orchestration::runtime::ToolCall,
-) -> Result<Uuid, Failure> {
-    let request = serde_json::to_value(&call.request)
-        .map_err(|error| Failure::Terminal("AGENT_TOOL_REQUEST_INVALID", error.to_string()))?;
-    let request_canonical = canonical_bytes(&request)?;
-    let request_sha256 = sha256(&request_canonical);
-    let tool_id = call.request.tool_id().wire_name();
-    let (request_schema_sha256, response_schema_sha256) =
-        analysis_tool_catalog::tool_schema_hashes(tool_id)
-            .ok_or_else(|| Failure::Terminal("AGENT_REGISTRY_DRIFT", tool_id.to_owned()))?;
-    let call_text = call.call_id.to_string();
-    let tool_call_id = Uuid::new_v4();
-    let rights_decision_sha256 = if tool_id == "source.fetch" {
-        let request_kind = request
-            .get("requestKind")
-            .and_then(Value::as_str)
-            .unwrap_or("FETCH_URL");
-        let source_id = if request_kind == "SEARCH_PUBLIC_WEB" {
-            "brave-search-web-v1"
-        } else {
-            "public-research"
-        };
-        let rights: Option<Value> = sqlx::query_scalar!(
-            "SELECT ops.assert_research_fetch_rights_v1($1,$2)",
-            source_id,
-            request_kind,
-        )
-        .fetch_one(&state.pool)
-        .await
-        .map_err(database)?;
-        rights
-            .and_then(|value| {
-                value
-                    .get("decisionSha256")
-                    .and_then(Value::as_str)
-                    .map(str::to_owned)
-            })
-            .ok_or_else(|| Failure::Terminal("SOURCE_RIGHTS_UNAVAILABLE", source_id.to_owned()))?
-    } else {
-        sha256(format!("rights-snapshot:{tool_id}:{request_sha256}").as_bytes())
-    };
-    sqlx::query!(
-        "INSERT INTO ops.agent_tool_calls(
-           tool_call_id,agent_run_id,provider_turn_id,call_id,input_snapshot_sha256,
-           prior_transcript_sha256,tool_id,tool_catalog_version,tool_catalog_sha256,
-           request_schema_id,request_schema_version,request_schema_sha256,response_schema_id,
-           response_schema_version,response_schema_sha256,timeout_ms,max_results,request_sha256,
-           request_redacted,request_canonical,allowlist_decision_sha256,scope_decision_sha256,
-           rights_decision_sha256,classification,status,source_use_count,
-           source_use_set_sha256,claim_generation,lease_token_sha256,lease_expires_at,
-           version,started_at)
-         VALUES($1,$2,$3,$4,$5,$6,$7,'13.0.0+agent-multimodal.1',$8,
-           $9,'2',$10,$11,'2',$12,8000,50,$13,$14,$15,$16,$17,$18,'INTERNAL',
-           'CLAIMED',0,
-           '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',1,$19,
-           clock_timestamp() + interval '60 seconds',1,clock_timestamp())
-         ON CONFLICT(agent_run_id,call_id) DO NOTHING",
-        tool_call_id,
-        turn.run_id,
-        turn.turn_id,
-        &call_text,
-        &turn.input_snapshot_sha256,
-        &turn.prior_transcript_sha256,
-        tool_id,
-        sha256(b"tool-catalog-v2"),
-        format!("{tool_id}.request.v2"),
-        request_schema_sha256,
-        format!("{tool_id}.response.v2"),
-        response_schema_sha256,
-        request_sha256,
-        request,
-        request_canonical,
-        sha256(format!("allowlist:{agent_type}").as_bytes()),
-        sha256(b"snapshot-scope"),
-        rights_decision_sha256,
-        sha256(call_text.as_bytes()),
-    )
-    .execute(&state.pool)
-    .await
-    .map_err(database)?;
-    let existing: Uuid = sqlx::query_scalar!(
-        "SELECT tool_call_id FROM ops.agent_tool_calls WHERE agent_run_id=$1 AND call_id=$2",
-        turn.run_id,
-        &call_text,
-    )
-    .fetch_one(&state.pool)
-    .await
-    .map_err(database)?;
-    Ok(existing)
 }
 
 /// A tool result is a provenance edge from every source selected by the

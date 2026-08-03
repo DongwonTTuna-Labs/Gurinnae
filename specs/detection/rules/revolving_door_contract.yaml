@@ -1,0 +1,134 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: REVOLVING_DOOR_CONTRACT
+name: 퇴직 공직자 원소속 기관 계약
+version: 1.0.0
+publication_claim_allowed: false
+operational_activation:
+  status: BLOCKED
+  active_seed: forbidden
+  reason: 공식 재취업 공고를 정규화하는 운영 커넥터가 아직 없다
+  unblock_condition: >-
+    공직자윤리위원회 공고 또는 관보의 공식 재취업 원천을 가져와 source locator와
+    완전한 퇴직일을 보존하고, 독립 인간 검증을 거친 VERIFIED+APPROVED
+    FORMER_OFFICIAL_ROLE을 typed graph v2에 공급하는 커넥터가 활성화되어야 한다
+policy:
+  source: immutable rule policy supplied with the frozen dataset snapshot
+  defaults: forbidden
+  production_seed: forbidden
+  required:
+  - cooling_period_days
+  - procurement_method_allowlist
+  - cooling_boundary
+  constraints:
+    cooling_period_days: positive integer
+    procurement_method_allowlist: non-empty exact uppercase token set; wildcard forbidden
+    cooling_boundary: DEPARTURE_EXCLUSIVE_COOLING_END_INCLUSIVE
+required:
+- policy.cooling_period_days
+- policy.procurement_method_allowlist
+- policy.cooling_boundary
+- source_coverage.official_reemployment_source_available
+- source_coverage.coverage_complete
+- former_official_roles
+- supplier_officer_roles
+- contracts
+materializer_input:
+  former_official_roles:
+    relationship_kind: FORMER_OFFICIAL_ROLE
+    endpoint_kinds:
+    - PERSON
+    - AGENCY
+    required_status:
+      validity_coverage_status: COMPLETE
+      verification_status: VERIFIED
+      public_use_status: APPROVED
+      independent_human_verification: true
+    person_identifier: exact lowercase sha256 digest only
+    person_fields_allowed:
+    - person_identifier_digest
+    - contextual_role
+    - source_locator
+    person_fields_forbidden:
+    - resident_registration_number
+    - address
+    - birth_date
+    - family_relation
+    dates:
+    - departed_on
+    official_source_kinds:
+    - PUBLIC_OFFICIAL_ETHICS_NOTICE
+    - OFFICIAL_GAZETTE
+  supplier_officer_roles:
+    relationship_kind: MANAGEMENT_ROLE
+    endpoint_kinds:
+    - PERSON
+    - SUPPLIER
+    required_status:
+      validity_coverage_status: COMPLETE
+      verification_status: VERIFIED
+      public_use_status: APPROVED
+      independent_human_verification: true
+    person_identifier: exact lowercase sha256 digest only
+    dates:
+    - valid_from
+    - valid_to
+    valid_to_semantics: >-
+      null means the role is authoritatively ongoing through the frozen snapshot cutoff;
+      it is allowed only with validity_coverage_status COMPLETE
+    official_source_kinds:
+    - DART_EXECUTIVE_STATUS
+  contracts:
+    required_fields:
+    - id
+    - agency_id
+    - supplier_id
+    - signed_on
+    - procurement_method
+formula: >-
+  SIGNAL when an exact PERSON digest joins an APPROVED+VERIFIED+COMPLETE
+  FORMER_OFFICIAL_ROLE to an APPROVED+VERIFIED+COMPLETE supplier MANAGEMENT_ROLE,
+  the awarded supplier and original agency match the contract, the officer role covers
+  the contract date, the procurement method is an exact member of the immutable policy
+  allowlist, and departed_on < signed_on <= departed_on + cooling_period_days
+blockers:
+- REQUIRED_FIELD_MISSING
+- INVALID_FIELD_SHAPE
+- POLICY_CONFIGURATION_INVALID
+- OFFICIAL_REEMPLOYMENT_SOURCE_UNAVAILABLE
+- OFFICIAL_REEMPLOYMENT_COVERAGE_INCOMPLETE
+- OFFICER_SOURCE_NOT_AUTHORITATIVE
+- RELATIONSHIP_SHAPE_INVALID
+- RELATIONSHIP_REVIEW_INCOMPLETE
+- TEMPORAL_COVERAGE_INCOMPLETE
+- PERSON_IDENTITY_AMBIGUOUS
+- DUPLICATE_CONTRACT_ID
+false_positive_boundaries:
+- same display name with a different PERSON digest never joins
+- contract agency different from the former agency is NO_SIGNAL
+- contract on or before departure is NO_SIGNAL
+- contract after the inclusive cooling-period end is NO_SIGNAL
+- method absent from the exact allowlist is NO_SIGNAL
+- supplier officer tenure not covering the contract date is NO_SIGNAL
+legal_boundaries:
+- no family or kinship relationship kind or inference
+- no natural-person score, rank, probability, address, birth date, or resident identifier
+- public relationship use requires independent human VERIFIED+APPROVED status
+- automatic publication and automatic relationship activation are forbidden
+metamorphic:
+- input row order does not change outcome or matched identifiers
+- display names do not participate in matching
+- procurement methods compare by exact token membership
+- cooling boundary is departure-exclusive and cooling-end-inclusive
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  publication_claim_allowed: false
+  automatic_state_change_allowed: false
+implementation: crates/detection/src/rules/revolving_door_contract.rs
+reference_evaluator: specs/detection/reference_evaluator.py
+oracle: specs/detection/oracles/revolving_door_contract.md
+eval_file: specs/detection/evals/revolving_door_contract.jsonl

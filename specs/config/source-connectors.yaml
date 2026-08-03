@@ -36,6 +36,23 @@ connectors:
     no_html_scraping: true
     failure_mode: connector remains DISABLED; unrelated connectors continue
   network: egress-gateway-only
+- id: koneps-bid-results
+  source_kind: OFFICIAL_REST_API
+  enabled_env: SOURCE_KONEPS_BID_RESULTS_ENABLED
+  credential_env: DATA_GO_KR_SERVICE_KEY
+  base_url: https://nopenapi.g2b.go.kr/as/ScsbidInfoService
+  manifest_url_env: null
+  operation_contract: specs/connectors/koneps-bid-results/operations.yaml
+  field_mapping: specs/connectors/koneps-bid-results/field-mapping.yaml
+  error_policy: specs/connectors/koneps-bid-results/error-policy.yaml
+  activation:
+    requires_credentialed_preflight: true
+    requires_recorded_response_fingerprint: true
+    requires_quota_probe: true
+    requires_terms_review: true
+    no_html_scraping: true
+    failure_mode: connector remains DISABLED; unrelated connectors continue
+  network: egress-gateway-only
 - id: local-finance
   source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
   enabled_env: SOURCE_LOCAL_FINANCE_ENABLED
@@ -86,6 +103,29 @@ connectors:
     requires_terms_review: true
     no_html_scraping: true
     failure_mode: connector remains DISABLED; unrelated connectors continue
+  network: egress-gateway-only
+- id: pps-sanctions
+  source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST
+  enabled_env: SOURCE_PPS_SANCTIONS_ENABLED
+  runtime_default_enabled: false
+  credential_env: null
+  base_url: null
+  manifest_url_env: PPS_SANCTIONS_OFFICIAL_MANIFEST_URL
+  operation_contract: specs/connectors/pps-sanctions/operations.yaml
+  field_mapping: specs/connectors/pps-sanctions/field-mapping.yaml
+  error_policy: specs/connectors/pps-sanctions/error-policy.yaml
+  activation:
+    requires_configured_manifest_or_fixed_link: true
+    requires_https_and_host_allowlist: true
+    requires_manifest_schema_validation: true
+    requires_recorded_response_fingerprint: true
+    requires_terms_review: true
+    requires_reuse_rights_approval: true
+    requires_exact_csv_schema_fingerprint: true
+    failure_mode: connector remains DISABLED
+  blocker:
+    code: PPS_SANCTIONS_REUSE_RIGHTS_UNCONFIRMED
+    unlock_condition: recorded reuse-rights approval plus exact CSV schema fingerprint and credentialed preflight receipt
   network: egress-gateway-only
 - id: audit-results
   source_kind: OFFICIAL_LINK_OR_FILE_MANIFEST

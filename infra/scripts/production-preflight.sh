@@ -136,9 +136,18 @@ connector_gate() {
 
 connector_gate SOURCE_KONEPS_CONTRACTS_ENABLED DATA_GO_KR_SERVICE_KEY KONEPS_CONTRACT_API_BASE_URL
 connector_gate SOURCE_KONEPS_NOTICES_ENABLED DATA_GO_KR_SERVICE_KEY KONEPS_NOTICE_API_BASE_URL
+connector_gate SOURCE_KONEPS_BID_RESULTS_ENABLED DATA_GO_KR_SERVICE_KEY KONEPS_BID_RESULTS_API_BASE_URL
 connector_gate SOURCE_OPEN_DART_ENABLED OPEN_DART_API_KEY OPEN_DART_API_BASE_URL
 connector_gate SOURCE_LOCAL_FINANCE_ENABLED LOCAL_FINANCE_OFFICIAL_MANIFEST_URL
 connector_gate SOURCE_ALIO_ENABLED ALIO_OFFICIAL_MANIFEST_URL
 connector_gate SOURCE_AUDIT_RESULTS_ENABLED AUDIT_RESULTS_OFFICIAL_MANIFEST_URL
+connector_gate SOURCE_PPS_SANCTIONS_ENABLED PPS_SANCTIONS_OFFICIAL_MANIFEST_URL
+if [[ "${SOURCE_PPS_SANCTIONS_ENABLED:-false}" == "true" ]]; then
+  [[ "$PPS_SANCTIONS_OFFICIAL_MANIFEST_URL" == https://* ]] ||
+    fail "PPS_SANCTIONS_OFFICIAL_MANIFEST_URL must use https"
+  [[ "$PPS_SANCTIONS_OFFICIAL_MANIFEST_URL" != https://fixture.invalid/* ]] ||
+    fail "PPS sanctions production activation cannot use a test fixture manifest"
+  fail "PPS sanctions remains blocked until reuse-rights approval and exact CSV fingerprint are recorded"
+fi
 
 printf 'production-preflight: PASS\n'

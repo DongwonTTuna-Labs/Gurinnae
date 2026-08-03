@@ -6,6 +6,10 @@ use thiserror::Error;
 pub struct ToolCall {
     pub call_id: Uuid,
     pub request: ToolRequest,
+    /// Exact flat authority-schema request received from the provider. The
+    /// projected Rust request intentionally omits transport-only fields and
+    /// therefore must never be used as the durable request evidence.
+    pub request_wire: serde_json::Value,
     pub request_sha256: String,
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

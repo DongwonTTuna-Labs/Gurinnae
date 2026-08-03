@@ -68,6 +68,10 @@ async fn activation_event(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Fail
 async fn rule_evaluation(pool: &PgPool, job: &ClaimedJob) -> Result<Value, Failure> {
     let evaluation_id = payload_uuid(&job.payload, "evaluationId")?;
     let mut tx = pool.begin().await.map_err(database)?;
+    sqlx::query!("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ")
+        .execute(&mut *tx)
+        .await
+        .map_err(database)?;
     let row = sqlx::query!(
         "UPDATE core.rule_evaluations e SET status='RUNNING', \
            started_at=COALESCE(started_at,clock_timestamp()) \

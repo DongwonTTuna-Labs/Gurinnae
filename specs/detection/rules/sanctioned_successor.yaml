@@ -1,0 +1,148 @@
+schema_version: 1
+specification_version: 13.0.0
+status: FINAL
+rule_id: SANCTIONED_SUCCESSOR
+name: 제재 업체 후속 신생 업체 수주
+version: 1.0.0
+operational_status: BLOCKED
+operational_blocker:
+  code: SANCTION_SOURCE_NOT_READY
+  reason: 조달청 부정당업자 제재 파일 원천은 권리 확인 전 disabled 상태다.
+  unblock_condition: >-
+    operator가 조달청 파일 접근·재사용 권리를 확인하고, credentialed preflight receipt와
+    exact CSV schema fingerprint가 고정된 connector activation receipt가 READY가 된 뒤,
+    완전한 제재 행의 효력 시작·종료일과 업체 strong identifier가 snapshot에 동결되어야 한다.
+production_policy:
+  seed: forbidden
+  activation: immutable policy row required; missing policy is inactive
+  required_fields:
+    maximum_new_entity_age_days:
+      type: integer
+      minimum: 0
+      semantics: 수주일 - 신생 업체 설립일의 포함 일수 상한
+    post_sanction_award_window_days:
+      type: integer
+      minimum: 0
+      semantics: 선택한 제재 효력 기준일 이후 수주일까지의 포함 일수 상한
+    sanction_effective_date_semantics:
+      enum:
+      - START_DATE_INCLUSIVE
+      - END_DATE_INCLUSIVE
+      semantics: START는 제재 효력 시작일, END는 제재 효력 종료일을 day zero로 사용
+    link_match_mode:
+      enum:
+      - STRONG_IDENTIFIER_OR_APPROVED_OFFICER
+      - STRONG_IDENTIFIER_ONLY
+      - APPROVED_OFFICER_ONLY
+      semantics: 활성화한 법적 식별 연결 경로 중 하나의 exact match 필요
+verification_fixture_policy:
+  authority: TEST_FIXTURE_ONLY_NOT_A_PRODUCTION_DEFAULT
+  maximum_new_entity_age_days: 365
+  post_sanction_award_window_days: 180
+  sanction_effective_date_semantics: START_DATE_INCLUSIVE
+  link_match_mode: STRONG_IDENTIFIER_OR_APPROVED_OFFICER
+required:
+- policy.maximum_new_entity_age_days
+- policy.post_sanction_award_window_days
+- policy.sanction_effective_date_semantics
+- policy.link_match_mode
+- sanction_source_status
+- sanctions
+- suppliers
+- awards
+- strong_identifier_facts
+- supplier_officer_roles
+- strong_identifier_coverage_complete
+- officer_role_coverage_complete
+materializer_input:
+  snapshot_authoritative: true
+  sanctions:
+    required_fields: [id, supplier_id, effective_from]
+    conditional_fields:
+      effective_to: required for END_DATE_INCLUSIVE
+    source_gate: connector activation receipt status must be READY
+  suppliers:
+    required_fields: [id, incorporated_at]
+    note: incorporation date is evaluated only for the award recipient
+  awards:
+    required_fields: [id, supplier_id, awarded_at]
+  strong_identifier_facts:
+    required_fields: [supplier_id, scheme, value_hash, verification_status, proof_state]
+    admitted_schemes:
+    - KOREAN_BUSINESS_NUMBER
+    - OPEN_DART_CORP_CODE
+    - KONEPS_PARTY_KEY
+    admitted_state: VERIFIED + PROVEN_V1
+    rejected_without_match:
+    - BUSINESS_NUMBER and DART_CORP_CODE legacy aliases
+    - LEGACY_UNPROVEN
+    - unverified facts
+    - weak identifiers and names
+  supplier_officer_roles:
+    required_fields:
+    - relationship_id
+    - relationship_kind
+    - subject_kind
+    - object_kind
+    - person_identifier_digest
+    - supplier_id
+    - valid_from
+    - valid_to
+    - validity_coverage_status
+    - verification_status
+    - public_use_status
+    - independent_human_verification
+    - evidence_id
+    - source_kind
+    - source_locator
+    admitted_shape: >-
+      MANAGEMENT_ROLE PERSON-to-SUPPLIER relation with exact lowercase SHA-256 person digest,
+      COMPLETE validity, VERIFIED, APPROVED, independent human verification, and a statutory
+      public source locator whose source_kind is DART_EXECUTIVE_STATUS, ALIO_EXECUTIVE_STATUS,
+      OFFICIAL_GAZETTE, or PUBLIC_OFFICIAL_ETHICS_NOTICE.
+    forbidden_matching_inputs:
+    - contextual name
+    - address
+    - birth date
+    - family or kinship relation
+    - natural-person score, rank, or probability
+formula: >-
+  source READY and immutable policy present; successor age is within the configured inclusive
+  bound; award falls within the configured inclusive window from the selected sanction effective
+  date; and the sanctioned supplier and distinct award supplier share either one admitted strong
+  identifier fact or one approved exact officer digest as allowed by link_match_mode.
+effective_date_semantics:
+  START_DATE_INCLUSIVE: effective_from <= awarded_at <= effective_from + configured days
+  END_DATE_INCLUSIVE: effective_to <= awarded_at <= effective_to + configured days
+  chronology: incorporated_at <= awarded_at and effective_from <= effective_to when end is present
+link_completeness:
+  known_match: one complete admitted link is sufficient even if the unused OR channel is incomplete
+  no_match: all enabled channels must have complete coverage before NO_SIGNAL
+  incomplete: >-
+    otherwise BLOCKED with LINK_EVIDENCE_INCOMPLETE; missing or malformed fields inside a strong
+    identifier fact or officer role are incomplete evidence and never escape as evaluator errors
+blockers:
+- RULE_POLICY_INACTIVE
+- RULE_POLICY_INVALID
+- REQUIRED_FIELD_MISSING
+- SANCTION_SOURCE_NOT_READY
+- INSUFFICIENT_CONTEXT
+- ENTITY_BINDING_MISMATCH
+- TEMPORAL_COVERAGE_INCOMPLETE
+- LINK_EVIDENCE_INCOMPLETE
+metamorphic:
+- sanction, supplier, award, identifier fact, and officer role order is irrelevant
+- same display name never links people or suppliers
+- weak, unverified, or LEGACY_UNPROVEN identifier facts never match
+- pending, denied, non-independent, non-official, or non-exact officer relations never match
+- changing one exact digest to a different digest removes that link
+- an award outside either configured inclusive time bound never signals
+output:
+  outcomes:
+  - SIGNAL
+  - NO_SIGNAL
+  - BLOCKED
+  publication_claim_allowed: false
+  automation_scope: anomaly triage only; publication, merge, state change, and person scoring forbidden
+implementation: crates/detection/src/rules/sanctioned_successor.rs
+reference_evaluator: specs/detection/reference_evaluator.py

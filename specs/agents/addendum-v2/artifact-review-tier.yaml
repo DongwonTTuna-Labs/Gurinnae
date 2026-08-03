@@ -1,0 +1,53 @@
+schema_version: 1
+specification_version: 13.0.0+r6c.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+title: Official Research Artifact Review Tier Contract
+
+authority:
+  physical_contract: raw.research_artifact_review_tiers
+  rule: Review tier is orthogonal to data classification. It never upgrades rights, safety, publication approval, or provider eligibility by inference.
+
+closed_review_tiers:
+  OFFICIAL_UNREVIEWED:
+    revision: 1
+    initial_classification: RESTRICTED
+    reviewer: forbidden
+    promotion_receipt: forbidden
+    allowed_use: Internal HYPOTHESIS reference to metadata and immutable artifact/source-use digests only.
+    forbidden_use: [MODEL_INPUT, CLAIM_CITATION, COMMUNICATION_CITATION, PUBLIC_EXCERPT, PUBLICATION]
+  HUMAN_PROMOTED:
+    revision: 2
+    predecessor: OFFICIAL_UNREVIEWED revision 1 receipt
+    reviewer: required_human
+    promotion_receipt: required
+    reviewed_classification_required: [PUBLIC, INTERNAL, RESTRICTED, PERSONAL_DATA, LEGAL_HOLD]
+    default_classification: forbidden
+    provider_eligibility: Only the promoted Evidence revision classified PUBLIC or INTERNAL may enter the existing provider-input gate; the ResearchArtifact bytes never enter MODEL_INPUT directly.
+
+source_fetch_boundary:
+  initial_write: Every successful official-source fetch appends OFFICIAL_UNREVIEWED with reviewedClassification RESTRICTED.
+  tool_response: Metadata only. It may include immutable artifact identity, origin, fetch status, review tier, and digests; title, path, snippet, body text, person name, role title, source locator text, and identifier values are forbidden.
+  content_rule: Fetched bytes remain untrusted storage. They are not copied into a provider request or priorToolResult.
+  natural_person_rule: PERSON data and any artifact classified PERSONAL_DATA or RESTRICTED is fail-closed before model egress.
+
+promotion_boundary:
+  command: promoteResearchArtifactToEvidence
+  requirements:
+    - exact artifact and predecessor review-tier receipt
+    - exact human promotion receipt and reviewer identity
+    - explicit reviewedClassification with no default
+    - existing rights, safety, locator, selected-content, case-version, capability, and idempotency gates
+  result: Promotion creates revision-fixed authoritative Evidence. It does not approve a claim, communication, publication, or provider dispatch.
+
+citation_boundary:
+  internal_hypothesis: OFFICIAL_UNREVIEWED metadata may be referenced only by immutable digests and review tier; no raw content is exposed.
+  claim_or_communication: Requires a HUMAN_PROMOTED review-tier receipt and the existing promoted-Evidence citation graph. An artifact ID, official-source label, or AI summary is never sufficient.
+  public: The existing independent human publication approval remains mandatory after promotion.
+
+acceptance:
+  - Fresh source.fetch output is RESTRICTED plus OFFICIAL_UNREVIEWED and contains no raw artifact content.
+  - OFFICIAL_UNREVIEWED cannot create MODEL_INPUT, CLAIM, COMMUNICATION, or public citation source uses.
+  - HUMAN_PROMOTED without an explicit reviewed classification is rejected.
+  - Only promoted Evidence classified PUBLIC or INTERNAL can later satisfy provider eligibility; RESTRICTED, PERSONAL_DATA, and LEGAL_HOLD remain blocked.

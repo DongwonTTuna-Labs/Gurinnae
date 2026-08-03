@@ -1,0 +1,11 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "award-goods-search",
+  "kind": "delete",
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": { "pageNo": 1, "numOfRows": 100, "totalCount": 0, "items": [] },
+    "deletion_semantics": "absence is not deletion"
+  }
+}

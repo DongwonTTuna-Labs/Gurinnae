@@ -18,8 +18,18 @@ fn operation_target(
     }
     let base = base_url
         .ok_or_else(|| Failure::Terminal("SOURCE_BASE_URL_MISSING", operation.id.into()))?;
-    let base = Url::parse(base)
+    let mut base = Url::parse(base)
         .map_err(|_| Failure::Terminal("SOURCE_BASE_URL_INVALID", operation.id.into()))?;
+    if base.query().is_some() || base.fragment().is_some() {
+        return Err(Failure::Terminal(
+            "SOURCE_BASE_URL_INVALID",
+            operation.id.into(),
+        ));
+    }
+    if !base.path().ends_with('/') {
+        let directory_path = format!("{}/", base.path());
+        base.set_path(&directory_path);
+    }
     base.join(operation.remote_path.trim_start_matches('/'))
         .map_err(|_| Failure::Terminal("SOURCE_TARGET_INVALID", operation.id.into()))
         .and_then(|value| validate_target(value.as_str()))
@@ -38,100 +48,7 @@ fn validate_target(value: &str) -> Result<String, Failure> {
     Ok(url.to_string())
 }
 
-fn with_operation_parameters(
-    target: &str,
-    operation: &ConnectorOperation,
-    configuration: &Value,
-    requested_from: Option<time::Date>,
-    requested_to: Option<time::Date>,
-) -> Result<String, Failure> {
-    let mut url = Url::parse(target)
-        .map_err(|_| Failure::Terminal("SOURCE_TARGET_INVALID", operation.id.into()))?;
-    {
-        let mut pairs = url.query_pairs_mut();
-        pairs.append_pair("operationId", operation.id);
-        if operation.pagination == "page-number" {
-            pairs.append_pair("pageNo", "1");
-            pairs.append_pair("numOfRows", "1000");
-            pairs.append_pair("type", "json");
-        }
-        if let Some(value) = requested_from {
-            pairs.append_pair("from", &value.to_string());
-        }
-        if let Some(value) = requested_to {
-            pairs.append_pair("to", &value.to_string());
-        }
-        if let Some(values) = configuration
-            .pointer(&format!("/parameters/{}", operation.id))
-            .and_then(Value::as_object)
-        {
-            for (key, value) in values {
-                if let Some(value) = value.as_str() {
-                    pairs.append_pair(key, value);
-                }
-            }
-        }
-    }
-    Ok(url.to_string())
-}
-
-async fn fetch_source(
-    client: &Client,
-    gateway: &Url,
-    source_id: &str,
-    target: &str,
-) -> Result<SourceResponse, Failure> {
-    let response = client
-        .get(gateway.clone())
-        .header("x-gurine-egress-caller", "ingest-worker")
-        .header("x-gurine-source-id", source_id)
-        .header("x-gurine-egress-target", target)
-        .send()
-        .await
-        .map_err(|error| Failure::Retryable("SOURCE_UNAVAILABLE", error.to_string()))?;
-    let status = response.status();
-    if status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
-        return Err(Failure::Retryable("SOURCE_UNAVAILABLE", status.to_string()));
-    }
-    if status == StatusCode::UNAUTHORIZED || status == StatusCode::FORBIDDEN {
-        return Err(Failure::Terminal(
-            "SOURCE_AUTHORIZATION_FAILED",
-            status.to_string(),
-        ));
-    }
-    if !status.is_success() {
-        return Err(Failure::Terminal(
-            "SOURCE_REQUEST_REJECTED",
-            status.to_string(),
-        ));
-    }
-    let content_type = response
-        .headers()
-        .get(reqwest::header::CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or("application/octet-stream")
-        .split(';')
-        .next()
-        .unwrap_or("application/octet-stream")
-        .to_owned();
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|error| Failure::Retryable("SOURCE_UNAVAILABLE", error.to_string()))?;
-    if bytes.len() > 67_108_864 {
-        return Err(Failure::Terminal(
-            "SOURCE_PAYLOAD_TOO_LARGE",
-            bytes.len().to_string(),
-        ));
-    }
-    Ok(SourceResponse {
-        bytes: bytes.to_vec(),
-        content_type,
-        http_status: status.as_u16(),
-    })
-}
-
-fn validate_manifest(bytes: &[u8]) -> Result<Vec<ManifestDocument>, Failure> {
+fn validate_manifest(source_id: &str, bytes: &[u8]) -> Result<Vec<ManifestDocument>, Failure> {
     let value: Value = serde_json::from_slice(bytes)
         .map_err(|error| Failure::Terminal("SOURCE_MANIFEST_INVALID", error.to_string()))?;
     if value.get("manifest_version").and_then(Value::as_str) != Some("1")
@@ -151,15 +68,69 @@ fn validate_manifest(bytes: &[u8]) -> Result<Vec<ManifestDocument>, Failure> {
         .iter()
         .filter(|document| document.get("deleted").and_then(Value::as_bool) != Some(true))
         .map(|document| {
+            let _title = required_text(document, "title")?;
+            let content_type = required_text(document, "content_type")?;
+            if !manifest_content_type_allowed(source_id, content_type) {
+                return Err(Failure::Terminal(
+                    "SOURCE_MANIFEST_INVALID",
+                    "content_type".to_owned(),
+                ));
+            }
+            let declared_sha256 = required_text(document, "sha256")?;
+            if !is_sha256(declared_sha256) {
+                return Err(Failure::Terminal(
+                    "SOURCE_MANIFEST_INVALID",
+                    "sha256".to_owned(),
+                ));
+            }
             Ok(ManifestDocument {
                 external_id: required_text(document, "external_id")?.to_owned(),
                 revision: required_text(document, "revision")?.to_owned(),
                 target: validate_target(required_text(document, "url")?)?,
-                content_type: required_text(document, "content_type")?.to_owned(),
+                content_type: content_type.to_owned(),
+                sha256: Some(declared_sha256.to_owned()),
                 published_at: Some(required_text(document, "published_at")?.to_owned()),
             })
         })
         .collect()
+}
+
+fn manifest_content_type_allowed(source_id: &str, content_type: &str) -> bool {
+    if source_id == "pps-sanctions" {
+        return matches!(content_type, "text/csv" | "application/csv");
+    }
+    matches!(
+        content_type,
+        "application/pdf" | "text/csv" | "application/csv"
+    )
+}
+
+fn validate_declared_document_response(
+    operation_kind: &str,
+    target: &ManifestDocument,
+    response: &SourceResponse,
+    actual_sha256: &str,
+) -> Result<(), Failure> {
+    if operation_kind != "document" {
+        return Ok(());
+    }
+    let declared_sha256 = target
+        .sha256
+        .as_deref()
+        .ok_or_else(|| Failure::Terminal("SOURCE_MANIFEST_INVALID", "sha256".to_owned()))?;
+    if declared_sha256 != actual_sha256 {
+        return Err(Failure::Terminal(
+            "SOURCE_DOCUMENT_DIGEST_MISMATCH",
+            target.external_id.clone(),
+        ));
+    }
+    if target.content_type != response.content_type {
+        return Err(Failure::Terminal(
+            "SOURCE_DOCUMENT_CONTENT_TYPE_MISMATCH",
+            target.external_id.clone(),
+        ));
+    }
+    Ok(())
 }
 
 fn required_text<'a>(value: &'a Value, key: &str) -> Result<&'a str, Failure> {
@@ -476,4 +447,64 @@ fn first_text_entry<'a, 'b>(value: &'a Value, keys: &'b [&'b str]) -> Option<(&'
             .filter(|value| !value.trim().is_empty())
             .map(|value| (*key, value))
     })
+}
+
+#[cfg(test)]
+mod manifest_integrity_tests {
+    use super::{
+        Failure, ManifestDocument, SourceResponse, validate_declared_document_response,
+        validate_manifest,
+    };
+
+    #[test]
+    fn manifest_requires_declared_sha256_and_closed_content_type() {
+        let missing_sha = br#"{
+          "manifest_version":"1","publisher":"fixture","generated_at":"2026-08-01T00:00:00Z",
+          "documents":[{"external_id":"s-1","title":"fixture","url":"https://fixture.invalid/s.csv",
+            "published_at":"2026-08-01T00:00:00Z","content_type":"text/csv","revision":"1"}]
+        }"#;
+        assert!(matches!(
+            validate_manifest("pps-sanctions", missing_sha),
+            Err(Failure::Terminal("SOURCE_MANIFEST_INVALID", _))
+        ));
+
+        let wrong_type = br#"{
+          "manifest_version":"1","publisher":"fixture","generated_at":"2026-08-01T00:00:00Z",
+          "documents":[{"external_id":"s-1","title":"fixture","url":"https://fixture.invalid/s.json",
+            "published_at":"2026-08-01T00:00:00Z","content_type":"application/json","revision":"1",
+            "sha256":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}]
+        }"#;
+        assert!(matches!(
+            validate_manifest("pps-sanctions", wrong_type),
+            Err(Failure::Terminal("SOURCE_MANIFEST_INVALID", _))
+        ));
+    }
+
+    #[test]
+    fn downloaded_document_must_match_declared_digest_and_content_type() {
+        let target = ManifestDocument {
+            external_id: "s-1".to_owned(),
+            revision: "1".to_owned(),
+            target: "https://fixture.invalid/s.csv".to_owned(),
+            content_type: "text/csv".to_owned(),
+            sha256: Some(
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".to_owned(),
+            ),
+            published_at: None,
+        };
+        let response = SourceResponse {
+            bytes: b"fixture".to_vec(),
+            content_type: "text/csv".to_owned(),
+            http_status: 200,
+        };
+        assert!(matches!(
+            validate_declared_document_response(
+                "document",
+                &target,
+                &response,
+                "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            ),
+            Err(Failure::Terminal("SOURCE_DOCUMENT_DIGEST_MISMATCH", _))
+        ));
+    }
 }

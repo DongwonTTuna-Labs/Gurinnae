@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the closed runtime migration filename contract."""
+"""Verify the closed runtime migration filename and transaction contract."""
 
 from __future__ import annotations
 
@@ -7,6 +7,11 @@ import argparse
 import sys
 from pathlib import Path
 from typing import Sequence
+
+from pglast import parse_sql
+from pglast.ast import TransactionStmt
+from pglast.enums import TransactionStmtKind
+from pglast.parser import ParseError
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,14 +29,18 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0034_public_monitoring_extensions.sql",
     "0035_r6b_agent_runtime_activation.sql",
     "0036_r6b_pipeline_activation.sql",
+    "0037_r6c_conflict_investigation.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS
 )
+LEGACY_EXPLICIT_TRANSACTION_PROFILES = {
+    "0030_v13_submission_session_hardening.sql": 29,
+}
 
 
 class MigrationVerificationError(RuntimeError):
-    """Migration filenames do not match the closed specification contract."""
+    """A runtime migration violates the closed specification contract."""
 
 
 def migration_names(directory: Path) -> tuple[str, ...]:
@@ -40,10 +49,139 @@ def migration_names(directory: Path) -> tuple[str, ...]:
     )
 
 
+def verify_transaction_closure(sql: str, migration_name: str) -> None:
+    """Reject an explicit migration transaction that is not closed by COMMIT.
+
+    Runner-managed migrations may omit transaction control. Once a migration
+    opts into an explicit transaction, only balanced BEGIN/COMMIT pairs are
+    accepted so an EOF cannot leave SQLx to commit a partial tail implicitly.
+    """
+
+    try:
+        statements = parse_sql(sql)
+    except ParseError as error:
+        raise MigrationVerificationError(
+            f"{migration_name}: PostgreSQL parser failed: {error}"
+        ) from error
+
+    transaction_open = False
+    begin_count = 0
+    commit_count = 0
+    for statement in statements:
+        if not isinstance(statement.stmt, TransactionStmt):
+            continue
+        kind = statement.stmt.kind
+        if kind == TransactionStmtKind.TRANS_STMT_BEGIN:
+            if transaction_open:
+                raise MigrationVerificationError(
+                    f"{migration_name}: nested explicit BEGIN is forbidden"
+                )
+            transaction_open = True
+            begin_count += 1
+            continue
+        if kind == TransactionStmtKind.TRANS_STMT_COMMIT:
+            if not transaction_open:
+                raise MigrationVerificationError(
+                    f"{migration_name}: explicit COMMIT has no matching BEGIN"
+                )
+            if statement.stmt.chain:
+                raise MigrationVerificationError(
+                    f"{migration_name}: COMMIT AND CHAIN leaves an explicit "
+                    "transaction open at EOF"
+                )
+            transaction_open = False
+            commit_count += 1
+            continue
+        raise MigrationVerificationError(
+            f"{migration_name}: unsupported explicit transaction control {kind.name}"
+        )
+
+    if transaction_open or begin_count != commit_count:
+        raise MigrationVerificationError(
+            f"{migration_name}: explicit BEGIN lacks terminal COMMIT "
+            f"(BEGIN={begin_count}, COMMIT={commit_count})"
+        )
+    if begin_count == 0:
+        return
+
+    legacy_pair_count = LEGACY_EXPLICIT_TRANSACTION_PROFILES.get(migration_name)
+    if legacy_pair_count is not None:
+        first = statements[0].stmt
+        if (
+            begin_count != legacy_pair_count
+            or not isinstance(first, TransactionStmt)
+            or first.kind != TransactionStmtKind.TRANS_STMT_BEGIN
+        ):
+            raise MigrationVerificationError(
+                f"{migration_name}: immutable legacy transaction profile drifted "
+                f"(expected {legacy_pair_count} balanced pairs starting at BEGIN)"
+            )
+        return
+
+    first = statements[0].stmt
+    last = statements[-1].stmt
+    one_outer_transaction = (
+        begin_count == 1
+        and commit_count == 1
+        and isinstance(first, TransactionStmt)
+        and first.kind == TransactionStmtKind.TRANS_STMT_BEGIN
+        and isinstance(last, TransactionStmt)
+        and last.kind == TransactionStmtKind.TRANS_STMT_COMMIT
+        and not last.chain
+    )
+    if not one_outer_transaction:
+        raise MigrationVerificationError(
+            f"{migration_name}: explicit transaction must wrap every statement "
+            "with the first top-level statement BEGIN and terminal COMMIT"
+        )
+
+
+def _require_transaction_rejection(
+    sql: str, canary_name: str, expected_error: str
+) -> None:
+    try:
+        verify_transaction_closure(sql, canary_name)
+    except MigrationVerificationError as error:
+        if expected_error in str(error):
+            return
+        raise MigrationVerificationError(
+            f"transaction-closure self-test failed with the wrong error: {error}"
+        ) from error
+    raise MigrationVerificationError(
+        f"transaction-closure self-test accepted {canary_name}"
+    )
+
+
+def self_test_transaction_closure() -> None:
+    """Prove the verifier rejects both ways an explicit transaction stays open."""
+
+    _require_transaction_rejection(
+        "BEGIN;\nSELECT 1;\n",
+        "BEGIN-only canary",
+        "explicit BEGIN lacks terminal COMMIT",
+    )
+    _require_transaction_rejection(
+        "BEGIN;\nCOMMIT AND CHAIN;\n",
+        "COMMIT AND CHAIN canary",
+        "COMMIT AND CHAIN leaves an explicit transaction open at EOF",
+    )
+    _require_transaction_rejection(
+        "BEGIN;\nCOMMIT;\nSELECT 1;\n",
+        "post-COMMIT tail canary",
+        "explicit transaction must wrap every statement",
+    )
+
+
 def verify_migrations(root: Path = ROOT) -> tuple[str, ...]:
     root = root.resolve()
+    self_test_transaction_closure()
     runtime_names = migration_names(root / "db/migrations")
     base_names = migration_names(root / "specs/database/migrations")
+    for migration_name in runtime_names:
+        migration_path = root / "db/migrations" / migration_name
+        verify_transaction_closure(
+            migration_path.read_text(encoding="utf-8"), migration_name
+        )
     if len(runtime_names) != EXPECTED_RUNTIME_MIGRATIONS:
         raise MigrationVerificationError(
             f"runtime migration count must be {EXPECTED_RUNTIME_MIGRATIONS}, "

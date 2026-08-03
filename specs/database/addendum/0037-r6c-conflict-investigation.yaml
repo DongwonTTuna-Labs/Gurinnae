@@ -1,0 +1,4002 @@
+schema_version: 1
+proposal_version: 2026-08-01.0037-r6c-conflict-investigation.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0037_r6c_conflict_investigation.sql
+  exact_relations:
+  - raw.research_artifact_review_tiers
+  - core.relationship_graph_endpoints_v2
+  - core.relationship_graph_assertions_v2
+  - core.relationship_graph_assertion_evidence_v2
+  - core.relationship_graph_verification_decisions_v2
+  - core.dataset_snapshot_relationship_assertions_v2
+  - core.dataset_snapshot_conflict_inputs_v2
+  - ops.hypothesis_recursion_policies
+  - ops.hypothesis_recursion_plans
+  - ops.hypothesis_recursion_nodes
+  - ops.hypothesis_recursion_transitions
+  - ops.hypothesis_recursion_receipts
+  - ops.hypothesis_recursion_budget_ledger
+  exact_new_relation_count: 13
+  relation_delta: 13
+  altered_relations:
+  - raw.research_artifacts
+  - raw.research_artifact_promotions
+  - ops.execution_authorizations
+  - core.dataset_snapshots
+  - core.dataset_snapshot_members
+  - ops.agent_source_uses
+  - ops.event_types
+  - editorial.conflict_snapshots
+  purpose: Add the forward-only R6c official-artifact review tier, typed relationship graph v2, snapshot-bound typed-neighbor
+    v3 reader, five conflict-rule input freezes, and bounded hypothesis recursion without changing the supplier-only graph
+    v1 or any migration through 0036.
+  relation_count_rule: Candidate keys, columns, enum evolution, routines, triggers, grants, revokes, and connector or rule
+    catalog changes add no relkind-r relation beyond scope.exact_relations.
+  acl_only_relations:
+  - core.parser_runs
+  - core.parser_versions
+  - editorial.cases
+  - editorial.hypotheses
+  - ops.agent_suggestions
+  - ops.inbox
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0036 remain byte-preserved; all authority is additive or a forward function
+    replacement in 0037
+  supplier_graph_v1_rule: the existing supplier-to-supplier relationship model and relationship.neighbors v2 remain available
+    and unchanged
+  typed_graph_v2_rule: all new cross-kind relations use the closed v2 endpoint and assertion graph below
+  exact_new_write_rule: runtime writes are accepted only through fixed SECURITY DEFINER owner routines with exact canonical
+    payload, digest, lineage, actor, evidence, and replay checks
+  no_operating_seed_rule: no production conflict-rule threshold policy and no hypothesis-recursion policy row is inserted
+    by this migration
+  fixture_only_rule: threshold examples and recursion limits used by tests are fixture authority only and never become an
+    operating default
+  fail_closed_rule: missing policy, stale lease or fence, incomplete lineage, ambiguous source coverage, unreviewed relationship,
+    missing receipt predecessor, noncanonical payload, or digest mismatch performs no activation, merge, publication, or recursive
+    scheduling
+existing_relation_changes:
+- relation: raw.research_artifacts
+  added_candidate_keys:
+  - name: research_artifacts_review_tier_binding_uq
+    columns:
+    - id
+    - asset_id
+    - asset_revision
+    - artifact_sha256
+    - content_sha256
+  changes:
+  - add the exact artifact identity candidate key over id, asset identity and revision, artifact SHA-256, and content SHA-256
+  - require FETCH_URL artifacts to be classified RESTRICTED before insert
+  - append exactly one OFFICIAL_UNREVIEWED revision-one review-tier receipt after a successful artifact insert
+- relation: raw.research_artifact_promotions
+  added_candidate_keys:
+  - name: research_artifact_promotions_review_tier_binding_uq
+    columns:
+    - promotion_id
+    - receipt_sha256
+    - research_artifact_id
+    - research_asset_id
+    - research_asset_revision
+    - research_artifact_sha256
+    - research_content_sha256
+  changes:
+  - add the exact promotion, receipt, artifact, asset, and content candidate key used by HUMAN_PROMOTED review-tier lineage
+  - append revision two only after the existing promotion row, explicit reviewed classification, human reviewer, and revision-one
+    predecessor receipt all match
+- relation: ops.execution_authorizations
+  added_candidate_keys:
+  - name: execution_authorizations_recursion_binding_uq
+    columns:
+    - execution_id
+    - generation
+    - execution_digest
+  changes:
+  - add the execution id, positive generation, and execution digest candidate key used by recursion-plan root binding
+- relation: core.dataset_snapshots
+  added_candidate_keys:
+  - name: dataset_snapshots_generation_hash_binding_uq
+    columns:
+    - id
+    - producer_generation
+    - snapshot_sha256
+  add_columns:
+    conflict_input_count:
+      type: bigint
+      nullable: true
+    conflict_input_set_sha256:
+      type: char(64)
+      nullable: true
+  changes:
+  - add the id, producer generation, and snapshot digest candidate key used by frozen typed-relationship bindings
+  - require the conflict-input count and set digest to be both null or a positive count plus lowercase SHA-256
+  - the conflict v2 finalizer binds the exact count and ordered input-digest set into the READY manifest
+- relation: core.dataset_snapshot_members
+  changes:
+  - extend the closed object_type set with TYPED_RELATIONSHIP_ASSERTION
+  - admit that type only in AGENT_CASE with no evidence, response, or normalization lineage columns
+  - preserve every prior evidence, response, direct CONTRACT, and normalized-object branch byte-for-byte
+- relation: ops.agent_source_uses
+  changes:
+  - extend DATASET_MEMBER object_type with TYPED_RELATIONSHIP_ASSERTION under the same exact snapshot-member and SOURCE_DOCUMENT
+    tuple
+  - preserve existing EVIDENCE_SEGMENT, RESPONSE_SNAPSHOT, other DATASET_MEMBER, and RESEARCH_ARTIFACT branches
+  - typed-neighbor v3 requires two distinct TOOL_QUERY source-use rows, one for each frozen endpoint source
+- relation: ops.event_types
+  changes:
+  - forward-override exactly attachment.scan_completed.v1 and agent.run_control_changed.v2 from the generated payload registry
+    before any 0037 owner routine can consume either event
+- relation: editorial.conflict_snapshots
+  changes:
+  - replace conflict_snapshots_candidate_role_ck with the exact prior AUTHOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, APPROVER,
+    EXECUTOR, and OPERATIONS set plus INVESTIGATOR, ACCESS_ADMIN, SECURITY_ADMIN, and EXECUTIVE_APPROVER so every eligible
+    active actions.review role selected by the owner is physically admissible; no generic or invented APPROVER assignment is
+    created
+enum_changes:
+  editorial.evidence_classification:
+    additive_values:
+    - INTERNAL
+    reason: the promotion request already admits explicit INTERNAL classification and the physical enum must preserve that
+      nondefaulted decision
+event_registry_contract:
+  generated_forward_override:
+    generator: scripts/generate_event_payload_registry.py
+    generator_sha256: 280d2ed049beba84dfa84db1752cfb8f359fab485e8a84f88e9da35a2357f244
+    exact_update_cardinality: 2
+    events_in_order:
+    - attachment.scan_completed.v1
+    - agent.run_control_changed.v2
+    ordering_rule: generated overrides are the first executable migration phase and a cardinality mismatch aborts the migration
+  conflict_snapshot_candidate_roles:
+    exact_values:
+    - AUTHOR
+    - INVESTIGATOR
+    - EDITOR
+    - LEGAL_REVIEWER
+    - PUBLISHER
+    - APPROVER
+    - EXECUTOR
+    - OPERATIONS
+    - ACCESS_ADMIN
+    - SECURITY_ADMIN
+    - EXECUTIVE_APPROVER
+    migration_seed: forbidden
+tables:
+  raw.research_artifact_review_tiers:
+    owner_role: gurine_migrator
+    owning_component: analysis-worker source.fetch and control-api human promotion
+    mutation_class: IMMUTABLE_REVISION_CHAIN
+    exact_columns:
+    - tier_id
+    - research_artifact_id
+    - research_asset_id
+    - research_asset_revision
+    - research_artifact_sha256
+    - research_content_sha256
+    - revision
+    - review_tier
+    - reviewed_classification
+    - predecessor_revision
+    - predecessor_receipt_sha256
+    - source_use_agent_run_id
+    - source_use_id
+    - source_use_sha256
+    - source_locator_digest
+    - official_source_registry_digest
+    - promotion_id
+    - promotion_receipt_sha256
+    - reviewed_by
+    - reviewed_at
+    - receipt_payload
+    - receipt_canonical
+    - receipt_sha256
+    - created_at
+    keys:
+      primary:
+      - tier_id
+      unique:
+      - - research_artifact_id
+        - revision
+      - - research_artifact_id
+        - revision
+        - receipt_sha256
+      - - receipt_sha256
+      exact_parents:
+      - raw.research_artifacts(id,asset_id,asset_revision,artifact_sha256,content_sha256)
+      - ops.agent_source_uses(agent_run_id,source_use_id,source_use_sha256)
+      - raw.research_artifact_promotions(promotion_id,receipt_sha256,research_artifact_id,research_asset_id,research_asset_revision,research_artifact_sha256,research_content_sha256)
+      - raw.research_artifact_review_tiers(research_artifact_id,revision,receipt_sha256)
+    shape:
+      revision_1:
+        review_tier: OFFICIAL_UNREVIEWED
+        reviewed_classification: RESTRICTED
+        predecessor: forbidden
+        promotion: forbidden
+        reviewer: forbidden
+      revision_2:
+        review_tier: HUMAN_PROMOTED
+        predecessor_revision: 1
+        predecessor_receipt: required
+        promotion: required
+        reviewer: required
+      promoted_classifications:
+      - PUBLIC
+      - INTERNAL
+      - RESTRICTED
+      - PERSONAL_DATA
+      - LEGAL_HOLD
+      default_classification: forbidden
+    canonical_rule: receipt_canonical is canonical UTF-8 JSON equal to receipt_payload and receipt_sha256 is its lowercase
+      SHA-256
+    trigger: research_artifact_review_tiers_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal artifact-review receipt chain exposed only to fixed worker, control, and audit roles
+    retention:
+      parent: raw.research_artifacts plus raw.research_artifact_promotions
+      rule: retain with the immutable artifact, promotion, source-use, and legal-hold graph
+      data_classification: source locator and digest evidence can remain linkable but stores no added natural-person identifier
+      legal_hold_key: research_artifact_id
+      backup_behavior: restore after artifact, source-use, and promotion parents and before citation consumers
+    repository: crates/persistence-postgres::research_artifacts::ResearchArtifactRepository
+    repository_roundtrip:
+      write: declared owner triggers append OFFICIAL_UNREVIEWED revision one and HUMAN_PROMOTED revision two only
+      read: resolve the exact artifact and revision chain without direct runtime mutation
+      assertions:
+      - exact predecessor, promotion, and source-use digest chain
+      - canonical receipt hash and the closed two-tier set
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      tier_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      research_artifact_id:
+        type: uuid
+        nullable: false
+      research_asset_id:
+        type: uuid
+        nullable: false
+      research_asset_revision:
+        type: bigint
+        nullable: false
+      research_artifact_sha256:
+        type: char(64)
+        nullable: false
+      research_content_sha256:
+        type: char(64)
+        nullable: false
+      revision:
+        type: bigint
+        nullable: false
+      review_tier:
+        type: text
+        nullable: false
+      reviewed_classification:
+        type: text
+        nullable: false
+      predecessor_revision:
+        type: bigint
+        nullable: true
+      predecessor_receipt_sha256:
+        type: char(64)
+        nullable: true
+      source_use_agent_run_id:
+        type: uuid
+        nullable: true
+      source_use_id:
+        type: uuid
+        nullable: true
+      source_use_sha256:
+        type: char(64)
+        nullable: true
+      source_locator_digest:
+        type: char(64)
+        nullable: false
+      official_source_registry_digest:
+        type: char(64)
+        nullable: false
+      promotion_id:
+        type: uuid
+        nullable: true
+      promotion_receipt_sha256:
+        type: char(64)
+        nullable: true
+      reviewed_by:
+        type: uuid
+        nullable: true
+      reviewed_at:
+        type: timestamptz
+        nullable: true
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_sha256:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: research_artifact_review_tiers_pk
+      columns:
+      - tier_id
+    uniques:
+    - name: research_artifact_review_tiers_revision_uq
+      columns:
+      - research_artifact_id
+      - revision
+    - name: research_artifact_review_tiers_chain_uq
+      columns:
+      - research_artifact_id
+      - revision
+      - receipt_sha256
+    - name: research_artifact_review_tiers_receipt_uq
+      columns:
+      - receipt_sha256
+    foreign_keys:
+    - name: research_artifact_review_tiers_artifact_fk
+      columns:
+      - research_artifact_id
+      - research_asset_id
+      - research_asset_revision
+      - research_artifact_sha256
+      - research_content_sha256
+      references: raw.research_artifacts(id,asset_id,asset_revision,artifact_sha256,content_sha256)
+      on_delete: RESTRICT
+    - name: research_artifact_review_tiers_source_use_fk
+      columns:
+      - source_use_agent_run_id
+      - source_use_id
+      - source_use_sha256
+      references: ops.agent_source_uses(agent_run_id,source_use_id,source_use_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    - name: research_artifact_review_tiers_promotion_fk
+      columns:
+      - promotion_id
+      - promotion_receipt_sha256
+      - research_artifact_id
+      - research_asset_id
+      - research_asset_revision
+      - research_artifact_sha256
+      - research_content_sha256
+      references: raw.research_artifact_promotions(promotion_id,receipt_sha256,research_artifact_id,research_asset_id,research_asset_revision,research_artifact_sha256,research_content_sha256)
+      on_delete: RESTRICT
+    - name: research_artifact_review_tiers_reviewer_fk
+      columns:
+      - reviewed_by
+      references: ops.users(id)
+      on_delete: RESTRICT
+    - name: research_artifact_review_tiers_predecessor_fk
+      columns:
+      - research_artifact_id
+      - predecessor_revision
+      - predecessor_receipt_sha256
+      references: raw.research_artifact_review_tiers(research_artifact_id,revision,receipt_sha256)
+      on_delete: RESTRICT
+    checks:
+    - name: research_artifact_review_tiers_shape_ck
+      expression: revision > 0 AND num_nonnulls(source_use_agent_run_id, source_use_id, source_use_sha256) IN (0, 3) AND review_tier
+        IN ('OFFICIAL_UNREVIEWED', 'HUMAN_PROMOTED') AND reviewed_classification IN ('PUBLIC', 'INTERNAL', 'RESTRICTED', 'PERSONAL_DATA',
+        'LEGAL_HOLD') AND ((review_tier = 'OFFICIAL_UNREVIEWED' AND reviewed_classification = 'RESTRICTED' AND revision =
+        1 AND num_nonnulls(predecessor_revision, predecessor_receipt_sha256, promotion_id, promotion_receipt_sha256, reviewed_by,
+        reviewed_at) = 0) OR (review_tier = 'HUMAN_PROMOTED' AND revision = 2 AND predecessor_revision = 1 AND num_nonnulls(predecessor_receipt_sha256,
+        promotion_id, promotion_receipt_sha256, reviewed_by, reviewed_at) = 5))
+    - name: research_artifact_review_tiers_digest_ck
+      expression: research_artifact_sha256 ~ '^[0-9a-f]{64}$' AND research_content_sha256 ~ '^[0-9a-f]{64}$' AND (source_use_sha256
+        IS NULL OR source_use_sha256 ~ '^[0-9a-f]{64}$') AND source_locator_digest ~ '^[0-9a-f]{64}$' AND official_source_registry_digest
+        ~ '^[0-9a-f]{64}$' AND (predecessor_receipt_sha256 IS NULL OR predecessor_receipt_sha256 ~ '^[0-9a-f]{64}$') AND (promotion_receipt_sha256
+        IS NULL OR promotion_receipt_sha256 ~ '^[0-9a-f]{64}$') AND receipt_sha256 ~ '^[0-9a-f]{64}$'
+    - name: research_artifact_review_tiers_canonical_ck
+      expression: CAST(convert_from(receipt_canonical, 'UTF8') AS jsonb) = receipt_payload AND receipt_sha256 = encode(extensions.digest(receipt_canonical,
+        'sha256'), 'hex')
+  core.relationship_graph_endpoints_v2:
+    owner_role: gurine_migrator
+    owning_component: ingest-worker typed graph normalizer
+    mutation_class: IMMUTABLE
+    exact_columns:
+    - endpoint_id
+    - endpoint_kind
+    - identity_resolution_status
+    - entity_id
+    - entity_revision
+    - entity_digest
+    - contextual_name
+    - role_title
+    - person_node_digest
+    - source_locator
+    - source_locator_digest
+    - identifier_digest
+    - source_document_id
+    - source_asset_id
+    - source_asset_revision
+    - source_content_sha256
+    - parser_run_id
+    - parsed_record_id
+    - parser_version
+    - parsed_payload_sha256
+    - normalization_run_id
+    - normalization_version
+    - normalization_contract_sha256
+    - source_use_agent_run_id
+    - source_use_id
+    - source_use_sha256
+    - endpoint_payload
+    - endpoint_canonical
+    - endpoint_digest
+    - created_actor_type
+    - created_actor_id
+    - created_by
+    - created_at
+    endpoint_kinds:
+    - SUPPLIER
+    - PERSON
+    - AGENCY
+    - PROCUREMENT_NOTICE
+    - SANCTION
+    person_shape:
+      identity_resolution_status: PENDING_HUMAN
+      stored_context_fields:
+      - contextual_name
+      - role_title
+      - source_locator
+      - identifier_digest
+      - person_node_digest
+      entity_binding: forbidden until a separate human identity decision
+      forbidden_fields:
+      - resident_registration_number
+      - address
+      - birth_date
+      - sex
+      - phone
+      - family_relation
+      - kinship
+      - score
+      - rank
+      - probability
+    nonperson_shape: entity id, positive revision, and digest are all required with identity_resolution_status NOT_APPLICABLE
+    provenance_branches:
+    - exact source document plus parser run plus parsed record
+    - exact source document plus normalization run
+    - exact same-run source use
+    actor_shape: HUMAN plus matching user UUID or SERVICE plus exact actor ingest-worker
+    canonical_rule: endpoint_canonical hashes to endpoint_digest and equals endpoint_payload
+    trigger: relationship_graph_endpoints_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable protected typed-graph endpoint read only by fixed internal roles
+    retention:
+      rule: retain with exact source evidence and graph legal holds
+      data_classification: PERSON stores only contextual name, role, source locator, and identifier digest as protected linkable
+        data; address, birth, family, sensitive, score, and rank fields do not exist
+      legal_hold_key: endpoint_id
+      backup_behavior: restore after source, parser, normalization, and source-use parents and before assertions
+    repository: crates/persistence-postgres::relationship_graph::RelationshipGraphRepository
+    repository_roundtrip:
+      write: owner writer inserts only the five closed endpoint kinds
+      read: resolve one exact endpoint identity and digest
+      assertions:
+      - PERSON remains PENDING_HUMAN with no entity binding and only the closed L4 fields
+      - non-PERSON endpoints require the exact entity tuple and one provenance branch
+      - canonical digest, immutability, and direct runtime DML denial
+    grants:
+      select:
+      - gurine_control_api
+      - gurine_auditor
+      execute_writer:
+      - gurine_ingest_worker
+      runtime_dml: []
+    columns:
+      endpoint_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      endpoint_kind:
+        type: text
+        nullable: false
+      identity_resolution_status:
+        type: text
+        nullable: false
+      entity_id:
+        type: uuid
+        nullable: true
+      entity_revision:
+        type: bigint
+        nullable: true
+      entity_digest:
+        type: char(64)
+        nullable: true
+      contextual_name:
+        type: text
+        nullable: true
+      role_title:
+        type: text
+        nullable: true
+      person_node_digest:
+        type: char(64)
+        nullable: true
+      source_locator:
+        type: text
+        nullable: false
+      source_locator_digest:
+        type: char(64)
+        nullable: false
+      identifier_digest:
+        type: char(64)
+        nullable: false
+      source_document_id:
+        type: uuid
+        nullable: true
+      source_asset_id:
+        type: uuid
+        nullable: true
+      source_asset_revision:
+        type: bigint
+        nullable: true
+      source_content_sha256:
+        type: char(64)
+        nullable: true
+      parser_run_id:
+        type: uuid
+        nullable: true
+      parsed_record_id:
+        type: uuid
+        nullable: true
+      parser_version:
+        type: text
+        nullable: true
+      parsed_payload_sha256:
+        type: char(64)
+        nullable: true
+      normalization_run_id:
+        type: uuid
+        nullable: true
+      normalization_version:
+        type: text
+        nullable: true
+      normalization_contract_sha256:
+        type: char(64)
+        nullable: true
+      source_use_agent_run_id:
+        type: uuid
+        nullable: true
+      source_use_id:
+        type: uuid
+        nullable: true
+      source_use_sha256:
+        type: char(64)
+        nullable: true
+      endpoint_payload:
+        type: jsonb
+        nullable: false
+      endpoint_canonical:
+        type: bytea
+        nullable: false
+      endpoint_digest:
+        type: char(64)
+        nullable: false
+      created_actor_type:
+        type: text
+        nullable: false
+      created_actor_id:
+        type: text
+        nullable: false
+      created_by:
+        type: uuid
+        nullable: true
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: relationship_graph_endpoints_v2_pk
+      columns:
+      - endpoint_id
+    uniques:
+    - name: relationship_graph_endpoints_v2_digest_uq
+      columns:
+      - endpoint_digest
+    - name: relationship_graph_endpoints_v2_exact_uq
+      columns:
+      - endpoint_id
+      - endpoint_digest
+    - name: relationship_graph_endpoints_v2_kind_exact_uq
+      columns:
+      - endpoint_id
+      - endpoint_kind
+      - endpoint_digest
+    - name: relationship_graph_endpoints_v2_source_uq
+      columns:
+      - endpoint_id
+      - source_use_id
+      - source_use_sha256
+    foreign_keys:
+    - name: relationship_graph_endpoints_v2_document_fk
+      columns:
+      - source_document_id
+      - source_asset_id
+      - source_asset_revision
+      - source_content_sha256
+      references: raw.source_documents(id,asset_id,asset_revision,content_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    - name: relationship_graph_endpoints_v2_normalization_fk
+      columns:
+      - normalization_run_id
+      - source_document_id
+      references: core.normalization_runs(id,source_document_id)
+      on_delete: RESTRICT
+    - name: relationship_graph_endpoints_v2_parser_run_fk
+      columns:
+      - parser_run_id
+      - source_document_id
+      references: core.parser_runs(id,source_document_id)
+      on_delete: RESTRICT
+    - name: relationship_graph_endpoints_v2_parsed_record_fk
+      columns:
+      - parsed_record_id
+      - source_document_id
+      - parser_run_id
+      - parser_version
+      - parsed_payload_sha256
+      references: raw.parsed_records(id,source_document_id,parser_run_id,parser_version,payload_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    - name: relationship_graph_endpoints_v2_source_use_fk
+      columns:
+      - source_use_agent_run_id
+      - source_use_id
+      - source_use_sha256
+      references: ops.agent_source_uses(agent_run_id,source_use_id,source_use_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    - name: relationship_graph_endpoints_v2_creator_fk
+      columns:
+      - created_by
+      references: ops.users(id)
+      on_delete: RESTRICT
+    checks:
+    - name: relationship_graph_endpoints_v2_kind_ck
+      expression: endpoint_kind IN ('SUPPLIER', 'PERSON', 'AGENCY', 'PROCUREMENT_NOTICE', 'SANCTION')
+    - name: relationship_graph_endpoints_v2_person_ck
+      expression: (endpoint_kind = 'PERSON' AND identity_resolution_status = 'PENDING_HUMAN' AND num_nonnulls(entity_id, entity_revision,
+        entity_digest) = 0 AND person_node_digest IS NOT NULL AND NULLIF(btrim(contextual_name), '') IS NOT NULL AND NULLIF(btrim(role_title),
+        '') IS NOT NULL) OR (endpoint_kind <> 'PERSON' AND identity_resolution_status = 'NOT_APPLICABLE' AND num_nonnulls(entity_id,
+        entity_revision, entity_digest) = 3 AND entity_revision > 0 AND person_node_digest IS NULL AND contextual_name IS
+        NULL AND role_title IS NULL)
+    - name: relationship_graph_endpoints_v2_text_ck
+      expression: length(btrim(source_locator)) BETWEEN 1 AND 2048 AND (contextual_name IS NULL OR length(btrim(contextual_name))
+        <= 300) AND (role_title IS NULL OR length(btrim(role_title)) <= 300)
+    - name: relationship_graph_endpoints_v2_digest_ck
+      expression: source_locator_digest ~ '^[0-9a-f]{64}$' AND identifier_digest ~ '^[0-9a-f]{64}$' AND (source_use_sha256
+        IS NULL OR source_use_sha256 ~ '^[0-9a-f]{64}$') AND (entity_digest IS NULL OR entity_digest ~ '^[0-9a-f]{64}$') AND
+        (person_node_digest IS NULL OR person_node_digest ~ '^[0-9a-f]{64}$') AND (source_content_sha256 IS NULL OR source_content_sha256
+        ~ '^[0-9a-f]{64}$') AND (parsed_payload_sha256 IS NULL OR parsed_payload_sha256 ~ '^[0-9a-f]{64}$') AND (normalization_contract_sha256
+        IS NULL OR normalization_contract_sha256 ~ '^[0-9a-f]{64}$') AND endpoint_digest ~ '^[0-9a-f]{64}$' AND (endpoint_kind
+        <> 'PERSON' OR (person_node_digest <> identifier_digest AND person_node_digest <> endpoint_digest))
+    - name: relationship_graph_endpoints_v2_provenance_ck
+      expression: (num_nonnulls(source_document_id, source_asset_id, source_asset_revision, source_content_sha256, parser_run_id,
+        parsed_record_id, parser_version, parsed_payload_sha256) = 8 AND source_asset_revision > 0 AND num_nonnulls(normalization_run_id,
+        normalization_version, normalization_contract_sha256) = 0 AND num_nonnulls(source_use_agent_run_id, source_use_id,
+        source_use_sha256) = 0) OR (num_nonnulls(source_document_id, source_asset_id, source_asset_revision, source_content_sha256,
+        normalization_run_id, normalization_version, normalization_contract_sha256) = 7 AND source_asset_revision > 0 AND
+        num_nonnulls(parser_run_id, parsed_record_id, parser_version, parsed_payload_sha256) = 0 AND num_nonnulls(source_use_agent_run_id,
+        source_use_id, source_use_sha256) = 0) OR (num_nonnulls(source_document_id, source_asset_id, source_asset_revision,
+        source_content_sha256, parser_run_id, parsed_record_id, parser_version, parsed_payload_sha256, normalization_run_id,
+        normalization_version, normalization_contract_sha256) = 0 AND num_nonnulls(source_use_agent_run_id, source_use_id,
+        source_use_sha256) = 3)
+    - name: relationship_graph_endpoints_v2_actor_ck
+      expression: (created_actor_type = 'HUMAN' AND created_by IS NOT NULL AND created_actor_id = CAST(created_by AS text))
+        OR (created_actor_type = 'SERVICE' AND created_by IS NULL AND created_actor_id = 'ingest-worker')
+    - name: relationship_graph_endpoints_v2_canonical_ck
+      expression: CAST(convert_from(endpoint_canonical, 'UTF8') AS jsonb) = endpoint_payload AND endpoint_digest = encode(extensions.digest(endpoint_canonical,
+        'sha256'), 'hex')
+  core.relationship_graph_assertions_v2:
+    owner_role: gurine_migrator
+    owning_component: ingest-worker proposal and human relationship review
+    mutation_class: IMMUTABLE_REVISION_CHAIN
+    exact_columns:
+    - assertion_id
+    - assertion_revision
+    - assertion_digest
+    - predecessor_revision
+    - predecessor_digest
+    - prior_receipt_sha256
+    - relationship_kind
+    - source_kind
+    - source_locator
+    - source_locator_digest
+    - subject_endpoint_id
+    - subject_endpoint_kind
+    - subject_endpoint_digest
+    - object_endpoint_id
+    - object_endpoint_kind
+    - object_endpoint_digest
+    - valid_from
+    - valid_to
+    - departed_on
+    - validity_coverage_status
+    - verification_status
+    - public_use_status
+    - evidence_count
+    - evidence_set_digest
+    - proposed_actor_type
+    - proposed_actor_id
+    - proposed_by
+    - verified_by
+    - verified_at
+    - verification_reason_digest
+    - assertion_payload
+    - assertion_canonical
+    - receipt_payload
+    - receipt_canonical
+    - receipt_sha256
+    - created_at
+    relationship_kinds:
+    - OWNERSHIP
+    - BENEFICIAL_OWNERSHIP
+    - CONTROL
+    - MANAGEMENT_ROLE
+    - LEGAL_REPRESENTATIVE
+    - CONTRACTUAL_RELATIONSHIP
+    - BID_PARTICIPATION
+    - SANCTION
+    - FORMER_OFFICIAL_ROLE
+    forbidden_relationship_kinds:
+    - FAMILY
+    - KINSHIP
+    - RELATIVE
+    - HOUSEHOLD
+    - SPOUSE
+    - PARENT
+    - CHILD
+    - SIBLING
+    canonical_direction:
+      supplier_to_supplier:
+      - OWNERSHIP
+      - BENEFICIAL_OWNERSHIP
+      - CONTROL
+      - CONTRACTUAL_RELATIONSHIP
+      person_to_supplier:
+      - MANAGEMENT_ROLE
+      - LEGAL_REPRESENTATIVE
+      supplier_to_procurement_notice:
+      - BID_PARTICIPATION
+      supplier_to_sanction:
+      - SANCTION
+      person_to_agency:
+      - FORMER_OFFICIAL_ROLE
+    revision_1:
+      verification_status: PENDING_HUMAN
+      public_use_status: NOT_REVIEWED
+      verified_by: forbidden
+      actor_session_binding: a HUMAN proposer must equal the nonempty gurine.actor_user_id session actor; the typed SERVICE
+        ingest-worker path remains separate
+    reviewed_revision:
+      independent_human: verified_by must be nonnull and distinct from proposed_by
+      actor_session_binding: the reviewer user must equal the nonempty gurine.actor_user_id session actor
+      verified_public_shape: VERIFIED plus APPROVED plus COMPLETE validity coverage
+      negative_shapes: REJECTED, CONFLICTED, or SUPERSEDED with NOT_REVIEWED or DENIED
+    former_official_role: departed_on is required, equals valid_to, and source_kind is PUBLIC_OFFICIAL_ETHICS_NOTICE or OFFICIAL_GAZETTE
+    evidence_rule: evidence_count is 1 through 1000 and equals the exact child count; evidence_set_digest binds the ordered
+      child digest set
+    canonical_rule: assertion and receipt canonical bytes independently hash to their stored digests
+    trigger: relationship_graph_assertions_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable revisioned protected relationship assertion exposed only to control and audit roles; identity writes
+        through SECURITY DEFINER owner routines
+    retention:
+      rule: retain with both endpoints, evidence children, verification decisions, and graph legal holds
+      data_classification: endpoint references are linkable protected graph data
+      legal_hold_key: assertion_id
+      backup_behavior: restore after endpoints and before evidence and decision children
+    repository: crates/persistence-postgres::relationship_graph::RelationshipGraphRepository
+    repository_roundtrip:
+      write: owner boundaries record revision one and append only an independently reviewed result revision
+      read: typed-neighbor readers resolve the exact approved revision
+      assertions:
+      - closed non-family relationship kind and direction matrix
+      - exact evidence set and independent human decision
+      - VERIFIED plus APPROVED plus COMPLETE L2 gate, receipt chain, immutability, and direct DML denial
+    grants:
+      select:
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      assertion_id:
+        type: uuid
+        nullable: false
+      assertion_revision:
+        type: bigint
+        nullable: false
+      assertion_digest:
+        type: char(64)
+        nullable: false
+      predecessor_revision:
+        type: bigint
+        nullable: true
+      predecessor_digest:
+        type: char(64)
+        nullable: true
+      prior_receipt_sha256:
+        type: char(64)
+        nullable: true
+      relationship_kind:
+        type: text
+        nullable: false
+      source_kind:
+        type: text
+        nullable: false
+      source_locator:
+        type: text
+        nullable: false
+      source_locator_digest:
+        type: char(64)
+        nullable: false
+      subject_endpoint_id:
+        type: uuid
+        nullable: false
+      subject_endpoint_kind:
+        type: text
+        nullable: false
+      subject_endpoint_digest:
+        type: char(64)
+        nullable: false
+      object_endpoint_id:
+        type: uuid
+        nullable: false
+      object_endpoint_kind:
+        type: text
+        nullable: false
+      object_endpoint_digest:
+        type: char(64)
+        nullable: false
+      valid_from:
+        type: date
+        nullable: true
+      valid_to:
+        type: date
+        nullable: true
+      departed_on:
+        type: date
+        nullable: true
+      validity_coverage_status:
+        type: text
+        nullable: false
+      verification_status:
+        type: text
+        nullable: false
+      public_use_status:
+        type: text
+        nullable: false
+      evidence_count:
+        type: integer
+        nullable: false
+      evidence_set_digest:
+        type: char(64)
+        nullable: false
+      proposed_actor_type:
+        type: text
+        nullable: false
+      proposed_actor_id:
+        type: text
+        nullable: false
+      proposed_by:
+        type: uuid
+        nullable: true
+      verified_by:
+        type: uuid
+        nullable: true
+      verified_at:
+        type: timestamptz
+        nullable: true
+      verification_reason_digest:
+        type: char(64)
+        nullable: true
+      assertion_payload:
+        type: jsonb
+        nullable: false
+      assertion_canonical:
+        type: bytea
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_sha256:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: relationship_graph_assertions_v2_pk
+      columns:
+      - assertion_id
+      - assertion_revision
+    uniques:
+    - name: relationship_graph_assertions_v2_exact_uq
+      columns:
+      - assertion_id
+      - assertion_revision
+      - assertion_digest
+    - name: relationship_graph_assertions_v2_chain_uq
+      columns:
+      - assertion_id
+      - assertion_revision
+      - assertion_digest
+      - receipt_sha256
+    - name: relationship_graph_assertions_v2_digest_uq
+      columns:
+      - assertion_digest
+    - name: relationship_graph_assertions_v2_receipt_uq
+      columns:
+      - receipt_sha256
+    foreign_keys:
+    - name: relationship_graph_assertions_v2_subject_fk
+      columns:
+      - subject_endpoint_id
+      - subject_endpoint_kind
+      - subject_endpoint_digest
+      references: core.relationship_graph_endpoints_v2(endpoint_id,endpoint_kind,endpoint_digest)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertions_v2_object_fk
+      columns:
+      - object_endpoint_id
+      - object_endpoint_kind
+      - object_endpoint_digest
+      references: core.relationship_graph_endpoints_v2(endpoint_id,endpoint_kind,endpoint_digest)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertions_v2_proposer_fk
+      columns:
+      - proposed_by
+      references: ops.users(id)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertions_v2_verifier_fk
+      columns:
+      - verified_by
+      references: ops.users(id)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertions_v2_predecessor_fk
+      columns:
+      - assertion_id
+      - predecessor_revision
+      - predecessor_digest
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertions_v2_predecessor_receipt_fk
+      columns:
+      - assertion_id
+      - predecessor_revision
+      - predecessor_digest
+      - prior_receipt_sha256
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest,receipt_sha256)
+      on_delete: RESTRICT
+    checks:
+    - name: relationship_graph_assertions_v2_kind_ck
+      expression: relationship_kind IN ('OWNERSHIP', 'BENEFICIAL_OWNERSHIP', 'CONTROL', 'MANAGEMENT_ROLE', 'LEGAL_REPRESENTATIVE',
+        'CONTRACTUAL_RELATIONSHIP', 'BID_PARTICIPATION', 'SANCTION', 'FORMER_OFFICIAL_ROLE')
+    - name: relationship_graph_assertions_v2_no_self_ck
+      expression: subject_endpoint_id <> object_endpoint_id
+    - name: relationship_graph_assertions_v2_pair_ck
+      expression: (relationship_kind IN ('OWNERSHIP', 'BENEFICIAL_OWNERSHIP', 'CONTROL', 'CONTRACTUAL_RELATIONSHIP') AND subject_endpoint_kind
+        = 'SUPPLIER' AND object_endpoint_kind = 'SUPPLIER') OR (relationship_kind IN ('MANAGEMENT_ROLE', 'LEGAL_REPRESENTATIVE')
+        AND subject_endpoint_kind = 'PERSON' AND object_endpoint_kind = 'SUPPLIER') OR (relationship_kind = 'BID_PARTICIPATION'
+        AND subject_endpoint_kind = 'SUPPLIER' AND object_endpoint_kind = 'PROCUREMENT_NOTICE') OR (relationship_kind = 'SANCTION'
+        AND subject_endpoint_kind = 'SUPPLIER' AND object_endpoint_kind = 'SANCTION') OR (relationship_kind = 'FORMER_OFFICIAL_ROLE'
+        AND subject_endpoint_kind = 'PERSON' AND object_endpoint_kind = 'AGENCY')
+    - name: relationship_graph_assertions_v2_revision_ck
+      expression: assertion_revision > 0 AND ((assertion_revision = 1 AND num_nonnulls(predecessor_revision, predecessor_digest,
+        prior_receipt_sha256) = 0) OR (assertion_revision > 1 AND predecessor_revision = (assertion_revision - 1) AND num_nonnulls(predecessor_digest,
+        prior_receipt_sha256) = 2))
+    - name: relationship_graph_assertions_v2_state_ck
+      expression: validity_coverage_status IN ('COMPLETE', 'PARTIAL', 'UNKNOWN', 'NOT_AVAILABLE') AND verification_status
+        IN ('PENDING_HUMAN', 'VERIFIED', 'REJECTED', 'CONFLICTED', 'SUPERSEDED') AND public_use_status IN ('NOT_REVIEWED',
+        'APPROVED', 'DENIED') AND ((assertion_revision = 1 AND verification_status = 'PENDING_HUMAN' AND public_use_status
+        = 'NOT_REVIEWED' AND num_nonnulls(verified_by, verified_at, verification_reason_digest) = 0) OR (assertion_revision
+        > 1 AND verification_status = 'VERIFIED' AND public_use_status = 'APPROVED' AND validity_coverage_status = 'COMPLETE'
+        AND verified_by IS NOT NULL AND verified_by IS DISTINCT FROM proposed_by AND verified_at IS NOT NULL AND verification_reason_digest
+        IS NOT NULL) OR (assertion_revision > 1 AND verification_status IN ('REJECTED', 'CONFLICTED', 'SUPERSEDED') AND public_use_status
+        IN ('NOT_REVIEWED', 'DENIED') AND verified_by IS NOT NULL AND verified_by IS DISTINCT FROM proposed_by AND verified_at
+        IS NOT NULL AND verification_reason_digest IS NOT NULL))
+    - name: relationship_graph_assertions_v2_evidence_ck
+      expression: evidence_count BETWEEN 1 AND 1000 AND evidence_set_digest ~ '^[0-9a-f]{64}$'
+    - name: relationship_graph_assertions_v2_time_ck
+      expression: valid_from IS NULL OR valid_to IS NULL OR valid_from <= valid_to
+    - name: relationship_graph_assertions_v2_source_ck
+      expression: length(btrim(source_kind)) BETWEEN 1 AND 128 AND length(btrim(source_locator)) BETWEEN 1 AND 2048 AND source_locator_digest
+        ~ '^[0-9a-f]{64}$'
+    - name: relationship_graph_assertions_v2_departure_ck
+      expression: (relationship_kind = 'FORMER_OFFICIAL_ROLE' AND departed_on IS NOT NULL AND valid_to IS NOT NULL AND valid_to
+        = departed_on AND source_kind IN ('PUBLIC_OFFICIAL_ETHICS_NOTICE', 'OFFICIAL_GAZETTE')) OR (relationship_kind <> 'FORMER_OFFICIAL_ROLE'
+        AND departed_on IS NULL AND NULLIF(btrim(source_kind), '') IS NOT NULL)
+    - name: relationship_graph_assertions_v2_actor_ck
+      expression: (proposed_actor_type = 'HUMAN' AND proposed_by IS NOT NULL AND proposed_actor_id = CAST(proposed_by AS text))
+        OR (proposed_actor_type = 'SERVICE' AND proposed_by IS NULL AND proposed_actor_id = 'ingest-worker')
+    - name: relationship_graph_assertions_v2_digest_ck
+      expression: assertion_digest ~ '^[0-9a-f]{64}$' AND subject_endpoint_digest ~ '^[0-9a-f]{64}$' AND object_endpoint_digest
+        ~ '^[0-9a-f]{64}$' AND (predecessor_digest IS NULL OR predecessor_digest ~ '^[0-9a-f]{64}$') AND (prior_receipt_sha256
+        IS NULL OR prior_receipt_sha256 ~ '^[0-9a-f]{64}$') AND (verification_reason_digest IS NULL OR verification_reason_digest
+        ~ '^[0-9a-f]{64}$') AND receipt_sha256 ~ '^[0-9a-f]{64}$'
+    - name: relationship_graph_assertions_v2_canonical_ck
+      expression: CAST(convert_from(assertion_canonical, 'UTF8') AS jsonb) = assertion_payload AND assertion_digest = encode(extensions.digest(assertion_canonical,
+        'sha256'), 'hex') AND CAST(convert_from(receipt_canonical, 'UTF8') AS jsonb) = receipt_payload AND receipt_sha256
+        = encode(extensions.digest(receipt_canonical, 'sha256'), 'hex')
+  core.relationship_graph_assertion_evidence_v2:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_CHILD
+    exact_columns:
+    - assertion_id
+    - assertion_revision
+    - assertion_digest
+    - evidence_ordinal
+    - evidence_id
+    - evidence_version
+    - evidence_digest
+    - source_document_id
+    - source_asset_id
+    - source_asset_revision
+    - source_content_sha256
+    - source_use_agent_run_id
+    - source_use_id
+    - source_use_sha256
+    - locator_digest
+    - evidence_binding_canonical
+    - evidence_member_digest
+    - created_at
+    source_shape: exactly one complete source-document tuple or one complete same-run source-use tuple
+    canonical_rule: evidence_member_digest is the SHA-256 of evidence_binding_canonical
+    trigger: relationship_graph_assertion_evidence_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable assertion-evidence child exposed only to fixed internal roles
+    retention:
+      parent: core.relationship_graph_assertions_v2
+      rule: retain only with the exact assertion revision and its legal holds
+      data_classification: locator and source graph values are protected linkable evidence
+      legal_hold_key: assertion_id plus assertion_revision
+      backup_behavior: restore after source and assertion parents
+    repository: crates/persistence-postgres::relationship_graph::RelationshipGraphRepository
+    repository_roundtrip:
+      write: assertion owner writes the ordered evidence set
+      read: recompute the exact evidence count and set digest for one revision
+      assertions:
+      - exact snapshot, evidence, and source tuples
+      - ordinal and digest uniqueness plus canonical member digest
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      assertion_id:
+        type: uuid
+        nullable: false
+      assertion_revision:
+        type: bigint
+        nullable: false
+      assertion_digest:
+        type: char(64)
+        nullable: false
+      evidence_ordinal:
+        type: integer
+        nullable: false
+      evidence_id:
+        type: uuid
+        nullable: false
+      evidence_version:
+        type: bigint
+        nullable: false
+      evidence_digest:
+        type: char(64)
+        nullable: false
+      source_document_id:
+        type: uuid
+        nullable: true
+      source_asset_id:
+        type: uuid
+        nullable: true
+      source_asset_revision:
+        type: bigint
+        nullable: true
+      source_content_sha256:
+        type: char(64)
+        nullable: true
+      source_use_agent_run_id:
+        type: uuid
+        nullable: true
+      source_use_id:
+        type: uuid
+        nullable: true
+      source_use_sha256:
+        type: char(64)
+        nullable: true
+      locator_digest:
+        type: char(64)
+        nullable: false
+      evidence_binding_canonical:
+        type: bytea
+        nullable: false
+      evidence_member_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: relationship_graph_assertion_evidence_v2_pk
+      columns:
+      - assertion_id
+      - assertion_revision
+      - evidence_ordinal
+    uniques:
+    - name: relationship_graph_assertion_evidence_v2_digest_uq
+      columns:
+      - assertion_id
+      - assertion_revision
+      - evidence_member_digest
+    foreign_keys:
+    - name: relationship_graph_assertion_evidence_v2_parent_fk
+      columns:
+      - assertion_id
+      - assertion_revision
+      - assertion_digest
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest)
+      on_delete: RESTRICT
+    - name: relationship_graph_assertion_evidence_v2_document_fk
+      columns:
+      - source_document_id
+      - source_asset_id
+      - source_asset_revision
+      - source_content_sha256
+      references: raw.source_documents(id,asset_id,asset_revision,content_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    - name: relationship_graph_assertion_evidence_v2_source_use_fk
+      columns:
+      - source_use_agent_run_id
+      - source_use_id
+      - source_use_sha256
+      references: ops.agent_source_uses(agent_run_id,source_use_id,source_use_sha256)
+      on_delete: RESTRICT
+      match: FULL
+    checks:
+    - name: relationship_graph_assertion_evidence_v2_scalar_ck
+      expression: evidence_ordinal >= 0 AND evidence_version > 0
+    - name: relationship_graph_assertion_evidence_v2_digest_ck
+      expression: assertion_digest ~ '^[0-9a-f]{64}$' AND evidence_digest ~ '^[0-9a-f]{64}$' AND (source_use_sha256 IS NULL
+        OR source_use_sha256 ~ '^[0-9a-f]{64}$') AND (source_content_sha256 IS NULL OR source_content_sha256 ~ '^[0-9a-f]{64}$')
+        AND locator_digest ~ '^[0-9a-f]{64}$' AND evidence_member_digest ~ '^[0-9a-f]{64}$' AND evidence_member_digest = encode(extensions.digest(evidence_binding_canonical,
+        'sha256'), 'hex')
+    - name: relationship_graph_assertion_evidence_v2_source_ck
+      expression: (num_nonnulls(source_document_id, source_asset_id, source_asset_revision, source_content_sha256) = 4 AND
+        source_asset_revision > 0 AND num_nonnulls(source_use_agent_run_id, source_use_id, source_use_sha256) = 0) OR (num_nonnulls(source_document_id,
+        source_asset_id, source_asset_revision, source_content_sha256) = 0 AND num_nonnulls(source_use_agent_run_id, source_use_id,
+        source_use_sha256) = 3)
+  core.relationship_graph_verification_decisions_v2:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_HUMAN_DECISION
+    exact_columns:
+    - decision_id
+    - assertion_id
+    - prior_assertion_revision
+    - prior_assertion_digest
+    - resulting_assertion_revision
+    - resulting_assertion_digest
+    - decision_kind
+    - reviewer_user_id
+    - reason_digest
+    - decision_payload
+    - decision_canonical
+    - decision_digest
+    - prior_receipt_sha256
+    - receipt_payload
+    - receipt_canonical
+    - receipt_sha256
+    - decided_at
+    - created_at
+    decision_kinds:
+    - VERIFY
+    - REJECT
+    - MARK_CONFLICT
+    - SUPERSEDE
+    revision_rule: resulting assertion revision is exactly prior revision plus one and both ends bind exact assertion digests
+      and the prior receipt
+    canonical_rule: decision and receipt canonical bytes independently hash to their stored digests
+    trigger: relationship_graph_verification_decisions_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable independent-human graph decision receipt exposed only to fixed internal roles
+    retention:
+      rule: retain with prior and resulting assertion revisions plus the audit and legal-hold graph
+      data_classification: reviewer UUID is a linkable internal identity
+      legal_hold_key: decision_id
+      backup_behavior: restore after the bound assertion revisions
+    repository: crates/persistence-postgres::relationship_graph::RelationshipGraphRepository
+    repository_roundtrip:
+      write: decision owner appends exactly one independently reviewed decision
+      read: resolve by decision identity and assertion revision
+      assertions:
+      - reviewer differs from proposer and automatic verification is forbidden
+      - exact prior and result digests plus canonical receipt hash
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      decision_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      assertion_id:
+        type: uuid
+        nullable: false
+      prior_assertion_revision:
+        type: bigint
+        nullable: false
+      prior_assertion_digest:
+        type: char(64)
+        nullable: false
+      resulting_assertion_revision:
+        type: bigint
+        nullable: false
+      resulting_assertion_digest:
+        type: char(64)
+        nullable: false
+      decision_kind:
+        type: text
+        nullable: false
+      reviewer_user_id:
+        type: uuid
+        nullable: false
+      reason_digest:
+        type: char(64)
+        nullable: false
+      decision_payload:
+        type: jsonb
+        nullable: false
+      decision_canonical:
+        type: bytea
+        nullable: false
+      decision_digest:
+        type: char(64)
+        nullable: false
+      prior_receipt_sha256:
+        type: char(64)
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_sha256:
+        type: char(64)
+        nullable: false
+      decided_at:
+        type: timestamptz
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: relationship_graph_verification_decisions_v2_pk
+      columns:
+      - decision_id
+    uniques:
+    - name: relationship_graph_verification_decisions_v2_assertion_uq
+      columns:
+      - assertion_id
+      - prior_assertion_revision
+    - name: relationship_graph_verification_decisions_v2_digest_uq
+      columns:
+      - decision_digest
+    - name: relationship_graph_verification_decisions_v2_receipt_uq
+      columns:
+      - receipt_sha256
+    foreign_keys:
+    - name: relationship_graph_verification_decisions_v2_prior_fk
+      columns:
+      - assertion_id
+      - prior_assertion_revision
+      - prior_assertion_digest
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest)
+      on_delete: RESTRICT
+    - name: relationship_graph_verification_decisions_v2_prior_receipt_fk
+      columns:
+      - assertion_id
+      - prior_assertion_revision
+      - prior_assertion_digest
+      - prior_receipt_sha256
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest,receipt_sha256)
+      on_delete: RESTRICT
+    - name: relationship_graph_verification_decisions_v2_result_fk
+      columns:
+      - assertion_id
+      - resulting_assertion_revision
+      - resulting_assertion_digest
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest)
+      on_delete: RESTRICT
+      deferrable: INITIALLY DEFERRED
+    - name: relationship_graph_verification_decisions_v2_reviewer_fk
+      columns:
+      - reviewer_user_id
+      references: ops.users(id)
+      on_delete: RESTRICT
+    checks:
+    - name: relationship_graph_verification_decisions_v2_kind_ck
+      expression: decision_kind IN ('VERIFY', 'REJECT', 'MARK_CONFLICT', 'SUPERSEDE')
+    - name: relationship_graph_verification_decisions_v2_revision_ck
+      expression: resulting_assertion_revision = (prior_assertion_revision + 1)
+    - name: relationship_graph_verification_decisions_v2_digest_ck
+      expression: prior_assertion_digest ~ '^[0-9a-f]{64}$' AND resulting_assertion_digest ~ '^[0-9a-f]{64}$' AND reason_digest
+        ~ '^[0-9a-f]{64}$' AND decision_digest ~ '^[0-9a-f]{64}$' AND prior_receipt_sha256 ~ '^[0-9a-f]{64}$' AND receipt_sha256
+        ~ '^[0-9a-f]{64}$'
+    - name: relationship_graph_verification_decisions_v2_canonical_ck
+      expression: CAST(convert_from(decision_canonical, 'UTF8') AS jsonb) = decision_payload AND decision_digest = encode(extensions.digest(decision_canonical,
+        'sha256'), 'hex') AND CAST(convert_from(receipt_canonical, 'UTF8') AS jsonb) = receipt_payload AND receipt_sha256
+        = encode(extensions.digest(receipt_canonical, 'sha256'), 'hex')
+  core.dataset_snapshot_relationship_assertions_v2:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_SNAPSHOT_CHILD
+    exact_columns:
+    - binding_id
+    - dataset_snapshot_id
+    - snapshot_sha256
+    - snapshot_generation
+    - assertion_ordinal
+    - assertion_id
+    - assertion_revision
+    - assertion_digest
+    - binding_canonical
+    - binding_digest
+    - created_at
+    eligibility: only the exact immutable assertion revision selected by the snapshot builder
+    activation_gate: assertion must be VERIFIED, APPROVED, COMPLETE, independently human reviewed, and have exact evidence
+      count and set digest
+    canonical_rule: binding_digest is the SHA-256 of binding_canonical
+    trigger: dataset_snapshot_relationship_assertions_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal snapshot child exposed only to fixed internal roles
+    retention:
+      parent: core.dataset_snapshots
+      rule: retain and remove only with the full immutable snapshot graph and its legal holds
+      data_classification: endpoint and assertion digests remain protected linkable graph data
+      legal_hold_key: dataset_snapshot_id
+      backup_behavior: restore after graph assertions and snapshot parent and before rule input
+    repository: crates/persistence-postgres::dataset_snapshots::PostgresDatasetSnapshotRepository
+    repository_roundtrip:
+      write: snapshot builder freezes only eligible assertion revisions
+      read: typed-neighbor v3 reads the exact READY snapshot binding
+      assertions:
+      - only COMPLETE plus VERIFIED plus APPROVED assertions
+      - exact generation, digest, count, order, and source bindings
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      binding_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      dataset_snapshot_id:
+        type: uuid
+        nullable: false
+      snapshot_sha256:
+        type: char(64)
+        nullable: false
+      snapshot_generation:
+        type: bigint
+        nullable: false
+      assertion_ordinal:
+        type: bigint
+        nullable: false
+      assertion_id:
+        type: uuid
+        nullable: false
+      assertion_revision:
+        type: bigint
+        nullable: false
+      assertion_digest:
+        type: char(64)
+        nullable: false
+      binding_canonical:
+        type: bytea
+        nullable: false
+      binding_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: dataset_snapshot_relationship_assertions_v2_pk
+      columns:
+      - binding_id
+    uniques:
+    - name: dataset_snapshot_relationship_assertions_v2_ordinal_uq
+      columns:
+      - dataset_snapshot_id
+      - assertion_ordinal
+    - name: dataset_snapshot_relationship_assertions_v2_assertion_uq
+      columns:
+      - dataset_snapshot_id
+      - assertion_id
+      - assertion_revision
+    - name: dataset_snapshot_relationship_assertions_v2_digest_uq
+      columns:
+      - dataset_snapshot_id
+      - binding_digest
+    foreign_keys:
+    - name: dataset_snapshot_relationship_assertions_v2_snapshot_fk
+      columns:
+      - dataset_snapshot_id
+      - snapshot_generation
+      - snapshot_sha256
+      references: core.dataset_snapshots(id,producer_generation,snapshot_sha256)
+      on_delete: RESTRICT
+    - name: dataset_snapshot_relationship_assertions_v2_assertion_fk
+      columns:
+      - assertion_id
+      - assertion_revision
+      - assertion_digest
+      references: core.relationship_graph_assertions_v2(assertion_id,assertion_revision,assertion_digest)
+      on_delete: RESTRICT
+    checks:
+    - name: dataset_snapshot_relationship_assertions_v2_scalar_ck
+      expression: snapshot_generation > 0 AND assertion_ordinal >= 0
+    - name: dataset_snapshot_relationship_assertions_v2_digest_ck
+      expression: snapshot_sha256 ~ '^[0-9a-f]{64}$' AND assertion_digest ~ '^[0-9a-f]{64}$' AND binding_digest ~ '^[0-9a-f]{64}$'
+        AND binding_digest = encode(extensions.digest(binding_canonical, 'sha256'), 'hex')
+  core.dataset_snapshot_conflict_inputs_v2:
+    owner_role: gurine_migrator
+    owning_component: analysis-worker conflict snapshot builder
+    mutation_class: IMMUTABLE_SNAPSHOT_CHILD
+    exact_columns:
+    - input_id
+    - dataset_snapshot_id
+    - snapshot_kind
+    - producer_generation
+    - snapshot_contract_version
+    - rule_id
+    - rule_version_id
+    - rule_version_digest
+    - coverage_status
+    - input_payload
+    - input_canonical
+    - input_sha256
+    - created_at
+    rule_ids:
+    - OFFICER_OVERLAP_AWARD
+    - OWNERSHIP_LINKED_COMPETITORS
+    - BID_ROTATION
+    - REVOLVING_DOOR_CONTRACT
+    - SANCTIONED_SUCCESSOR
+    coverage_statuses:
+    - COMPLETE
+    - PARTIAL
+    - BLOCKED
+    payload_exact_sections:
+    - schema_version
+    - rule_id
+    - rule_version_id
+    - rule_version_digest
+    - coverage_status
+    - coverage
+    - contracts
+    - suppliers
+    - procurement_notices
+    - procurement_awards
+    - bidder_participations
+    - sanctions
+    - typed_relationship_assertions
+    - strong_identifier_facts
+    live_policy_in_payload: forbidden
+    policy_binding: rule_version_digest equals the immutable core.rule_versions.code_digest; producerDigest and selection
+      separately commit the canonical configuration SHA-256
+    canonical_rule: input_canonical is canonical UTF-8 JSON equal to input_payload and input_sha256 is its lowercase SHA-256
+    trigger: dataset_snapshot_conflict_inputs_v2_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal five-rule materialization child exposed only to fixed internal roles
+    retention:
+      parent: core.dataset_snapshots
+      rule: retain and remove with the snapshot, rule-run, and legal-hold graph
+      data_classification: canonical input may contain protected organization and relationship facts but no added sensitive-person
+        attributes
+      legal_hold_key: dataset_snapshot_id
+      backup_behavior: restore after the snapshot graph and before evaluations
+    repository: crates/persistence-postgres::dataset_snapshots::PostgresDatasetSnapshotRepository
+    repository_roundtrip:
+      write: conflict builder and finalizer write one exact rule and version input
+      read: analysis reader verifies the frozen canonical input
+      assertions:
+      - exact five rule identifiers and immutable threshold policy digest
+      - explicit BLOCKED coverage reason and deterministic canonical input hash
+      - count and set digest, immutability, and direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    columns:
+      input_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      dataset_snapshot_id:
+        type: uuid
+        nullable: false
+      snapshot_kind:
+        type: text
+        nullable: false
+      producer_generation:
+        type: bigint
+        nullable: false
+      snapshot_contract_version:
+        type: smallint
+        nullable: false
+      rule_id:
+        type: text
+        nullable: false
+      rule_version_id:
+        type: uuid
+        nullable: false
+      rule_version_digest:
+        type: char(64)
+        nullable: false
+      coverage_status:
+        type: text
+        nullable: false
+      input_payload:
+        type: jsonb
+        nullable: false
+      input_canonical:
+        type: bytea
+        nullable: false
+      input_sha256:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: dataset_snapshot_conflict_inputs_v2_pk
+      columns:
+      - input_id
+    uniques:
+    - name: dataset_snapshot_conflict_inputs_v2_rule_uq
+      columns:
+      - dataset_snapshot_id
+      - rule_id
+      - rule_version_id
+    - name: dataset_snapshot_conflict_inputs_v2_digest_uq
+      columns:
+      - dataset_snapshot_id
+      - input_sha256
+    foreign_keys:
+    - name: dataset_snapshot_conflict_inputs_v2_header_fk
+      columns:
+      - dataset_snapshot_id
+      - snapshot_kind
+      - producer_generation
+      - snapshot_contract_version
+      references: core.dataset_snapshots(id,snapshot_kind,producer_generation,contract_version)
+      on_delete: RESTRICT
+    - name: dataset_snapshot_conflict_inputs_v2_rule_fk
+      columns:
+      - rule_version_id
+      references: core.rule_versions(id)
+      on_delete: RESTRICT
+    checks:
+    - name: dataset_snapshot_conflict_inputs_v2_shape_ck
+      expression: snapshot_kind = 'DETECTION_DATASET' AND snapshot_contract_version = 1 AND producer_generation > 0 AND rule_id
+        IN ('OFFICER_OVERLAP_AWARD', 'OWNERSHIP_LINKED_COMPETITORS', 'BID_ROTATION', 'REVOLVING_DOOR_CONTRACT', 'SANCTIONED_SUCCESSOR')
+        AND coverage_status IN ('COMPLETE', 'PARTIAL', 'BLOCKED')
+    - name: dataset_snapshot_conflict_inputs_v2_digest_ck
+      expression: rule_version_digest ~ '^[0-9a-f]{64}$' AND input_sha256 ~ '^[0-9a-f]{64}$' AND CAST(convert_from(input_canonical,
+        'UTF8') AS jsonb) = input_payload AND input_sha256 = encode(extensions.digest(input_canonical, 'sha256'), 'hex')
+    - name: dataset_snapshot_conflict_inputs_v2_payload_ck
+      expression: jsonb_typeof(input_payload) = 'object' AND (input_payload ->> 'schema_version') = 'conflict-detection-input.v2'
+        AND (input_payload ->> 'rule_id') = rule_id AND (input_payload ->> 'rule_version_id') = CAST(rule_version_id AS text)
+        AND (input_payload ->> 'rule_version_digest') = btrim(rule_version_digest) AND (input_payload ->> 'coverage_status')
+        = coverage_status AND NOT input_payload ? 'policy' AND jsonb_typeof(input_payload -> 'coverage') = 'object' AND jsonb_typeof(input_payload
+        -> 'contracts') = 'array' AND jsonb_typeof(input_payload -> 'suppliers') = 'array' AND jsonb_typeof(input_payload
+        -> 'procurement_notices') = 'array' AND jsonb_typeof(input_payload -> 'procurement_awards') = 'array' AND jsonb_typeof(input_payload
+        -> 'bidder_participations') = 'array' AND jsonb_typeof(input_payload -> 'sanctions') = 'array' AND jsonb_typeof(input_payload
+        -> 'typed_relationship_assertions') = 'array' AND jsonb_typeof(input_payload -> 'strong_identifier_facts') = 'array'
+  ops.hypothesis_recursion_policies:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_POLICY
+    exact_columns:
+    - policy_id
+    - policy_key
+    - version
+    - enabled
+    - max_depth
+    - case_budget_micros_krw
+    - market_researcher_stage_budget_micros_krw
+    - skeptic_stage_budget_micros_krw
+    - provider_policy_version
+    - provider_policy_sha256
+    - provider_classification
+    - provider_candidate_ids
+    - budget_policy_version
+    - budget_policy_sha256
+    - max_provider_turns
+    - max_tool_calls
+    - deadline_interval
+    - market_researcher_prompt_id
+    - market_researcher_prompt_version
+    - market_researcher_prompt_sha256
+    - market_researcher_output_schema_id
+    - market_researcher_output_schema_version
+    - market_researcher_output_schema_sha256
+    - skeptic_prompt_id
+    - skeptic_prompt_version
+    - skeptic_prompt_sha256
+    - skeptic_output_schema_id
+    - skeptic_output_schema_version
+    - skeptic_output_schema_sha256
+    - created_by
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - policy_canonical
+    - policy_digest
+    - created_at
+    required_policy_rule: every threshold, provider, budget, prompt, schema, iteration, deadline, and human creator field
+      is nonnull; no application or database default supplies an operational value
+    bounds:
+      max_depth: 1..16
+      max_provider_turns: 1..32
+      max_tool_calls: 0..32
+      case_budget: positive
+      stage_budgets: positive and independently enforced together with the case budget; no static sum relation is inferred
+    operating_seed: forbidden
+    trigger: hypothesis_recursion_policies_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal policy read only by fixed workflow, control, and audit roles
+    retention:
+      record_class: AGENT_RUNTIME_POLICY
+      trigger: later of supersession, every referencing plan and receipt, and audit or legal-hold closure
+      schedule_binding: exact current finite operational-audit schedule bound by the 0037 guard
+      data_classification: no natural-person data is stored; created_by is a linkable internal actor
+      legal_hold_key: policy_id
+      backup_behavior: restore before recursion plans
+      terminal_action_rule: approved finite schedule only; PRESERVE_PUBLIC_REVISION and custom PRESERVE are forbidden
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: append a fixture-authority policy version only through the owner boundary
+      read: resolve the latest version deterministically
+      assertions:
+      - no production seed or default and missing or disabled means inactive
+      - enabled rows require every bound threshold and canonical digest
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_policies_retention_guard
+    columns:
+      policy_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      policy_key:
+        type: text
+        nullable: false
+        default: '''HYPOTHESIS_RECURSION'''
+      version:
+        type: bigint
+        nullable: false
+      enabled:
+        type: boolean
+        nullable: false
+      max_depth:
+        type: integer
+        nullable: false
+      case_budget_micros_krw:
+        type: bigint
+        nullable: false
+      market_researcher_stage_budget_micros_krw:
+        type: bigint
+        nullable: false
+      skeptic_stage_budget_micros_krw:
+        type: bigint
+        nullable: false
+      provider_policy_version:
+        type: text
+        nullable: false
+      provider_policy_sha256:
+        type: char(64)
+        nullable: false
+      provider_classification:
+        type: text
+        nullable: false
+      provider_candidate_ids:
+        type: text[]
+        nullable: false
+      budget_policy_version:
+        type: text
+        nullable: false
+      budget_policy_sha256:
+        type: char(64)
+        nullable: false
+      max_provider_turns:
+        type: integer
+        nullable: false
+      max_tool_calls:
+        type: integer
+        nullable: false
+      deadline_interval:
+        type: interval
+        nullable: false
+      market_researcher_prompt_id:
+        type: text
+        nullable: false
+      market_researcher_prompt_version:
+        type: text
+        nullable: false
+      market_researcher_prompt_sha256:
+        type: char(64)
+        nullable: false
+      market_researcher_output_schema_id:
+        type: text
+        nullable: false
+      market_researcher_output_schema_version:
+        type: text
+        nullable: false
+      market_researcher_output_schema_sha256:
+        type: char(64)
+        nullable: false
+      skeptic_prompt_id:
+        type: text
+        nullable: false
+      skeptic_prompt_version:
+        type: text
+        nullable: false
+      skeptic_prompt_sha256:
+        type: char(64)
+        nullable: false
+      skeptic_output_schema_id:
+        type: text
+        nullable: false
+      skeptic_output_schema_version:
+        type: text
+        nullable: false
+      skeptic_output_schema_sha256:
+        type: char(64)
+        nullable: false
+      created_by:
+        type: uuid
+        nullable: false
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      policy_canonical:
+        type: bytea
+        nullable: false
+      policy_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_policies_pk
+      columns:
+      - policy_id
+    uniques:
+    - name: hypothesis_recursion_policies_version_uq
+      columns:
+      - policy_key
+      - version
+    - name: hypothesis_recursion_policies_id_version_uq
+      columns:
+      - policy_id
+      - version
+    - name: hypothesis_recursion_policies_exact_uq
+      columns:
+      - policy_id
+      - version
+      - policy_digest
+    - name: hypothesis_recursion_policies_digest_uq
+      columns:
+      - policy_digest
+    foreign_keys:
+    - name: hypothesis_recursion_policies_creator_fk
+      columns:
+      - created_by
+      references: ops.users(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_policies_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    checks:
+    - name: hypothesis_recursion_policies_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_POLICY'
+    - name: hypothesis_recursion_policies_key_ck
+      expression: policy_key = 'HYPOTHESIS_RECURSION' AND version > 0
+    - name: hypothesis_recursion_policies_required_ck
+      expression: COALESCE(max_depth BETWEEN 1 AND 16 AND case_budget_micros_krw > 0 AND market_researcher_stage_budget_micros_krw
+        > 0 AND skeptic_stage_budget_micros_krw > 0 AND NULLIF(btrim(provider_policy_version), '') IS NOT NULL AND provider_policy_sha256 ~
+        '^[0-9a-f]{64}$' AND provider_classification IN ('PUBLIC', 'INTERNAL') AND provider_candidate_ids IS NOT NULL AND
+        ops.agent_provider_candidates_are_valid(provider_candidate_ids) AND NULLIF(btrim(budget_policy_version), '') IS NOT
+        NULL AND budget_policy_sha256 ~ '^[0-9a-f]{64}$' AND max_provider_turns BETWEEN 1 AND 32 AND max_tool_calls BETWEEN
+        0 AND 32 AND deadline_interval > CAST('0 seconds' AS interval) AND NULLIF(btrim(market_researcher_prompt_id), '')
+        IS NOT NULL AND NULLIF(btrim(market_researcher_prompt_version), '') IS NOT NULL AND market_researcher_prompt_sha256
+        ~ '^[0-9a-f]{64}$' AND NULLIF(btrim(market_researcher_output_schema_id), '') IS NOT NULL AND NULLIF(btrim(market_researcher_output_schema_version),
+        '') IS NOT NULL AND market_researcher_output_schema_sha256 ~ '^[0-9a-f]{64}$' AND NULLIF(btrim(skeptic_prompt_id),
+        '') IS NOT NULL AND NULLIF(btrim(skeptic_prompt_version), '') IS NOT NULL AND skeptic_prompt_sha256 ~ '^[0-9a-f]{64}$'
+        AND NULLIF(btrim(skeptic_output_schema_id), '') IS NOT NULL AND NULLIF(btrim(skeptic_output_schema_version), '') IS
+        NOT NULL AND skeptic_output_schema_sha256 ~ '^[0-9a-f]{64}$' AND created_by IS NOT NULL, FALSE)
+    - name: hypothesis_recursion_policies_canonical_ck
+      expression: policy_digest ~ '^[0-9a-f]{64}$' AND policy_digest = encode(extensions.digest(policy_canonical, 'sha256'),
+        'hex')
+  ops.hypothesis_recursion_plans:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE
+    exact_columns:
+    - plan_id
+    - case_id
+    - root_hypothesis_execution_id
+    - root_hypothesis_execution_generation
+    - root_hypothesis_execution_digest
+    - dataset_snapshot_id
+    - snapshot_sha256
+    - policy_id
+    - policy_version
+    - policy_digest
+    - max_depth
+    - case_budget_micros_krw
+    - actor_type
+    - actor_id
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - plan_canonical
+    - plan_digest
+    - created_at
+    root_gate: action.execution_completed.v1 for a HYPOTHESIS execution with SUCCEEDED state and exact execution generation
+      and digest
+    actor:
+      type: SERVICE
+      id: workflow-worker
+    trigger: hypothesis_recursion_plans_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal recursion root receipt graph exposed only to fixed internal roles
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      trigger: close only after case, root execution, snapshot, nodes, receipts, audit, and legal-hold closure
+      data_classification: no natural-person data is stored
+      legal_hold_key: plan_id
+      backup_behavior: restore after policy, execution, and snapshot parents and before child relations
+      terminal_action_rule: approved finite operational-audit schedule only
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: execution-completed owner creates the root plan
+      read: resolve the exact immutable root
+      assertions:
+      - SUCCEEDED HYPOTHESIS execution generation and digest gate
+      - exact policy, snapshot, case budget, and SERVICE workflow-worker binding
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_plans_retention_guard
+    columns:
+      plan_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      case_id:
+        type: uuid
+        nullable: false
+      root_hypothesis_execution_id:
+        type: uuid
+        nullable: false
+      root_hypothesis_execution_generation:
+        type: bigint
+        nullable: false
+      root_hypothesis_execution_digest:
+        type: char(64)
+        nullable: false
+      dataset_snapshot_id:
+        type: uuid
+        nullable: false
+      snapshot_sha256:
+        type: char(64)
+        nullable: false
+      policy_id:
+        type: uuid
+        nullable: false
+      policy_version:
+        type: bigint
+        nullable: false
+      policy_digest:
+        type: char(64)
+        nullable: false
+      max_depth:
+        type: integer
+        nullable: false
+      case_budget_micros_krw:
+        type: bigint
+        nullable: false
+      actor_type:
+        type: text
+        nullable: false
+        default: '''SERVICE'''
+      actor_id:
+        type: text
+        nullable: false
+        default: '''workflow-worker'''
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      plan_canonical:
+        type: bytea
+        nullable: false
+      plan_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_plans_pk
+      columns:
+      - plan_id
+    uniques:
+    - name: hypothesis_recursion_plans_root_uq
+      columns:
+      - root_hypothesis_execution_id
+      - root_hypothesis_execution_generation
+    - name: hypothesis_recursion_plans_node_binding_uq
+      columns:
+      - plan_id
+      - case_id
+      - dataset_snapshot_id
+      - snapshot_sha256
+    - name: hypothesis_recursion_plans_digest_uq
+      columns:
+      - plan_digest
+    foreign_keys:
+    - name: hypothesis_recursion_plans_case_fk
+      columns:
+      - case_id
+      references: editorial.cases(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_plans_execution_fk
+      columns:
+      - root_hypothesis_execution_id
+      - root_hypothesis_execution_generation
+      - root_hypothesis_execution_digest
+      references: ops.execution_authorizations(execution_id,generation,execution_digest)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_plans_snapshot_fk
+      columns:
+      - dataset_snapshot_id
+      - snapshot_sha256
+      references: core.dataset_snapshots(id,snapshot_sha256)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_plans_policy_fk
+      columns:
+      - policy_id
+      - policy_version
+      - policy_digest
+      references: ops.hypothesis_recursion_policies(policy_id,version,policy_digest)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_plans_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    checks:
+    - name: hypothesis_recursion_plans_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_INITIATION_RECEIPT'
+    - name: hypothesis_recursion_plans_shape_ck
+      expression: root_hypothesis_execution_generation > 0 AND max_depth BETWEEN 1 AND 16 AND case_budget_micros_krw > 0 AND
+        actor_type = 'SERVICE' AND actor_id = 'workflow-worker'
+    - name: hypothesis_recursion_plans_digest_ck
+      expression: root_hypothesis_execution_digest ~ '^[0-9a-f]{64}$' AND snapshot_sha256 ~ '^[0-9a-f]{64}$' AND policy_digest
+        ~ '^[0-9a-f]{64}$' AND plan_digest ~ '^[0-9a-f]{64}$' AND plan_digest = encode(extensions.digest(plan_canonical, 'sha256'),
+        'hex')
+  ops.hypothesis_recursion_nodes:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE
+    exact_columns:
+    - node_id
+    - plan_id
+    - parent_node_id
+    - parent_depth
+    - case_id
+    - depth
+    - stage
+    - hypothesis_execution_digest
+    - dataset_snapshot_id
+    - snapshot_sha256
+    - agent_run_id
+    - job_id
+    - reserved_micros_krw
+    - dedupe_key_sha256
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - node_canonical
+    - node_digest
+    - created_at
+    stages:
+    - MARKET_RESEARCHER
+    - SKEPTIC
+    depth_rule: root HYPOTHESIS execution is depth 0; the first MARKET_RESEARCHER node is depth 1; every node child is parent
+      depth plus one and never exceeds immutable policy max_depth
+    dedupe_preimage:
+    - caseId
+    - hypothesisExecutionDigest
+    - snapshotDigest
+    - stage
+    - depth
+    trigger: hypothesis_recursion_nodes_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal recursion node graph exposed only to fixed internal roles
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      parent: ops.hypothesis_recursion_plans
+      data_classification: no natural-person data is stored
+      legal_hold_key: plan_id
+      backup_behavior: restore after the plan and before transitions and jobs
+      terminal_action_rule: approved finite operational-audit schedule only
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: root and stage owners append bounded nodes
+      read: resolve nodes by plan, depth, and stage
+      assertions:
+      - HYPOTHESIS execution root is outside nodes at depth zero, first MARKET_RESEARCHER node is depth one, and SKEPTIC child
+        is depth two
+      - later children are parent depth plus one, bounded by maxDepth 1 through 16, with the approved dedupe tuple
+      - no automatic claim-drafter, exact run and job digests, immutability, and direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_nodes_retention_guard
+    columns:
+      node_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      plan_id:
+        type: uuid
+        nullable: false
+      parent_node_id:
+        type: uuid
+        nullable: true
+      parent_depth:
+        type: integer
+        nullable: true
+      case_id:
+        type: uuid
+        nullable: false
+      depth:
+        type: integer
+        nullable: false
+      stage:
+        type: text
+        nullable: false
+      hypothesis_execution_digest:
+        type: char(64)
+        nullable: false
+      dataset_snapshot_id:
+        type: uuid
+        nullable: false
+      snapshot_sha256:
+        type: char(64)
+        nullable: false
+      agent_run_id:
+        type: uuid
+        nullable: false
+      job_id:
+        type: uuid
+        nullable: false
+      reserved_micros_krw:
+        type: bigint
+        nullable: false
+      dedupe_key_sha256:
+        type: char(64)
+        nullable: false
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      node_canonical:
+        type: bytea
+        nullable: false
+      node_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_nodes_pk
+      columns:
+      - node_id
+    uniques:
+    - name: hypothesis_recursion_nodes_dedupe_uq
+      columns:
+      - dedupe_key_sha256
+    - name: hypothesis_recursion_nodes_run_uq
+      columns:
+      - agent_run_id
+    - name: hypothesis_recursion_nodes_job_uq
+      columns:
+      - job_id
+    - name: hypothesis_recursion_nodes_parent_binding_uq
+      columns:
+      - node_id
+      - plan_id
+      - case_id
+      - dataset_snapshot_id
+      - snapshot_sha256
+      - depth
+    foreign_keys:
+    - name: hypothesis_recursion_nodes_plan_fk
+      columns:
+      - plan_id
+      - case_id
+      - dataset_snapshot_id
+      - snapshot_sha256
+      references: ops.hypothesis_recursion_plans(plan_id,case_id,dataset_snapshot_id,snapshot_sha256)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_nodes_case_fk
+      columns:
+      - case_id
+      references: editorial.cases(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_nodes_snapshot_fk
+      columns:
+      - dataset_snapshot_id
+      - snapshot_sha256
+      references: core.dataset_snapshots(id,snapshot_sha256)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_nodes_run_fk
+      columns:
+      - agent_run_id
+      references: ops.agent_runs(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_nodes_job_fk
+      columns:
+      - job_id
+      references: ops.jobs(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_nodes_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    - name: hypothesis_recursion_nodes_parent_fk
+      columns:
+      - parent_node_id
+      - plan_id
+      - case_id
+      - dataset_snapshot_id
+      - snapshot_sha256
+      - parent_depth
+      references: ops.hypothesis_recursion_nodes(node_id,plan_id,case_id,dataset_snapshot_id,snapshot_sha256,depth)
+      on_delete: RESTRICT
+    checks:
+    - name: hypothesis_recursion_nodes_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_INITIATION_RECEIPT'
+    - name: hypothesis_recursion_nodes_stage_ck
+      expression: stage IN ('MARKET_RESEARCHER', 'SKEPTIC')
+    - name: hypothesis_recursion_nodes_shape_ck
+      expression: depth BETWEEN 1 AND 16 AND ((depth = 1 AND parent_node_id IS NULL AND parent_depth IS NULL) OR (depth >
+        1 AND parent_node_id IS NOT NULL AND parent_depth = (depth - 1))) AND reserved_micros_krw > 0 AND hypothesis_execution_digest
+        ~ '^[0-9a-f]{64}$' AND snapshot_sha256 ~ '^[0-9a-f]{64}$' AND dedupe_key_sha256 ~ '^[0-9a-f]{64}$' AND node_digest
+        ~ '^[0-9a-f]{64}$' AND node_digest = encode(extensions.digest(node_canonical, 'sha256'), 'hex')
+  ops.hypothesis_recursion_transitions:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_RECEIPT_CHAIN
+    exact_columns:
+    - transition_id
+    - plan_id
+    - node_id
+    - transition_sequence
+    - transition_scope
+    - stage
+    - prior_state
+    - next_state
+    - proof_kind
+    - proof_sha256
+    - actor_type
+    - actor_id
+    - prior_transition_sequence
+    - prior_receipt_sha256
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - transition_payload
+    - transition_canonical
+    - receipt_sha256
+    - occurred_at
+    - created_at
+    plan_states:
+    - ACTIVE
+    - REVIEWED_TERMINAL
+    - BUDGET_EXHAUSTED
+    node_states:
+    - QUEUED
+    - SUCCEEDED
+    - FAILED
+    - BUDGET_BLOCKED
+    chain_rule: sequence one has no predecessor; every later sequence binds exactly the preceding sequence and receipt digest
+    actor:
+      type: SERVICE
+      id: workflow-worker
+    trigger: hypothesis_recursion_transitions_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal recursion transition chain exposed only to fixed internal roles
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      parent: ops.hypothesis_recursion_plans plus ops.hypothesis_recursion_nodes
+      data_classification: no natural-person data is stored
+      legal_hold_key: plan_id
+      backup_behavior: restore after nodes and before trigger receipts
+      terminal_action_rule: approved finite operational-audit schedule only
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: recursion owners append the gapless transition chain
+      read: resolve transitions in sequence order
+      assertions:
+      - exact predecessor receipt and plan or node state matrix
+      - SERVICE workflow-worker actor and canonical digest
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_transitions_retention_guard
+    columns:
+      transition_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      plan_id:
+        type: uuid
+        nullable: false
+      node_id:
+        type: uuid
+        nullable: true
+      transition_sequence:
+        type: bigint
+        nullable: false
+      transition_scope:
+        type: text
+        nullable: false
+      stage:
+        type: text
+        nullable: true
+      prior_state:
+        type: text
+        nullable: true
+      next_state:
+        type: text
+        nullable: false
+      proof_kind:
+        type: text
+        nullable: false
+      proof_sha256:
+        type: char(64)
+        nullable: false
+      actor_type:
+        type: text
+        nullable: false
+        default: '''SERVICE'''
+      actor_id:
+        type: text
+        nullable: false
+        default: '''workflow-worker'''
+      prior_transition_sequence:
+        type: bigint
+        nullable: true
+      prior_receipt_sha256:
+        type: char(64)
+        nullable: true
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      transition_payload:
+        type: jsonb
+        nullable: false
+      transition_canonical:
+        type: bytea
+        nullable: false
+      receipt_sha256:
+        type: char(64)
+        nullable: false
+      occurred_at:
+        type: timestamptz
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_transitions_pk
+      columns:
+      - transition_id
+    uniques:
+    - name: hypothesis_recursion_transitions_sequence_uq
+      columns:
+      - plan_id
+      - transition_sequence
+    - name: hypothesis_recursion_transitions_chain_uq
+      columns:
+      - plan_id
+      - transition_sequence
+      - receipt_sha256
+    - name: hypothesis_recursion_transitions_receipt_uq
+      columns:
+      - receipt_sha256
+    foreign_keys:
+    - name: hypothesis_recursion_transitions_plan_fk
+      columns:
+      - plan_id
+      references: ops.hypothesis_recursion_plans(plan_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_transitions_node_fk
+      columns:
+      - node_id
+      references: ops.hypothesis_recursion_nodes(node_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_transitions_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    - name: hypothesis_recursion_transitions_prior_fk
+      columns:
+      - plan_id
+      - prior_transition_sequence
+      - prior_receipt_sha256
+      references: ops.hypothesis_recursion_transitions(plan_id,transition_sequence,receipt_sha256)
+      on_delete: RESTRICT
+    checks:
+    - name: hypothesis_recursion_transitions_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_INITIATION_RECEIPT'
+    - name: hypothesis_recursion_transitions_scope_ck
+      expression: (transition_scope = 'PLAN' AND node_id IS NULL AND stage IS NULL AND next_state IN ('ACTIVE', 'REVIEWED_TERMINAL',
+        'BUDGET_EXHAUSTED')) OR (transition_scope = 'NODE' AND node_id IS NOT NULL AND stage IN ('MARKET_RESEARCHER', 'SKEPTIC')
+        AND next_state IN ('QUEUED', 'SUCCEEDED', 'FAILED', 'BUDGET_BLOCKED'))
+    - name: hypothesis_recursion_transitions_chain_ck
+      expression: transition_sequence > 0 AND ((transition_sequence = 1 AND prior_transition_sequence IS NULL AND prior_receipt_sha256
+        IS NULL) OR (transition_sequence > 1 AND prior_transition_sequence = (transition_sequence - 1) AND prior_receipt_sha256
+        ~ '^[0-9a-f]{64}$')) AND actor_type = 'SERVICE' AND actor_id = 'workflow-worker'
+    - name: hypothesis_recursion_transitions_digest_ck
+      expression: proof_sha256 ~ '^[0-9a-f]{64}$' AND receipt_sha256 ~ '^[0-9a-f]{64}$' AND CAST(convert_from(transition_canonical,
+        'UTF8') AS jsonb) = transition_payload AND receipt_sha256 = encode(extensions.digest(transition_canonical, 'sha256'),
+        'hex')
+  ops.hypothesis_recursion_receipts:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_IDEMPOTENCY_RECEIPT
+    exact_columns:
+    - receipt_id
+    - trigger_kind
+    - trigger_id
+    - trigger_generation
+    - trigger_digest
+    - trigger_receipt_sha256
+    - producer_job_id
+    - policy_id
+    - policy_version
+    - disposition
+    - plan_id
+    - node_id
+    - agent_run_id
+    - job_id
+    - actor_type
+    - actor_id
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - receipt_payload
+    - receipt_canonical
+    - receipt_digest
+    - created_at
+    trigger_kinds:
+    - ACTION_EXECUTION
+    - AGENT_RUN
+    dispositions:
+    - STARTED
+    - POLICY_ABSENT
+    - POLICY_DISABLED
+    - MAX_DEPTH_REACHED
+    - CASE_BUDGET_BLOCKED
+    - NOT_HYPOTHESIS
+    - NOT_SUCCEEDED
+    - NODE_NOT_RECURSIVE
+    - STAGE_NOT_MARKET_RESEARCHER
+    - RUN_NOT_SUCCEEDED
+    - PLAN_TERMINAL
+    started_shape: policy, plan, node, agent run, and job are all present
+    noop_shape: plan, node, agent run, and job are all absent
+    trigger: hypothesis_recursion_receipts_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal recursion trigger receipt exposed only to fixed internal roles
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      rule: retain with trigger job and event, policy, plan, node, run, audit, and legal-hold graph
+      data_classification: no natural-person data is stored
+      legal_hold_key: trigger_id plus trigger_generation
+      backup_behavior: restore after every bound parent
+      terminal_action_rule: approved finite operational-audit schedule only
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: recursion owners append the exact trigger outcome once
+      read: resolve only an exact replay tuple
+      assertions:
+      - STARTED has all effects and no-start outcomes have zero effects
+      - exact lease, fence, trigger, and canonical receipt digests
+      - replay conflict, immutability, and direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_receipts_retention_guard
+    columns:
+      receipt_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      trigger_kind:
+        type: text
+        nullable: false
+      trigger_id:
+        type: uuid
+        nullable: false
+      trigger_generation:
+        type: bigint
+        nullable: false
+      trigger_digest:
+        type: char(64)
+        nullable: false
+      trigger_receipt_sha256:
+        type: char(64)
+        nullable: false
+      producer_job_id:
+        type: uuid
+        nullable: false
+      policy_id:
+        type: uuid
+        nullable: true
+      policy_version:
+        type: bigint
+        nullable: true
+      disposition:
+        type: text
+        nullable: false
+      plan_id:
+        type: uuid
+        nullable: true
+      node_id:
+        type: uuid
+        nullable: true
+      agent_run_id:
+        type: uuid
+        nullable: true
+      job_id:
+        type: uuid
+        nullable: true
+      actor_type:
+        type: text
+        nullable: false
+        default: '''SERVICE'''
+      actor_id:
+        type: text
+        nullable: false
+        default: '''workflow-worker'''
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      receipt_payload:
+        type: jsonb
+        nullable: false
+      receipt_canonical:
+        type: bytea
+        nullable: false
+      receipt_digest:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_receipts_pk
+      columns:
+      - receipt_id
+    uniques:
+    - name: hypothesis_recursion_receipts_trigger_uq
+      columns:
+      - trigger_kind
+      - trigger_id
+      - trigger_generation
+    - name: hypothesis_recursion_receipts_digest_uq
+      columns:
+      - receipt_digest
+    foreign_keys:
+    - name: hypothesis_recursion_receipts_producer_job_fk
+      columns:
+      - producer_job_id
+      references: ops.jobs(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_receipts_policy_fk
+      columns:
+      - policy_id
+      - policy_version
+      references: ops.hypothesis_recursion_policies(policy_id,version)
+      on_delete: RESTRICT
+      match: FULL
+    - name: hypothesis_recursion_receipts_plan_fk
+      columns:
+      - plan_id
+      references: ops.hypothesis_recursion_plans(plan_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_receipts_node_fk
+      columns:
+      - node_id
+      references: ops.hypothesis_recursion_nodes(node_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_receipts_run_fk
+      columns:
+      - agent_run_id
+      references: ops.agent_runs(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_receipts_job_fk
+      columns:
+      - job_id
+      references: ops.jobs(id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_receipts_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    checks:
+    - name: hypothesis_recursion_receipts_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_INITIATION_RECEIPT'
+    - name: hypothesis_recursion_receipts_trigger_kind_ck
+      expression: trigger_kind IN ('ACTION_EXECUTION', 'AGENT_RUN') AND trigger_generation > 0
+    - name: hypothesis_recursion_receipts_disposition_ck
+      expression: disposition IN ('STARTED', 'POLICY_ABSENT', 'POLICY_DISABLED', 'MAX_DEPTH_REACHED', 'CASE_BUDGET_BLOCKED',
+        'NOT_HYPOTHESIS', 'NOT_SUCCEEDED', 'NODE_NOT_RECURSIVE', 'STAGE_NOT_MARKET_RESEARCHER', 'RUN_NOT_SUCCEEDED', 'PLAN_TERMINAL')
+    - name: hypothesis_recursion_receipts_created_shape_ck
+      expression: (disposition = 'STARTED' AND num_nonnulls(plan_id, node_id, agent_run_id, job_id) = 4 AND policy_id IS NOT
+        NULL) OR (disposition <> 'STARTED' AND num_nonnulls(plan_id, node_id, agent_run_id, job_id) = 0)
+    - name: hypothesis_recursion_receipts_actor_ck
+      expression: actor_type = 'SERVICE' AND actor_id = 'workflow-worker'
+    - name: hypothesis_recursion_receipts_digest_ck
+      expression: trigger_digest ~ '^[0-9a-f]{64}$' AND trigger_receipt_sha256 ~ '^[0-9a-f]{64}$' AND receipt_digest ~ '^[0-9a-f]{64}$'
+        AND CAST(convert_from(receipt_canonical, 'UTF8') AS jsonb) = receipt_payload AND receipt_digest = encode(extensions.digest(receipt_canonical,
+        'sha256'), 'hex')
+  ops.hypothesis_recursion_budget_ledger:
+    owner_role: gurine_migrator
+    mutation_class: IMMUTABLE_RECEIPT_CHAIN
+    exact_columns:
+    - ledger_id
+    - plan_id
+    - node_id
+    - ledger_sequence
+    - stage
+    - entry_kind
+    - amount_micros_krw
+    - prior_reserved_micros_krw
+    - next_reserved_micros_krw
+    - prior_settled_micros_krw
+    - next_settled_micros_krw
+    - actor_type
+    - actor_id
+    - prior_ledger_sequence
+    - prior_receipt_sha256
+    - retention_schedule_id
+    - retention_record_class
+    - retention_schedule_digest
+    - ledger_payload
+    - ledger_canonical
+    - receipt_sha256
+    - created_at
+    entry_kinds:
+    - RESERVE
+    - SETTLE
+    - RELEASE
+    accounting_rule: reserve increases reserved, settle increases settled without exceeding reserved, release decreases reserved,
+      and no value becomes negative
+    chain_rule: sequence one has no predecessor; every later sequence binds exactly the preceding sequence and receipt digest
+    actor:
+      type: SERVICE
+      id: workflow-worker
+    trigger: hypothesis_recursion_budget_ledger_immutable_guard
+    rls:
+      enabled: false
+      forced: false
+      reason: immutable internal recursion budget ledger exposed only to fixed internal roles
+    retention:
+      record_class: AGENT_RUNTIME_INITIATION_RECEIPT
+      parent: ops.hypothesis_recursion_plans plus ops.hypothesis_recursion_nodes
+      data_classification: no natural-person data is stored
+      legal_hold_key: plan_id
+      backup_behavior: restore after plan and node parents and before settlement proof
+      terminal_action_rule: approved finite operational-audit schedule only
+    repository: crates/persistence-postgres::hypothesis_recursion::HypothesisRecursionRepository
+    repository_roundtrip:
+      write: recursion owners append reserve, settle, and release entries
+      read: resolve the ledger in sequence order
+      assertions:
+      - gapless predecessor chain, case and stage caps, and nonnegative conservation
+      - one settlement per reservation plus SERVICE actor and canonical digest
+      - immutable update and delete denial plus direct runtime DML denial
+    grants:
+      select:
+      - gurine_analysis_worker
+      - gurine_workflow_worker
+      - gurine_control_api
+      - gurine_auditor
+      runtime_dml: []
+    retention_trigger: hypothesis_recursion_budget_ledger_retention_guard
+    columns:
+      ledger_id:
+        type: uuid
+        nullable: false
+        default: gen_random_uuid()
+      plan_id:
+        type: uuid
+        nullable: false
+      node_id:
+        type: uuid
+        nullable: false
+      ledger_sequence:
+        type: bigint
+        nullable: false
+      stage:
+        type: text
+        nullable: false
+      entry_kind:
+        type: text
+        nullable: false
+      amount_micros_krw:
+        type: bigint
+        nullable: false
+      prior_reserved_micros_krw:
+        type: bigint
+        nullable: false
+      next_reserved_micros_krw:
+        type: bigint
+        nullable: false
+      prior_settled_micros_krw:
+        type: bigint
+        nullable: false
+      next_settled_micros_krw:
+        type: bigint
+        nullable: false
+      actor_type:
+        type: text
+        nullable: false
+        default: '''SERVICE'''
+      actor_id:
+        type: text
+        nullable: false
+        default: '''workflow-worker'''
+      prior_ledger_sequence:
+        type: bigint
+        nullable: true
+      prior_receipt_sha256:
+        type: char(64)
+        nullable: true
+      retention_schedule_id:
+        type: uuid
+        nullable: false
+      retention_record_class:
+        type: text
+        nullable: false
+      retention_schedule_digest:
+        type: char(64)
+        nullable: false
+      ledger_payload:
+        type: jsonb
+        nullable: false
+      ledger_canonical:
+        type: bytea
+        nullable: false
+      receipt_sha256:
+        type: char(64)
+        nullable: false
+      created_at:
+        type: timestamptz
+        nullable: false
+        default: clock_timestamp()
+    primary_key:
+      name: hypothesis_recursion_budget_ledger_pk
+      columns:
+      - ledger_id
+    uniques:
+    - name: hypothesis_recursion_budget_ledger_sequence_uq
+      columns:
+      - plan_id
+      - ledger_sequence
+    - name: hypothesis_recursion_budget_ledger_chain_uq
+      columns:
+      - plan_id
+      - ledger_sequence
+      - receipt_sha256
+    - name: hypothesis_recursion_budget_ledger_receipt_uq
+      columns:
+      - receipt_sha256
+    foreign_keys:
+    - name: hypothesis_recursion_budget_ledger_plan_fk
+      columns:
+      - plan_id
+      references: ops.hypothesis_recursion_plans(plan_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_budget_ledger_node_fk
+      columns:
+      - node_id
+      references: ops.hypothesis_recursion_nodes(node_id)
+      on_delete: RESTRICT
+    - name: hypothesis_recursion_budget_ledger_retention_fk
+      columns:
+      - retention_schedule_id
+      - retention_record_class
+      - retention_schedule_digest
+      references: ops.record_class_schedules(id,record_class,schedule_digest)
+      on_delete: RESTRICT
+      match: FULL
+    - name: hypothesis_recursion_budget_ledger_prior_fk
+      columns:
+      - plan_id
+      - prior_ledger_sequence
+      - prior_receipt_sha256
+      references: ops.hypothesis_recursion_budget_ledger(plan_id,ledger_sequence,receipt_sha256)
+      on_delete: RESTRICT
+    checks:
+    - name: hypothesis_recursion_budget_ledger_retention_ck
+      expression: retention_record_class IS NULL OR retention_record_class = 'AGENT_RUNTIME_INITIATION_RECEIPT'
+    - name: hypothesis_recursion_budget_ledger_shape_ck
+      expression: ledger_sequence > 0 AND stage IN ('MARKET_RESEARCHER', 'SKEPTIC') AND entry_kind IN ('RESERVE', 'SETTLE',
+        'RELEASE') AND amount_micros_krw >= 0 AND prior_reserved_micros_krw >= 0 AND next_reserved_micros_krw >= 0 AND prior_settled_micros_krw
+        >= 0 AND next_settled_micros_krw >= 0 AND next_settled_micros_krw <= next_reserved_micros_krw AND actor_type = 'SERVICE'
+        AND actor_id = 'workflow-worker' AND ((ledger_sequence = 1 AND prior_ledger_sequence IS NULL AND prior_receipt_sha256
+        IS NULL) OR (ledger_sequence > 1 AND prior_ledger_sequence = (ledger_sequence - 1) AND prior_receipt_sha256 ~ '^[0-9a-f]{64}$'))
+    - name: hypothesis_recursion_budget_ledger_entry_ck
+      expression: (entry_kind = 'RESERVE' AND next_reserved_micros_krw = (prior_reserved_micros_krw + amount_micros_krw) AND
+        next_settled_micros_krw = prior_settled_micros_krw) OR (entry_kind = 'SETTLE' AND next_reserved_micros_krw = prior_reserved_micros_krw
+        AND next_settled_micros_krw = (prior_settled_micros_krw + amount_micros_krw)) OR (entry_kind = 'RELEASE' AND next_reserved_micros_krw
+        = (prior_reserved_micros_krw - amount_micros_krw) AND next_settled_micros_krw = prior_settled_micros_krw)
+    - name: hypothesis_recursion_budget_ledger_digest_ck
+      expression: receipt_sha256 ~ '^[0-9a-f]{64}$' AND CAST(convert_from(ledger_canonical, 'UTF8') AS jsonb) = ledger_payload
+        AND receipt_sha256 = encode(extensions.digest(ledger_canonical, 'sha256'), 'hex')
+typed_graph_contract:
+  endpoint_kind_set:
+  - SUPPLIER
+  - PERSON
+  - AGENCY
+  - PROCUREMENT_NOTICE
+  - SANCTION
+  relationship_kind_set:
+  - OWNERSHIP
+  - BENEFICIAL_OWNERSHIP
+  - CONTROL
+  - MANAGEMENT_ROLE
+  - LEGAL_REPRESENTATIVE
+  - CONTRACTUAL_RELATIONSHIP
+  - BID_PARTICIPATION
+  - SANCTION
+  - FORMER_OFFICIAL_ROLE
+  family_or_kinship_kind_exists: false
+  proposal_only_rule: ingest-worker may append PENDING_HUMAN endpoints and assertion revision one; it cannot write VERIFIED,
+    APPROVED, a verification decision, or a merge
+  independent_review_rule: VERIFIED plus APPROVED requires a later immutable human decision by a reviewer distinct from the
+    proposer
+  public_read_rule: typed-neighbor v3 returns only snapshot-frozen COMPLETE, VERIFIED, APPROVED assertions with complete independent
+    review fields
+  person_output_rule: PERSON is returned as a snapshot- and run-bound personNodeRef digest, never a raw endpoint UUID, display
+    name, identifier value, score, rank, or probability
+  snapshot_source_use_rule: both endpoint sides require distinct exact TOOL_QUERY DATASET_MEMBER source uses bound to the
+    frozen snapshot member sources
+  compatibility_reader: relationship.neighbors request/response v2 remains supplier-only
+  typed_reader:
+    request_schema_version: relationship.neighbors.request.v3
+    response_schema_version: relationship.neighbors.response.v3
+    request_schema_sha256: 520f00d9ee779e33a31d9e1ce7d72088feea51bbe8a30ab9518b52789c897679
+    response_schema_sha256: 63dd5666bdd34a681047f334ef02e22da7c9342fb97f38a0a572beeb4d209b29
+    maximum_limit: 50
+    relationship_filter: sorted unique subset of the closed nine-kind catalog
+    snapshot_gate: exact RUNNING and ACTIVE AgentRunV2 plus exact READY AGENT_CASE snapshot id, generation, and digest
+open_dart_parsed_record_provenance:
+  writer: core.record_typed_relationship_endpoint_v2(jsonb)
+  request_schema_version: typed-relationship-endpoint.record.request.v2
+  request_exact_keys:
+  - schemaVersion
+  - endpointKind
+  - contextualName
+  - roleTitle
+  - sourceKind
+  - sourceLocator
+  - identifierDigest
+  - entityId
+  - entityRevision
+  - entityDigest
+  - sourceDocument
+  - operationId
+  source_document_exact_keys:
+  - id
+  - assetId
+  - assetRevision
+  - contentSha256
+  - parserRunId
+  - parsedRecordId
+  - parserVersion
+  - parsedPayloadSha256
+  exact_foreign_keys:
+  - raw.source_documents(id,asset_id,asset_revision,content_sha256)
+  - core.parser_runs(id,source_document_id)
+  - raw.parsed_records(id,source_document_id,parser_run_id,parser_version,payload_sha256)
+  person_source_kinds:
+  - DART_EXECUTIVE_STATUS
+  - ALIO_EXECUTIVE_STATUS
+  - OFFICIAL_GAZETTE
+  - PUBLIC_OFFICIAL_ETHICS_NOTICE
+  open_dart_rule: DART executive rows preserve exact parsed-record identity and source locator and enter as distinct PENDING_HUMAN
+    PERSON endpoints
+  major_shareholder_rule: no typed graph row is emitted until OpenDART exposes an authoritative entity-type discriminator
+    and a separate human identity mapping is approved
+  normalization_run_requirement: parsed-record exact lineage is a complete accepted provenance branch; inventing a normalization
+    run solely to satisfy graph insertion is forbidden
+artifact_review_tier_contract:
+  orthogonality: review tier never infers rights, publication approval, provider eligibility, or data classification
+  initial_fetch: successful official FETCH_URL storage is RESTRICTED plus OFFICIAL_UNREVIEWED revision one
+  internal_use: unreviewed artifact metadata and immutable digests may support internal hypothesis context only
+  forbidden_before_promotion:
+  - MODEL_INPUT
+  - CLAIM_CITATION
+  - COMMUNICATION_CITATION
+  - PUBLIC_EXCERPT
+  - PUBLICATION
+  human_promotion: explicit reviewed classification plus exact artifact, predecessor receipt, promotion receipt, and human
+    reviewer produces HUMAN_PROMOTED revision two
+  public_promotion_rights_gate:
+    required_primary_decisions:
+      redistribution: ALLOW
+      commercialUse: ALLOW
+      publicDisplay: ALLOW
+    missing_or_non_allow: fail closed with no promoted Evidence or review-tier successor
+  parser_authority_gate:
+  - exact source document, asset revision, and content digest
+  - selected evidence segment and its source locator
+  - SUCCEEDED parser run with exact input, output, implementation, and extraction receipt digests
+  - ACTIVE parser version with exact implementation digest and supported media type
+  mismatch: fail closed before Evidence, case-version, promotion, or review-tier mutation
+  provider_input: only HUMAN_PROMOTED Evidence classified PUBLIC or INTERNAL may proceed to the existing provider rights and
+    safety gates
+  public_citation: only HUMAN_PROMOTED Evidence classified PUBLIC may proceed to the existing independent publication gate
+  raw_artifact_model_egress: forbidden
+  source_use_forward_rule: FETCH_URL root and derived source-use classifications must remain RESTRICTED until the human promotion
+    path explicitly creates the promoted Evidence lineage
+conflict_input_freeze_contract:
+  producer: core.build_conflict_detection_dataset_snapshot_v2(uuid,uuid,bigint)
+  reader: core.read_conflict_detection_input_v2(uuid,bigint,char(64),text,uuid)
+  snapshot_kind: DETECTION_DATASET
+  per_snapshot_cardinality: exactly one immutable conflict input for the exact rule version job
+  common_frozen_sections:
+  - contracts
+  - suppliers
+  - procurement_notices
+  - procurement_awards
+  - bidder_participations
+  - sanctions
+  - typed_relationship_assertions
+  - strong_identifier_facts
+  - coverage
+  contract_amount_projection:
+    source: core.contracts.current_amount
+    canonical_json: SQL NULL remains JSON null; every nonnull numeric is trim_scale(current_amount)::text stored as a JSON string
+    example: decimal 1.50 is the JSON string 1.5
+    fractional_json_number: forbidden because PostgreSQL numeric and JSON number lexical forms do not provide the frozen cross-runtime
+      decimal-string authority
+    digest_rule: equal projected decimal strings replay the same input digest and any projected amount change changes the digest
+  graph_eligibility: only head revisions that are COMPLETE, VERIFIED, APPROVED, independently human verified, source-authoritative,
+    and exact-evidence-set complete
+  strong_fact_eligibility: only KOREAN_BUSINESS_NUMBER, OPEN_DART_CORP_CODE, or KONEPS_PARTY_KEY with VERIFIED plus PROVEN_V1
+    immutable fact lineage
+  rule_inputs:
+    OFFICER_OVERLAP_AWARD:
+      authorities:
+      - koneps-bid-results
+      - open-dart dart-executive-status
+      required_frozen_inputs:
+      - procurement_awards
+      - MANAGEMENT_ROLE assertions
+      blocked_when: either source authority is not enabled and APPROVED
+    OWNERSHIP_LINKED_COMPETITORS:
+      authorities:
+      - koneps-structured-bidder-participation
+      required_frozen_inputs:
+      - procurement_notices
+      - bidder_participations
+      - OWNERSHIP or CONTROL assertions
+      blocked_when: structured bidder authority is unavailable
+    BID_ROTATION:
+      authorities:
+      - koneps-structured-bidder-participation
+      required_frozen_inputs:
+      - procurement_notices
+      - procurement_awards
+      - bidder_participations including bid amount and rank
+      blocked_when: structured participant authority is unavailable
+    REVOLVING_DOOR_CONTRACT:
+      authorities:
+      - open-dart dart-executive-status
+      - PUBLIC_OFFICIAL_ETHICS_NOTICE or OFFICIAL_GAZETTE
+      required_frozen_inputs:
+      - contracts
+      - MANAGEMENT_ROLE assertions
+      - FORMER_OFFICIAL_ROLE assertions with departed_on
+      blocked_when: no approved official reemployment authority provides complete independently verified former-role assertions
+    SANCTIONED_SUCCESSOR:
+      authorities:
+      - pps-sanctions
+      required_frozen_inputs:
+      - procurement_awards
+      - SANCTION assertions
+      - strong_identifier_facts
+      - optional approved MANAGEMENT_ROLE link
+      blocked_when: sanctions source activation receipt is not READY and its registry remains disabled
+  canonicality: the input digest, ordered conflict-input set digest, selection digest, normalization authority, manifest digest,
+    terminal receipt, and audit all commit the same rule version and input bytes
+  replay: exact producer job replays the same READY snapshot only after validating the stored conflict input, graph-binding
+    cardinality, set digest, and manifest digest
+  frozen_relationship_reader: core.read_frozen_relationship_assertions_for_rule_v2(uuid,bigint,char(64),text,uuid)
+  reader_output:
+  - rule_id
+  - rule_version_id
+  - coverage_status
+  - input_payload
+  - input_canonical
+  - input_sha256
+  rule_binding:
+    rule_version_digest: exact core.rule_versions.code_digest
+    configuration_sha256: separately committed in producer canonical bytes and selection
+    policy_validation: the complete rule_versions.configuration policy object must pass the exact-key required-threshold validator
+      before snapshot creation
+hypothesis_recursion_contract:
+  start_event: action.execution_completed.v1 with execution state SUCCEEDED and action kind HYPOTHESIS
+  root_authorization_chain:
+  - exact execution authorization, effect, terminal receipt, outbox event, generation, state version, and receipt predecessor
+  - approved HYPOTHESIS action proposal version plus exact typed HYPOTHESIS approval detail
+  - ACCEPTED six-key canonical HYPOTHESIS suggestion with decision digest and USER agents.review success audit
+  - originating investigator AgentRunV2 in SUCCEEDED plus SETTLED with one exact VALID output-validation binding
+  - the complete supporting plus contradicting citation identity set bound to that suggestion, run, validation, snapshot, and
+    hypothesis payload digest
+  hypothesis_payload_contract:
+    exact_keys:
+    - kind
+    - statement
+    - supportingCitationIds
+    - contradictingCitationIds
+    - unknowns
+    - limitations
+    kind: HYPOTHESIS
+    canonical_digest: exact accepted suggestion payload_canonical and payload_sha256
+    market_researcher_binding: full payload plus digest are embedded in the canonical objective and plan; the digest is bound
+      into the initial transcript, node, transition, and receipt chain
+    skeptic_binding: the canonical plan revalidates the same payload and digest before scheduling
+  parent_output_contract:
+    required_stage: MARKET_RESEARCHER
+    success_gate: the parent AgentRunV2 must be SUCCEEDED plus SETTLED and bound to one exact VALID output-validation row
+    digest: canonical parent output payload SHA-256 equals the run output digest and transition proof
+    skeptic_binding: the untrusted parent output payload plus digest are embedded in the canonical skeptic objective; the digest
+      is bound into the initial transcript, node, transition, and receipt chain
+  root_depth: 0
+  child_depth: parent depth plus 1
+  stages:
+  - MARKET_RESEARCHER
+  - SKEPTIC
+  sequence: evidence gap starts MARKET_RESEARCHER; a successful market-researcher node must schedule SKEPTIC before any claim-drafter
+    eligibility
+  claim_drafter_automatic_execution: forbidden
+  required_policy_fields:
+  - maxDepth
+  - caseBudgetMicrosKrw
+  - marketResearcherStageBudgetMicrosKrw
+  - skepticStageBudgetMicrosKrw
+  - providerPolicyVersion
+  - providerPolicySha256
+  - providerClassification
+  - providerCandidateIds
+  - budgetPolicyVersion
+  - budgetPolicySha256
+  - maxProviderTurns
+  - maxToolCalls
+  - deadlineInterval
+  - marketResearcherPrompt
+  - marketResearcherOutputSchema
+  - skepticPrompt
+  - skepticOutputSchema
+  default_policy: forbidden
+  operating_seed: forbidden
+  missing_or_disabled_policy: no recursion plan, node, agent run, or job
+  budget_rule: reserve before scheduling; settle or release through the immutable ledger; case and stage limits are both mandatory
+  dedupe_key:
+  - caseId
+  - hypothesisExecutionDigest
+  - snapshotDigest
+  - stage
+  - depth
+  actor:
+    type: SERVICE
+    id: workflow-worker
+  producer_job_fence:
+    job_type: EVENT_DELIVERY
+    queue: workflow-worker
+    required_state: RUNNING with exact nonexpired lease token and positive fencing token
+    job_payload: exact eight-key event envelope bound to the outbox event identity, type, aggregate, version, occurrence time,
+      and payload in the same transaction
+    private_aliases:
+    - ops.process_hypothesis_execution_completed_v1_unfenced_0037(jsonb,uuid)
+    - ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037(jsonb,uuid)
+    direct_execute: revoked from PUBLIC and gurine_workflow_worker; only the fenced migration-owned wrappers may delegate
+  artifact_tier: OFFICIAL_UNREVIEWED may support internal hypothesis metadata only and cannot be cited publicly before human
+    promotion
+terminal_rule:
+  exact_trigger_replay: only the same trigger identity, generation, digest, predecessor receipt, producer job, and canonical
+    payload may replay an existing immutable receipt
+  duplicate_dedupe_key: a different trigger cannot adopt or silently suppress an existing node; the unique dedupe key fails
+    closed instead of creating a DUPLICATE_SUPPRESSED receipt
+  invalid_stage_budget: fail closed without a receipt
+  root_case_budget_blocked: append the bounded CASE_BUDGET_BLOCKED no-start receipt
+  existing_plan_case_budget_blocked: append an immutable ACTIVE to BUDGET_EXHAUSTED plan transition bound to the policy and
+    budget-ledger predecessor, then append the CASE_BUDGET_BLOCKED trigger receipt
+  other_no_start_receipts: policy absent or disabled, depth cap, non-hypothesis, non-success, non-recursive node, wrong stage,
+    failed run, and already-terminal plan remain explicit immutable dispositions
+hypothesis_preview_forward_contract:
+  compatibility:
+    renamed_legacy_routine: ops.execute_action_approval_v1_legacy_0030(text,jsonb,uuid)
+    wrapper_routine: ops.execute_action_approval_v1(text,jsonb,uuid)
+    legacy_execute: revoked from PUBLIC and gurine_control_api; reachable only inside the migration-owned wrapper
+    dispatch: only previewActionDraft, submitActionForReview, and submitActionDecision for an AgentProposalV2 HYPOTHESIS
+      proposal enter the v2 authorities; AgentProposalV1, system-origin, missing-suggestion, every other command, and every
+      other action kind delegate to the byte-preserved legacy owner
+  accepted_authority:
+    routine: ops.accepted_hypothesis_action_authority_v2(uuid,bigint)
+    source: the exact accepted AgentProposalV2 HYPOTHESIS suggestion and requested proposal version
+    requires:
+    - six-key canonical HYPOTHESIS payload and digest
+    - USER agents.review acceptance audit with exact details
+    - exact proposal materialization audit and version binding
+    - originating investigator AgentRunV2 plus exact VALID output validation
+    - complete bidirectional citation set containing only bound EVIDENCE_SEGMENT citations
+    returns:
+    - case identity and expected version
+    - statement, evidence, contrary-evidence, unknown, and action-detail digests
+    - ordered evidence segment identifiers derived from the accepted citations
+  preview_writer:
+    routine: ops.preview_accepted_hypothesis_action_draft_v2(jsonb,uuid)
+    mutation: atomically append the exact HYPOTHESIS review preview, binding, audit, receipt, and
+      ops.action_approval_hypothesis_details row before human decision
+    forbidden: synthetic statement, case, citation, evidence, unknown, or request-wide substitute digests; post-approval detail
+      reconstruction; browser-side direct mutation
+  review_submission_writer:
+    routine: ops.submit_accepted_hypothesis_action_for_review_v2(jsonb,uuid)
+    eligibility: choose one active user with an active role grant whose exact role has actions.review capability, ordered by
+      reviewer UUID then role code, excluding the proposer and submitter
+    mutation: append the strict v2 review assignment, STEP_UP conflict snapshot, SoD and primary quorum bindings, receipt, and
+      audit while storing the selected real role code
+    missing_reviewer: fail closed without assignment, review state, or receipt mutation
+    generic_role_alias_seed: forbidden
+  decision_writer:
+    routine: ops.execute_accepted_hypothesis_action_decision_v2(jsonb,uuid)
+    eligibility: only the strict AgentProposalV2 HYPOTHESIS proposal, current PENDING_QUORUM version, exact locked assignment,
+      expected versions, and approval digest may enter the existing decision owner
+    authority_revalidation: lock and revalidate the current CASE version, normalized six-key HYPOTHESIS detail, accepted
+      authority, action-detail canonical bytes, approval binding, and denormalized supporting-evidence, contrary-evidence,
+      and uncertainty digests before delegation
+    delegated_effect: call the byte-preserved 0030 submitActionDecision owner in the same transaction so STEP_UP, SoD, quorum,
+      ExecutionAuthorization, audit, receipt, and effect creation retain their existing authority
+    mismatch: fail before decision, authorization, effect, receipt, audit, or outbox mutation
+  replay: the same request and accepted authority tuple returns the exact stored receipt; any authority, reviewer, role, or
+    request drift is a conflict
+hypothesis_execution_contract:
+  scope: execute only the approved AgentProposalV2 HYPOTHESIS DATABASE_ONLY createHypothesis effect created by the existing
+    proposal, decision, and ExecutionAuthorization chain; no external provider or paid egress is permitted
+  sealed_load:
+    routine: ops.load_approved_hypothesis_execution_v1(uuid,uuid,bigint,uuid,bigint,jsonb)
+    mutation: none
+    returns: exact proposal id, proposal version, encrypted target draft, and target-request SHA-256 only after the active
+      workflow-worker EVENT_DELIVERY lease, fencing token, inbox claim, outbox event, authorization, immutable decision,
+      accepted authority, proposal detail, and receipt chain all agree
+    fail_closed: malformed or stale event, job, inbox, authorization, proposal, draft, authority, or receipt state returns no
+      sealed input and performs no DML
+  executor:
+    routine: ops.execute_approved_hypothesis_v1(uuid,uuid,bigint,uuid,bigint,jsonb,jsonb)
+    preconditions: revalidate the sealed draft after decryption, exact accepted authority, terminal APPROVE decision, immutable
+      authorization, active workflow-worker job lease and fence, dispatched inbox event, QUEUED effect and attempt, and current
+      CASE version
+    atomic_effect: in one transaction append the lease-claim and dispatch receipts, insert one OPEN hypothesis, increment the
+      CASE version, append the SERVICE/workflow-worker terminal audit and immutable EFFECT_SUCCEEDED receipt, emit
+      action.execution_completed.v1, and terminalize the attempt and effect
+    hypothesis_creator: the terminal human reviewer who issued the quorum-satisfying APPROVE decision; the workflow worker is
+      recorded separately as the service execution actor
+    stale_or_tampered: stale lease or fence, expired nonterminal authorization, modified decrypted draft, authority drift, or
+      stale CASE version raises before commit and leaves hypothesis, case, receipt, audit, outbox, attempt, effect, and inbox
+      state unchanged
+    terminal_replay: an exact SUCCEEDED receipt and proof chain may replay after authorization expiry without new mutation;
+      any replay-chain mismatch fails closed
+    lease_token_rule: the raw lease token is neither returned nor written to a receipt, audit, proof, or outbox; its transient
+      attempt value is cleared before the atomic transaction can commit
+  inbox_lock_acl: gurine_migrator receives UPDATE on processed_at and result only because PostgreSQL locking SELECT requires an
+    UPDATE privilege; neither execution routine issues inbox UPDATE and no runtime role receives direct inbox DML
+retention_contract:
+  relation_classes:
+    raw.research_artifact_review_tiers: inherited with the immutable research artifact and promotion evidence graph
+    core.relationship_graph_endpoints_v2: inherited with source evidence and graph revision legal holds
+    core.relationship_graph_assertions_v2: inherited with source evidence and graph revision legal holds
+    core.relationship_graph_assertion_evidence_v2: inherited with its assertion revision
+    core.relationship_graph_verification_decisions_v2: inherited with its assertion decision graph
+    core.dataset_snapshot_relationship_assertions_v2: inherited with the dataset snapshot
+    core.dataset_snapshot_conflict_inputs_v2: inherited with the dataset snapshot
+    ops.hypothesis_recursion_policies: AGENT_RUNTIME_POLICY
+    ops.hypothesis_recursion_plans: AGENT_RUNTIME_INITIATION_RECEIPT
+    ops.hypothesis_recursion_nodes: AGENT_RUNTIME_INITIATION_RECEIPT
+    ops.hypothesis_recursion_transitions: AGENT_RUNTIME_INITIATION_RECEIPT
+    ops.hypothesis_recursion_receipts: AGENT_RUNTIME_INITIATION_RECEIPT
+    ops.hypothesis_recursion_budget_ledger: AGENT_RUNTIME_INITIATION_RECEIPT
+  finite_schedule_predicate:
+  - record class equals the relation-specific class
+  - effective_at is at or before row created_at and review_expires_at is after it
+  - active_duration_seconds and backup_duration_seconds are nonnull
+  - terminal_action is DELETE, ANONYMIZE, or CRYPTO_ERASE
+  caller_override: forbidden
+  missing_or_ambiguous_schedule: fail closed before insert
+  natural_person_data_check: recursion policy, receipt, transition, and budget payloads store no natural-person identifier,
+    name, role, address, birth date, family relation, score, rank, or probability
+  forbidden_terminal_actions:
+  - PRESERVE_PUBLIC_REVISION
+  - indefinite null duration
+  - arbitrary PRESERVE token
+owner_routines:
+  exact_effective_count: 35
+  ops.bind_r6c_audit_retention_schedule_v1:
+    signature: ops.bind_r6c_audit_retention_schedule_v1() RETURNS trigger
+    effect: bind one exact current finite operational-audit retention schedule and reject caller overrides
+  ops.enforce_fetch_url_restricted_v1:
+    signature: ops.enforce_fetch_url_restricted_v1() RETURNS trigger
+    effect: force FETCH_URL artifacts to RESTRICTED without changing unrelated fetch classifications
+  ops.append_initial_research_artifact_review_tier_v1:
+    signature: ops.append_initial_research_artifact_review_tier_v1() RETURNS trigger
+    effect: append the exact OFFICIAL_UNREVIEWED revision-one receipt
+  ops.append_promoted_research_artifact_review_tier_v1:
+    signature: ops.append_promoted_research_artifact_review_tier_v1() RETURNS trigger
+    effect: append the exact HUMAN_PROMOTED revision-two receipt under the predecessor and human-promotion graph
+  ops.read_research_artifact_review_authorization_v1:
+    signature: ops.read_research_artifact_review_authorization_v1(uuid,uuid,bigint,char(64),char(64),text) RETURNS TABLE(review_tier
+      text,reviewed_classification text,review_receipt_sha256 char(64),promotion_id uuid,promotion_receipt_sha256 char(64),reviewed_by
+      uuid,reviewed_at timestamptz,source_locator_digest char(64),official_source_registry_digest char(64))
+    effect: return one latest eligible review tier for PROVIDER_INPUT or PUBLIC_CITATION and otherwise return zero rows
+    runtime_execute:
+    - gurine_analysis_worker
+    - gurine_control_api
+    - gurine_public_projector
+    - gurine_auditor
+  ops.promote_research_artifact_to_evidence_v1:
+    signature: ops.promote_research_artifact_to_evidence_v1(jsonb,uuid,uuid,char(64),char(64)) RETURNS jsonb
+    effect: forward replacement preserving the existing promotion transaction while removing PUBLIC fallback and requiring
+      the revision-one review-tier predecessor
+    runtime_execute:
+    - gurine_control_api
+  ops.jsonb_object_has_exact_keys_v1:
+    signature: ops.jsonb_object_has_exact_keys_v1(jsonb,text[]) RETURNS boolean
+    effect: immutable scalar-safe exact-object-key validator for fixed owner inputs
+  core.record_typed_relationship_endpoint_v2:
+    signature: core.record_typed_relationship_endpoint_v2(jsonb) RETURNS jsonb
+    runtime_execute:
+    - gurine_ingest_worker
+    effect: append or exactly replay one parsed-record-bound endpoint; PERSON remains PENDING_HUMAN
+  core.record_typed_relationship_assertion_v2:
+    signature: core.record_typed_relationship_assertion_v2(jsonb) RETURNS TABLE(assertion_id uuid,assertion_revision bigint,assertion_digest
+      char(64),receipt_sha256 char(64),verification_status text,public_use_status text,disposition text,replayed boolean)
+    runtime_execute:
+    - gurine_ingest_worker
+    - gurine_identity_api
+    effect: append or exactly replay one PENDING_HUMAN assertion and its complete evidence set without activation; HUMAN
+      proposals require exact session-actor binding
+  core.decide_typed_relationship_assertion_v2:
+    signature: core.decide_typed_relationship_assertion_v2(uuid,jsonb) RETURNS TABLE(decision_id uuid,assertion_id uuid,assertion_revision
+      bigint,assertion_digest char(64),verification_status text,public_use_status text,receipt_sha256 char(64),replayed boolean)
+    runtime_execute:
+    - gurine_identity_api
+    effect: append one independently reviewed human decision and exact successor assertion revision only when the request actor
+      equals the required identity-api session actor
+  core.typed_person_node_ref_v3:
+    signature: core.typed_person_node_ref_v3(uuid,uuid,bigint,char(64),uuid,char(64),char(64)) RETURNS char(64)
+    effect: derive a run- and snapshot-scoped opaque PERSON reference
+  core.list_typed_relationship_neighbors_v3:
+    signature: core.list_typed_relationship_neighbors_v3(uuid,uuid,bigint,char(64),bytea,bigint) RETURNS TABLE(query_digest
+      char(64),relationship_kind text,subject jsonb,object jsonb,assertion_id uuid,assertion_revision bigint,assertion_digest
+      char(64),valid_from date,valid_to date,evidence_count integer,evidence_set_digest char(64),subject_source_use_id uuid,subject_source_use_sha256
+      char(64),object_source_use_id uuid,object_source_use_sha256 char(64),verification_status text,public_use_status text,proposed_actor_type
+      text,proposed_actor_id text,verified_by uuid,verified_at timestamptz,verification_reason_digest char(64))
+    runtime_execute:
+    - gurine_analysis_worker
+    effect: read only exact frozen independently reviewed typed assertions plus source-use bindings
+  ops.relationship_neighbors_payload_is_valid_v2_v3:
+    signature: ops.relationship_neighbors_payload_is_valid_v2_v3(jsonb,jsonb) RETURNS boolean
+    effect: validate the legacy supplier-only v2 and typed v3 payloads without weakening either closed schema
+  ops.agent_tool_payload_is_valid:
+    signature: ops.agent_tool_payload_is_valid(text,jsonb,jsonb) RETURNS boolean
+    effect: forward replacement routing relationship.neighbors v2 and v3 through their exact validators
+    runtime_execute:
+    - gurine_analysis_worker
+  ops.agent_tool_schema_contract_is_valid:
+    signature: ops.agent_tool_schema_contract_is_valid(text,char(64),char(64)) RETURNS boolean
+    effect: forward replacement admitting the exact relationship.neighbors v3 request and response schema digests while retaining
+      every existing tool tuple
+    runtime_execute:
+    - gurine_analysis_worker
+  core.conflict_detection_policy_v2_is_valid:
+    signature: core.conflict_detection_policy_v2_is_valid(text,jsonb) RETURNS boolean
+    effect: immutable exact-key and threshold validator for the five rule policies; no defaults
+  core.finalize_conflict_detection_dataset_snapshot_v2:
+    signature: core.finalize_conflict_detection_dataset_snapshot_v2(uuid,bigint,jsonb,bytea,char(64),uuid) RETURNS TABLE(snapshot_id
+      uuid,state text,version bigint,snapshot_sha256 char(64),member_count bigint,conflict_input_count bigint,conflict_input_set_sha256
+      char(64))
+    effect: finalize a BUILDING conflict snapshot only when the manifest, input count and set digest, terminal receipt, audit,
+      and generation fence agree
+  core.build_conflict_detection_dataset_snapshot_v2:
+    signature: core.build_conflict_detection_dataset_snapshot_v2(uuid,uuid,bigint) RETURNS TABLE(snapshot_id uuid,snapshot_sha256
+      char(64),member_count bigint,conflict_input_count bigint,conflict_input_set_sha256 char(64),replayed boolean)
+    runtime_execute:
+    - gurine_analysis_worker
+    effect: freeze one exact rule input under a running DETECTION_SNAPSHOT_BUILD job lease and fence and finalize or exactly
+      replay it
+  core.read_conflict_detection_input_v2:
+    signature: core.read_conflict_detection_input_v2(uuid,bigint,char(64),text,uuid) RETURNS TABLE(rule_id text,rule_version_id
+      uuid,coverage_status text,input_payload jsonb,input_canonical bytea,input_sha256 char(64))
+    runtime_execute:
+    - gurine_analysis_worker
+    effect: read only the exact READY snapshot, generation, digest, rule, and rule-version-bound immutable input
+  ops.process_hypothesis_execution_completed_v1:
+    signature: ops.process_hypothesis_execution_completed_v1(jsonb,uuid,uuid,bigint) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    runtime_execute:
+    - gurine_workflow_worker
+    effect: require the exact active EVENT_DELIVERY job lease, fence, closed payload, and outbox event before delegating to the
+      private two-argument owner that applies policy, depth, budget, and dedupe gates
+  ops.process_hypothesis_recursion_stage_completed_v1:
+    signature: ops.process_hypothesis_recursion_stage_completed_v1(jsonb,uuid,uuid,bigint) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    runtime_execute:
+    - gurine_workflow_worker
+    effect: require the exact active EVENT_DELIVERY job lease, fence, closed payload, and outbox event before delegating to the
+      private two-argument owner that schedules the skeptic stage
+  ops.connector_operation_contract_is_valid:
+    signature: ops.connector_operation_contract_is_valid(text,text,text,text,char(64),text,char(64)) RETURNS boolean
+    effect: forward-replace the connector operation closed-world predicate with the mechanically generated exact 8-connector,
+      56-operation catalog; unknown, cross-connector, version-drifted, or manifest-drifted tuples return false
+  ops.record_research_fetch_v1:
+    effect: forward-replace the 0030 fetch recorder so FETCH_URL artifact and root source use are both RESTRICTED, SEARCH_PUBLIC_WEB
+      remains discovery-only, and exact replay validates the review-tier lineage
+    runtime_execute:
+    - gurine_analysis_worker
+    signature: ops.record_research_fetch_v1(uuid,uuid,uuid,text,char(64),text,text,text,text,text,integer,text,char(64),bytea,text,text,char(64),uuid,uuid,uuid,uuid,char(64),char(64),jsonb,jsonb)
+      RETURNS jsonb
+  core.read_frozen_relationship_assertions_for_rule_v2:
+    effect: read the exact READY conflict input through its owner integrity gate and return typed assertions in frozen ordinal
+      order
+    runtime_execute:
+    - gurine_analysis_worker
+    signature: core.read_frozen_relationship_assertions_for_rule_v2(uuid,bigint,char(64),text,uuid) RETURNS TABLE(assertion_ordinal
+      bigint,assertion_payload jsonb)
+  ops.complete_agent_run_worker_v2:
+    effect: forward-replace AgentRunV2 completion so SUCCEEDED requires exactly one matching VALID output-validation row and
+      stores its identity; non-success branches remain validation-null
+    runtime_execute:
+    - gurine_analysis_worker
+    signature: ops.complete_agent_run_worker_v2(uuid,bigint,uuid,char(64),uuid,uuid,bigint,text,text,text,jsonb,char(64),text,jsonb,char(64),numeric)
+      RETURNS TABLE(version bigint,terminal_receipt_id uuid,terminal_receipt_sha256 char(64),replayed boolean)
+  ops.execute_action_approval_v1_legacy_0030:
+    signature: ops.execute_action_approval_v1_legacy_0030(text,jsonb,uuid) RETURNS jsonb
+    effect: preserve the exact 0030 owner for every non-AgentProposalV2-HYPOTHESIS route; direct PUBLIC and control-api execute
+      are revoked so only the migration-owned wrapper can delegate to it
+    runtime_execute: []
+  ops.accepted_hypothesis_action_authority_v2:
+    signature: ops.accepted_hypothesis_action_authority_v2(uuid,bigint) RETURNS jsonb
+    effect: bind one accepted six-key AgentProposalV2 HYPOTHESIS payload to its case version, investigator run, exact VALID
+      output validation, human acceptance audit, materialization audit, and complete bidirectional evidence citation set
+    runtime_execute: []
+  ops.preview_accepted_hypothesis_action_draft_v2:
+    signature: ops.preview_accepted_hypothesis_action_draft_v2(jsonb,uuid) RETURNS jsonb
+    effect: atomically append the exact HYPOTHESIS preview, approval binding, audit, receipt, and normalized hypothesis detail
+      before human decision, with exact replay and stale-authority rejection
+    runtime_execute: []
+  ops.submit_accepted_hypothesis_action_for_review_v2:
+    signature: ops.submit_accepted_hypothesis_action_for_review_v2(jsonb,uuid) RETURNS jsonb
+    effect: submit only a strict AgentProposalV2 HYPOTHESIS preview to one eligible active reviewer under exact role,
+      capability, STEP_UP, SoD, quorum, conflict snapshot, and replay bindings
+    runtime_execute: []
+  ops.execute_accepted_hypothesis_action_decision_v2:
+    signature: ops.execute_accepted_hypothesis_action_decision_v2(jsonb,uuid) RETURNS jsonb
+    effect: lock and revalidate the strict AgentProposalV2 HYPOTHESIS proposal, current version, assignment, accepted authority,
+      normalized detail, approval binding, evidence digests, and CASE fence before delegating to the legacy decision owner
+    runtime_execute: []
+  ops.execute_action_approval_v1:
+    signature: ops.execute_action_approval_v1(text,jsonb,uuid) RETURNS jsonb
+    effect: dispatch only AgentProposalV2 HYPOTHESIS preview, review submission, and decision to the strict v2 writers and
+      delegate every compatibility route to the renamed byte-preserved 0030 owner
+    runtime_execute:
+    - gurine_control_api
+  ops.load_approved_hypothesis_execution_v1:
+    signature: ops.load_approved_hypothesis_execution_v1(uuid,uuid,bigint,uuid,bigint,jsonb) RETURNS TABLE(proposal_id uuid,proposal_version
+      bigint,target_request_encrypted bytea,target_request_sha256 char(64))
+    effect: perform a mutation-free sealed-input verification of the exact active workflow-worker job, inbox, authorization,
+      proposal, decision, accepted authority, encrypted draft, and execution receipt chain
+    runtime_execute:
+    - gurine_workflow_worker
+  ops.execute_approved_hypothesis_v1:
+    signature: ops.execute_approved_hypothesis_v1(uuid,uuid,bigint,uuid,bigint,jsonb,jsonb) RETURNS jsonb
+    effect: atomically create the human-approved OPEN hypothesis, advance the CASE version, append the exact claim, dispatch,
+      terminal audit and receipt chain, emit completion, and terminalize the DATABASE_ONLY execution under the active lease
+      and fence, with exact terminal replay
+    runtime_execute:
+    - gurine_workflow_worker
+  ops.process_hypothesis_execution_completed_v1_unfenced_0037:
+    signature: ops.process_hypothesis_execution_completed_v1_unfenced_0037(jsonb,uuid) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    effect: preserve the validated recursion mutation body behind the four-argument job-fenced owner
+    runtime_execute: []
+  ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037:
+    signature: ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037(jsonb,uuid) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    effect: preserve the validated stage mutation body behind the four-argument job-fenced owner
+    runtime_execute: []
+trigger_registry:
+  immutable_guards:
+  - research_artifact_review_tiers_immutable_guard
+  - relationship_graph_endpoints_v2_immutable_guard
+  - relationship_graph_assertions_v2_immutable_guard
+  - relationship_graph_assertion_evidence_v2_immutable_guard
+  - relationship_graph_verification_decisions_v2_immutable_guard
+  - dataset_snapshot_relationship_assertions_v2_immutable_guard
+  - dataset_snapshot_conflict_inputs_v2_immutable_guard
+  - hypothesis_recursion_policies_immutable_guard
+  - hypothesis_recursion_plans_immutable_guard
+  - hypothesis_recursion_nodes_immutable_guard
+  - hypothesis_recursion_transitions_immutable_guard
+  - hypothesis_recursion_receipts_immutable_guard
+  - hypothesis_recursion_budget_ledger_immutable_guard
+  retention_guards:
+  - hypothesis_recursion_policies_retention_guard
+  - hypothesis_recursion_plans_retention_guard
+  - hypothesis_recursion_nodes_retention_guard
+  - hypothesis_recursion_transitions_retention_guard
+  - hypothesis_recursion_receipts_retention_guard
+  - hypothesis_recursion_budget_ledger_retention_guard
+  artifact_guards:
+  - research_artifacts_fetch_url_restricted_guard
+  - research_artifacts_initial_review_tier_append
+  - research_artifact_promotions_review_tier_append
+acl_changes:
+  public:
+    relation_privileges: none on all 13 new relations
+    routine_execute: revoked on every 0037 helper and owner routine
+  gurine_ingest_worker:
+    parser_registry_columns:
+    - parser_name
+    - version
+    - implementation_digest
+    - status
+    routine_execute:
+    - core.record_typed_relationship_endpoint_v2
+    - core.record_typed_relationship_assertion_v2
+    direct_new_relation_dml: []
+  gurine_analysis_worker:
+    routine_execute:
+    - core.list_typed_relationship_neighbors_v3
+    - core.build_conflict_detection_dataset_snapshot_v2
+    - core.read_conflict_detection_input_v2
+    - core.read_frozen_relationship_assertions_for_rule_v2
+    - ops.read_research_artifact_review_authorization_v1
+    - ops.record_research_fetch_v1
+    - ops.complete_agent_run_worker_v2
+    direct_person_graph_select: forbidden; typed relationship reads are owner-routine-only so contextual PERSON fields never
+      cross the analysis-worker ACL boundary
+    direct_new_relation_dml: []
+  gurine_workflow_worker:
+    routine_execute:
+    - ops.process_hypothesis_execution_completed_v1
+    - ops.process_hypothesis_recursion_stage_completed_v1
+    - ops.load_approved_hypothesis_execution_v1
+    - ops.execute_approved_hypothesis_v1
+    direct_new_relation_dml: []
+  gurine_control_api:
+    routine_execute:
+    - ops.read_research_artifact_review_authorization_v1
+    - ops.promote_research_artifact_to_evidence_v1
+    - ops.execute_action_approval_v1
+    direct_new_relation_dml: []
+  gurine_identity_api:
+    routine_execute:
+    - core.record_typed_relationship_assertion_v2
+    - core.decide_typed_relationship_assertion_v2
+    direct_new_relation_dml: []
+  gurine_public_projector:
+    routine_execute:
+    - ops.read_research_artifact_review_authorization_v1
+    direct_new_relation_dml: []
+  gurine_auditor:
+    read_only: all 13 new relations
+    routine_execute:
+    - ops.read_research_artifact_review_authorization_v1
+legal_and_safety_boundaries:
+  L1:
+    rule: automatic identity merge is forbidden; ingest writes proposal-only PENDING_HUMAN graph rows
+    weak_identifier_verified: forbidden
+  L2:
+    rule: relationship use in a snapshot or typed-neighbor response requires COMPLETE plus VERIFIED plus APPROVED plus an
+      independent human reviewer
+  L3:
+    rule: family or kinship inference and relation kinds do not exist; sensitive natural-person fields and scoring are absent
+      from the physical schema and owner payloads
+  L4:
+    rule: PERSON comes only from a closed official-source kind set and stores contextual name, role, source locator, and observation
+      identifier digests; external readers receive only opaque run-scoped references
+  L5:
+    rule: all five conflict rules have publication_claim_allowed false and can produce anomaly triage only
+  L6:
+    rule: PERSONAL_DATA or RESTRICTED natural-person content and unreviewed raw artifact bytes cannot enter external provider
+      input
+  no_automatic_effects:
+  - publication
+  - case state change
+  - relationship activation
+  - supplier merge
+  - identity verification
+  - claim drafting
+  - external communication
+source_and_rule_activation:
+  implemented_sources:
+    open_dart_executive_status: parsed-record exact PENDING_HUMAN PERSON endpoint path only; MANAGEMENT_ROLE proposals remain
+      zero-DML until the deferred supplier authority binding is resolved
+    open_dart_major_shareholder_status: raw and normalized observation only; graph rows remain zero until entity-type authority
+      exists
+    koneps_bid_results: procurement notice and award metadata only
+    pps_sanctions: manifest and CSV connector registered disabled pending rights and schema activation receipt
+  deferred_sources:
+    open_dart_management_role_supplier_binding:
+      blocker: no owner-controlled typed read model currently resolves an observed OpenDART company to a human-resolved SUPPLIER
+        entity id, revision, and digest that the assertion writer can verify in the same transaction
+      prohibited_workaround: caller-supplied supplier revision or digest, company-name matching, or automatic MANAGEMENT_ROLE
+        assertion creation
+      unblocks:
+      - OFFICER_OVERLAP_AWARD
+    koneps_structured_bidder_participation:
+      blocker: no authoritative structured per-procurement participant, bid amount, rank, status, and withdrawal rows
+      unblocks:
+      - OWNERSHIP_LINKED_COMPETITORS
+      - BID_ROTATION
+    open_dart_affiliated_companies:
+      blocker: operation and normalization contract not in the verified connector set
+    alio_executive_roster:
+      blocker: no verified normalizer preserving complete official lineage and L4 field minimization
+    public_official_reemployment:
+      blocker: no active official ethics-notice or gazette normalizer producing independently reviewed FORMER_OFFICIAL_ROLE
+        assertions
+      unblocks:
+      - REVOLVING_DOOR_CONTRACT
+  rule_status:
+    OFFICER_OVERLAP_AWARD: BLOCKED until the owner-controlled human-resolved SUPPLIER read model and transactionally verified
+      MANAGEMENT_ROLE proposal path exist; after that, activation still requires immutable policy, complete KONEPS award coverage,
+      and independently VERIFIED plus APPROVED OpenDART officer graph coverage
+    OWNERSHIP_LINKED_COMPETITORS: BLOCKED until koneps_structured_bidder_participation is authoritative and complete
+    BID_ROTATION: BLOCKED until koneps_structured_bidder_participation is authoritative and complete
+    REVOLVING_DOOR_CONTRACT: BLOCKED until official reemployment source coverage creates complete approved FORMER_OFFICIAL_ROLE
+      assertions
+    SANCTIONED_SUCCESSOR: BLOCKED while pps_sanctions remains disabled; activation requires rights, credentialed preflight,
+      exact CSV fingerprint, complete effective dates, and frozen strong identifiers
+verification_obligations:
+- PostgreSQL 18.4 applies migrations 0001 through 0037 in order on an empty database
+- exactly 13 new ordinary relations exist and every migration through 0036 remains byte-identical
+- all 13 relations are owned by gurine_migrator, PUBLIC has no privilege, runtime roles have no direct DML, and every immutable
+  relation rejects UPDATE and DELETE
+- OpenDART endpoint insertion rejects an inexact source-document, parser-run, parsed-record, parser-version, payload-digest,
+  locator, or L4 field shape
+- OpenDART executive ingestion may create only the PENDING_HUMAN PERSON endpoint while supplier authority is unresolved; it
+  creates zero MANAGEMENT_ROLE assertions and OFFICER_OVERLAP_AWARD remains operationally BLOCKED
+- equal names or observation digests never create a VERIFIED person identity, supplier merge, or active assertion
+- typed graph revision one is PENDING_HUMAN only and VERIFIED plus APPROVED requires a distinct human reviewer and exact evidence
+  count and set digest
+- relationship.neighbors v2 remains byte-compatible and v3 returns only exact snapshot-frozen VERIFIED plus APPROVED rows
+  with two bound source uses
+- each of the five rule jobs deterministically freezes the same canonical input and digest for the same authoritative rows
+  and emits BLOCKED or PARTIAL rather than inventing absent source data
+- legacy weak or LEGACY_UNPROVEN supplier identifiers never enter strong_identifier_facts
+- OFFICIAL_UNREVIEWED cannot enter provider input, claim or communication citation, or public output and human promotion requires
+  explicit classification
+- recursion proves missing policy, disabled policy, duplicate, max depth, case budget, stage budget, market-researcher success,
+  skeptic scheduling, and exact replay branches
+- both recursion consumers reject a wrong, expired, or missing EVENT_DELIVERY job lease, fence, closed envelope, or outbox row,
+  and the private two-argument aliases have no runtime execute grant
+- strict AgentProposalV2 HYPOTHESIS preview and review submission use the shared accepted authority, choose only a real active
+  actions.review role, preserve STEP_UP and SoD, and fail closed when no independent reviewer exists
+- strict AgentProposalV2 HYPOTHESIS decision precondition drift creates zero decision, authorization, effect, receipt, audit,
+  or outbox mutation before delegating to the unchanged 0030 governance owner
+- the approved-hypothesis sealed loader performs zero DML and returns input only for the exact active workflow-worker job,
+  inbox claim, authorization, terminal human approval, accepted authority, encrypted draft, and receipt chain
+- the approved-hypothesis executor commits hypothesis insert, CASE version advance, claim and dispatch receipts, terminal
+  SERVICE/workflow-worker audit, EFFECT_SUCCEEDED receipt, completion outbox, and attempt and effect terminalization atomically,
+  and exact terminal replay creates no new mutation even after authorization expiry
+- a lease-expiry lock-wait race raises SQLSTATE 40001 and leaves hypothesis, CASE version, receipt sequences two through four,
+  audit, outbox, attempt, effect, and inbox unchanged
+- gurine_workflow_worker has only the two approved-hypothesis routine EXECUTE grants and no direct table DML; gurine_migrator
+  has only processed_at and result UPDATE columns on ops.inbox and the executor performs no inbox UPDATE
+- gurine_migrator has SELECT and INSERT on editorial.hypotheses only for the SECURITY DEFINER INSERT RETURNING boundary; no
+  runtime role receives direct hypothesis-table privileges
+- gurine_identity_api has core schema USAGE only to resolve the typed relationship assertion record and decision owner
+  routines; all direct graph-relation SELECT, INSERT, UPDATE, and DELETE privileges remain absent
+- the generated event payload override updates exactly two active rows before owner execution and the conflict snapshot role
+  CHECK admits the exact selected reviewer role set including EXECUTIVE_APPROVER
+- no production conflict threshold or recursion policy seed exists; fixture-only policies are isolated under db/test-fixtures
+- retention insert guards reject caller override, missing schedule, ambiguous schedule, and nonfinite schedule for all six
+  recursion relations
+- the connector operation predicate accepts exactly 8 connectors and 56 manifest-pinned operations and rejects every unknown
+  or cross-connector tuple
+artifact_hashes:
+  migration_sha256: 9ef7d3162603c1c018622a9d390f70c706de3d4de5b0932795e1a75f111cd433
+  addendum_sha256: __SELF_HASH_RECORDED_IN_GLOBAL_AFTER_FINALIZATION__
+  relationship_neighbors_request_v3_sha256: 520f00d9ee779e33a31d9e1ce7d72088feea51bbe8a30ab9518b52789c897679
+  relationship_neighbors_response_v3_sha256: 63dd5666bdd34a681047f334ef02e22da7c9342fb97f38a0a572beeb4d209b29
+OPEN_QUESTIONS: []
+parser_registry_acl:
+  relation: core.parser_versions
+  role: gurine_ingest_worker
+  privilege: SELECT
+  exact_columns:
+  - parser_name
+  - version
+  - implementation_digest
+  - status
+  write_privileges: []
+  reason: the parsed-record exact OpenDART endpoint writer resolves only the already pinned parser identity and implementation
+    digest
+promotion_parser_authority_acl:
+  role: gurine_migrator
+  write_privileges: []
+  relations:
+    core.parser_runs:
+    - id
+    - source_document_id
+    - parser_name
+    - parser_version
+    - status
+    - input_content_sha256
+    - output_digest
+    - implementation_sha256
+    - extraction_receipt_sha256
+    core.parser_versions:
+    - parser_name
+    - version
+    - supported_media_types
+    - implementation_digest
+    - status
+  reason: the SECURITY DEFINER promotion owner re-binds the selected source segment to one successful parser run and one
+    active parser implementation without receiving unrelated parser-table columns
+hypothesis_preview_owner_acl:
+  role: gurine_migrator
+  relations:
+    editorial.cases:
+    - SELECT
+    - UPDATE
+    ops.agent_suggestions:
+    - SELECT
+    - UPDATE
+  runtime_roles: []
+  reason: the migration-owned SECURITY DEFINER preview authority must lock the accepted suggestion and its case while deriving
+    the exact review preimage; no browser or runtime role receives direct access through this change
+hypothesis_execution_owner_acl:
+  role: gurine_migrator
+  relations:
+    editorial.hypotheses:
+    - SELECT
+    - INSERT
+    ops.inbox:
+    - UPDATE (processed_at, result) only
+  runtime_roles: []
+  direct_runtime_table_dml: forbidden
+  reason: the SECURITY DEFINER executor needs INSERT plus SELECT for INSERT RETURNING on the legacy hypotheses relation, while
+    PostgreSQL locking SELECT on inbox requires only the two ownership-column UPDATE privileges; no inbox UPDATE statement or
+    runtime-role table grant is introduced
+typed_relationship_runtime_schema_acl:
+  role: gurine_identity_api
+  schema: core
+  privilege: USAGE
+  callable_owner_routines:
+  - core.record_typed_relationship_assertion_v2(jsonb)
+  - core.decide_typed_relationship_assertion_v2(uuid,jsonb)
+  direct_relation_privileges:
+    SELECT: []
+    INSERT: []
+    UPDATE: []
+    DELETE: []
+  reason: 0016 revoked broad core access; schema USAGE restores only qualified owner-routine resolution while the routines'
+    SECURITY DEFINER bodies retain all graph mutation authority
+connector_operation_contract_override:
+  routine: ops.connector_operation_contract_is_valid(text,text,text,text,char(64),text,char(64))
+  compatibility: forward-only CREATE OR REPLACE in 0037; migrations 0001 through 0036 remain byte-preserved
+  exact_connector_count: 8
+  exact_operation_count: 56
+  source_manifests:
+    alio:
+      path: specs/connectors/alio/operations.yaml
+      sha256: 5617358308396d8de06c64971124cf6680aa9e480f8db59dce63de7aa31fe2af
+      operation_count: 2
+    audit-results:
+      path: specs/connectors/audit-results/operations.yaml
+      sha256: 497973dbc4c21487527a8686544b128c2492b1b6772990332ec11fe22511ed1b
+      operation_count: 2
+    koneps-bid-results:
+      path: specs/connectors/koneps-bid-results/operations.yaml
+      sha256: 7d79e361c4742d88450514a809a0fb1ddc2d1665e76b7b3311f31c2e8b44775c
+      operation_count: 8
+    koneps-contracts:
+      path: specs/connectors/koneps-contracts/operations.yaml
+      sha256: ff73547c58a9c6b6fdcc8a38d31ab524762b9affec8c3986ca82714ba9c16d22
+      operation_count: 16
+    koneps-notices:
+      path: specs/connectors/koneps-notices/operations.yaml
+      sha256: 7dd056ed1c40f364386b90a308e91035e6d5d6ab63a449b2b1174929bc0612da
+      operation_count: 17
+    local-finance:
+      path: specs/connectors/local-finance/operations.yaml
+      sha256: f435335ad64b6608391c53be86fc09e34969fa13c40be2785c41722d31c466e5
+      operation_count: 3
+    open-dart:
+      path: specs/connectors/open-dart/operations.yaml
+      sha256: 65be2c5e89ee510ecfa2aa9818650835959f7d8e6a301d6399483e31ba596ed8
+      operation_count: 6
+    pps-sanctions:
+      path: specs/connectors/pps-sanctions/operations.yaml
+      sha256: aab7d107e781efbb59b5c648789dcf71059cc3d26ef46f10a5166761b082e680
+      operation_count: 2
+  pagination_contract:
+    page-number:
+      stored: PAGE_NUMBER
+      terminal_predicate_version: page-number.total-count.v1
+    none:
+      stored: NONE
+      terminal_predicate_version: single-response.v1
+    manifest-documents-array:
+      stored: MANIFEST_DOCUMENTS_ARRAY
+      terminal_predicate_version: manifest-root.v1
+    manifest-order:
+      stored: MANIFEST_ORDER
+      terminal_predicate_version: manifest-order.v1
+  terminal_predicate_sha256_rule: caller value must be lowercase 64-hex; its semantic digest remains bound by the stored
+    terminal-predicate contract
+  closed_world_rules:
+  - unknown connector_id returns false
+  - unknown operation_id returns false
+  - operation_id under a different connector returns false
+  - pagination strategy or predicate-version drift returns false
+  - connector contract version other than 13.0.0 returns false
+  - operations YAML digest drift returns false
+source_fetch_forward_contract:
+  routine: ops.record_research_fetch_v1
+  compatibility: preserve the 0030 rights, safety, capability, legal-hold, exact replay, artifact, receipt, and object-storage
+    boundaries
+  SEARCH_PUBLIC_WEB: discovery-only receipt; creates no ResearchArtifact, SourceUse, or review-tier row and fails closed on
+    materialized-lineage collision
+  FETCH_URL:
+    artifact_classification: RESTRICTED
+    source_use_classification: RESTRICTED
+    source_use_kind: TOOL_QUERY
+    source_kind: RESEARCH_ARTIFACT
+    caller_digest_rule: the caller-provided sourceUseSha256 must equal the canonical RESTRICTED preimage digest
+    review_tier: OFFICIAL_UNREVIEWED revision one is inserted with the artifact transaction
+    provider_or_public_use: forbidden until an exact HUMAN_PROMOTED Evidence lineage satisfies the separate use-scope gate
+  tool_call_binding:
+    request: caller request SHA-256 must equal the exact persisted tool-call request digest
+    result: caller result SHA-256 must equal the exact persisted tool-call result digest
+    mismatch: fail closed before artifact, source-use, review-tier, or receipt mutation
+  replay: bind every caller identity, source, artifact, asset, result, content, rights, classification, source-use, and review-tier
+    byte; partial identity adoption is forbidden
+agent_tool_schema_pin_override:
+  routine: ops.agent_tool_schema_contract_is_valid(text,char(64),char(64))
+  exact_count: 13
+  pins:
+    agency.profile:
+      request_sha256: 32fcac51ce943f4ca5aeaeda5996958a601f2cd89ffb76498c06260d93e67230
+      response_sha256: 400480d8fc62033edb35c75a9b3d3eb0d87822b5d0bcccf24de61d8844c9ca55
+    claim.language_check:
+      request_sha256: 5f997b0ad29c80151e0ddd649f6763f14451b41dd8e653ffbf43eccf2ec0112e
+      response_sha256: 949321557a879a4f05e25ac8315abc27509816c25d17fb3c7a48867314a098c7
+    contract.find_comparables:
+      request_sha256: f6cc5c330f6e3fba10784625a7b1ace0b18a6c6684b0934f9a1ee4e342153bb3
+      response_sha256: d8912d7453096e0cb2d23a2445ca7691c8d7e1e99c9a72fa7b4d632879f4d158
+    contract.search:
+      request_sha256: 53023a69e4f010bb1a50868e9da42601b3c71e8c8a2b6c4976574b8512019721
+      response_sha256: 334a5b481f5e8bbe5d52b0c4ea50be5d6d4fadcc08576318513312a7a80076e6
+    entity.lookup:
+      request_sha256: 487ec03b653e0f15a34f936eaea9edb365628ebf5286268682a6fbc444f2b3f8
+      response_sha256: ed2bc474a805b5854446b4398593143fcc0f14c4294f1758c606bc3afcdd9f31
+    evidence.read:
+      request_sha256: e659cb038ed233c29a1eee2f6923937e21660f9e7c8b8366bb5b82f87202e073
+      response_sha256: a95f7d0dabbff40b388bb94f92c458c55168d0bc105b2775d551b61c11f125c1
+    evidence.search:
+      request_sha256: 8773231779b56f840c6fd22250c5d0ecc5e8af476c276a531a35d8e6ab3753e8
+      response_sha256: 3c842109198f09d56b1b8128a50ac725c450233a9634b80311b03f3a191dc387
+    relationship.neighbors:
+      request_sha256: 520f00d9ee779e33a31d9e1ce7d72088feea51bbe8a30ab9518b52789c897679
+      response_sha256: 63dd5666bdd34a681047f334ef02e22da7c9342fb97f38a0a572beeb4d209b29
+    response.read:
+      request_sha256: 4c484e6db2e5d25bbfc764e8f6c7c147b3ea8e1f3381be2cf83d5084471b878e
+      response_sha256: e47edd531612ed746c0b24a73f2f94122cc2e6e669eeddcb38048b2e0f15469a
+    rule.reproduce:
+      request_sha256: 67725f6210e485ef0f3c64b3611adb5b670822a0ab25ab4d495fb6e1c1cf6676
+      response_sha256: 2e50ec1af02566ab6472d6ceb8b746cbcc246f2fd972b4ba5b758974c970fa0e
+    source.fetch:
+      request_sha256: e197b3f470dcd2180ad6127c1615684507c10c86cb26c9ee57967f73bff9e57c
+      response_sha256: c1097a7785d2680e2b27d99133c0f9f37c26f67172cccbc94d9acb9aab7905c6
+    source.locator_verify:
+      request_sha256: 9f21ec92e2bc7716c43f8130e33fc48c65b7cedff152b7ad86b9c1af8eca4ff9
+      response_sha256: efe7d2d4fab81911f88c6a78f6b6beb1ad0cfdc941ef552508aa0961aa875ef2
+    supplier.profile:
+      request_sha256: 0ecb53a68a6a0eff29ec4b1e56b0061859e8f9b8750a3e2f50be5a96686e870c
+      response_sha256: e502989a7d06ee5dd7ae73d69b1822fd5dd4bc89c65b6b17553b37193b7149a3
+  relationship_neighbors_rule: the relationship.neighbors hashes pin the combined backward-compatible v2 plus typed v3 request
+    and response authority; no runtime schema fallback exists
+agent_run_v2_completion_binding:
+  routine: ops.complete_agent_run_worker_v2
+  success_requires_exactly_one:
+    relation: ops.agent_output_validations
+    bindings:
+    - agent_run_id
+    - provider_output_sha256
+    - input_snapshot_sha256
+    - output_schema_id
+    - output_schema_version
+    - output_schema_sha256
+    statuses:
+      validation_status: VALID
+      schema_status: PASS
+      citation_status: PASS
+      policy_status: PASS
+      run_terminal_status: SUCCEEDED
+  success_effect: store the exact validation_id in agent_runs.output_validation_id before the terminal receipt and completion
+    event are accepted
+  missing_or_ambiguous: fail closed with no terminal transition
+  non_success: FAILED, BUDGET_BLOCKED, and POLICY_BLOCKED retain null output_validation_id
+  replay: the stored output_validation_id is part of the exact replay comparison
+routine_inventory:
+  exact_count: 35
+  created_or_replaced_effective_count: 32
+  renamed_existing_count: 3
+  definition_statement_count: 38
+  renamed_existing:
+  - from: ops.execute_action_approval_v1(text,jsonb,uuid)
+    to: ops.execute_action_approval_v1_legacy_0030(text,jsonb,uuid)
+    origin_migration: 0030_v13_submission_session_hardening.sql
+  - from: ops.process_hypothesis_execution_completed_v1(jsonb,uuid)
+    to: ops.process_hypothesis_execution_completed_v1_unfenced_0037(jsonb,uuid)
+    origin_migration: 0037_r6c_conflict_investigation.sql
+  - from: ops.process_hypothesis_recursion_stage_completed_v1(jsonb,uuid)
+    to: ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037(jsonb,uuid)
+    origin_migration: 0037_r6c_conflict_investigation.sql
+  forward_redefined_in_migration:
+  - ops.execute_action_approval_v1(text,jsonb,uuid)
+  - ops.process_hypothesis_execution_completed_v1(jsonb,uuid)
+  - ops.process_hypothesis_recursion_stage_completed_v1(jsonb,uuid)
+  effective_definition_rule: apply renames in statement order, then for an identical name and input signature use the last
+    CREATE OR REPLACE definition; the two unfenced aliases remain private and the public names expose only four-argument fences
+  ordered:
+  - name: ops.bind_r6c_audit_retention_schedule_v1
+    signature: ops.bind_r6c_audit_retention_schedule_v1() RETURNS trigger
+  - name: ops.enforce_fetch_url_restricted_v1
+    signature: ops.enforce_fetch_url_restricted_v1() RETURNS trigger
+  - name: ops.append_initial_research_artifact_review_tier_v1
+    signature: ops.append_initial_research_artifact_review_tier_v1() RETURNS trigger
+  - name: ops.append_promoted_research_artifact_review_tier_v1
+    signature: ops.append_promoted_research_artifact_review_tier_v1() RETURNS trigger
+  - name: ops.read_research_artifact_review_authorization_v1
+    signature: ops.read_research_artifact_review_authorization_v1(uuid,uuid,bigint,char(64),char(64),text) RETURNS TABLE(review_tier
+      text,reviewed_classification text,review_receipt_sha256 char(64),promotion_id uuid,promotion_receipt_sha256 char(64),reviewed_by
+      uuid,reviewed_at timestamptz,source_locator_digest char(64),official_source_registry_digest char(64))
+  - name: ops.promote_research_artifact_to_evidence_v1
+    signature: ops.promote_research_artifact_to_evidence_v1(jsonb,uuid,uuid,char(64),char(64)) RETURNS jsonb
+  - name: ops.process_hypothesis_execution_completed_v1
+    signature: ops.process_hypothesis_execution_completed_v1(jsonb,uuid,uuid,bigint) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+  - name: ops.process_hypothesis_recursion_stage_completed_v1
+    signature: ops.process_hypothesis_recursion_stage_completed_v1(jsonb,uuid,uuid,bigint) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+  - name: ops.connector_operation_contract_is_valid
+    signature: ops.connector_operation_contract_is_valid(text,text,text,text,char(64),text,char(64)) RETURNS boolean
+  - name: ops.record_research_fetch_v1
+    signature: ops.record_research_fetch_v1(uuid,uuid,uuid,text,char(64),text,text,text,text,text,integer,text,char(64),bytea,text,text,char(64),uuid,uuid,uuid,uuid,char(64),char(64),jsonb,jsonb)
+      RETURNS jsonb
+  - name: core.conflict_detection_policy_v2_is_valid
+    signature: core.conflict_detection_policy_v2_is_valid(text,jsonb) RETURNS boolean
+  - name: core.finalize_conflict_detection_dataset_snapshot_v2
+    signature: core.finalize_conflict_detection_dataset_snapshot_v2(uuid,bigint,jsonb,bytea,char(64),uuid) RETURNS TABLE(snapshot_id
+      uuid,state text,version bigint,snapshot_sha256 char(64),member_count bigint,conflict_input_count bigint,conflict_input_set_sha256
+      char(64))
+  - name: core.build_conflict_detection_dataset_snapshot_v2
+    signature: core.build_conflict_detection_dataset_snapshot_v2(uuid,uuid,bigint) RETURNS TABLE(snapshot_id uuid,snapshot_sha256
+      char(64),member_count bigint,conflict_input_count bigint,conflict_input_set_sha256 char(64),replayed boolean)
+  - name: core.read_conflict_detection_input_v2
+    signature: core.read_conflict_detection_input_v2(uuid,bigint,char(64),text,uuid) RETURNS TABLE(rule_id text,rule_version_id
+      uuid,coverage_status text,input_payload jsonb,input_canonical bytea,input_sha256 char(64))
+  - name: core.read_frozen_relationship_assertions_for_rule_v2
+    signature: core.read_frozen_relationship_assertions_for_rule_v2(uuid,bigint,char(64),text,uuid) RETURNS TABLE(assertion_ordinal
+      bigint,assertion_payload jsonb)
+  - name: ops.jsonb_object_has_exact_keys_v1
+    signature: ops.jsonb_object_has_exact_keys_v1(jsonb,text[]) RETURNS boolean
+  - name: core.record_typed_relationship_endpoint_v2
+    signature: core.record_typed_relationship_endpoint_v2(jsonb) RETURNS jsonb
+  - name: core.record_typed_relationship_assertion_v2
+    signature: core.record_typed_relationship_assertion_v2(jsonb) RETURNS TABLE(assertion_id uuid,assertion_revision bigint,assertion_digest
+      char(64),receipt_sha256 char(64),verification_status text,public_use_status text,disposition text,replayed boolean)
+  - name: core.decide_typed_relationship_assertion_v2
+    signature: core.decide_typed_relationship_assertion_v2(uuid,jsonb) RETURNS TABLE(decision_id uuid,assertion_id uuid,assertion_revision
+      bigint,assertion_digest char(64),verification_status text,public_use_status text,receipt_sha256 char(64),replayed boolean)
+  - name: core.typed_person_node_ref_v3
+    signature: core.typed_person_node_ref_v3(uuid,uuid,bigint,char(64),uuid,char(64),char(64)) RETURNS char(64)
+  - name: core.list_typed_relationship_neighbors_v3
+    signature: core.list_typed_relationship_neighbors_v3(uuid,uuid,bigint,char(64),bytea,bigint) RETURNS TABLE(query_digest
+      char(64),relationship_kind text,subject jsonb,object jsonb,assertion_id uuid,assertion_revision bigint,assertion_digest
+      char(64),valid_from date,valid_to date,evidence_count integer,evidence_set_digest char(64),subject_source_use_id uuid,subject_source_use_sha256
+      char(64),object_source_use_id uuid,object_source_use_sha256 char(64),verification_status text,public_use_status text,proposed_actor_type
+      text,proposed_actor_id text,verified_by uuid,verified_at timestamptz,verification_reason_digest char(64))
+  - name: ops.relationship_neighbors_payload_is_valid_v2_v3
+    signature: ops.relationship_neighbors_payload_is_valid_v2_v3(jsonb,jsonb) RETURNS boolean
+  - name: ops.agent_tool_payload_is_valid
+    signature: ops.agent_tool_payload_is_valid(text,jsonb,jsonb) RETURNS boolean
+  - name: ops.agent_tool_schema_contract_is_valid
+    signature: ops.agent_tool_schema_contract_is_valid(text,char(64),char(64)) RETURNS boolean
+  - name: ops.complete_agent_run_worker_v2
+    signature: ops.complete_agent_run_worker_v2(uuid,bigint,uuid,char(64),uuid,uuid,bigint,text,text,text,jsonb,char(64),text,jsonb,char(64),numeric)
+      RETURNS TABLE(version bigint,terminal_receipt_id uuid,terminal_receipt_sha256 char(64),replayed boolean)
+  - name: ops.execute_action_approval_v1_legacy_0030
+    signature: ops.execute_action_approval_v1_legacy_0030(text,jsonb,uuid) RETURNS jsonb
+    inventory_kind: renamed_existing
+  - name: ops.accepted_hypothesis_action_authority_v2
+    signature: ops.accepted_hypothesis_action_authority_v2(uuid,bigint) RETURNS jsonb
+  - name: ops.preview_accepted_hypothesis_action_draft_v2
+    signature: ops.preview_accepted_hypothesis_action_draft_v2(jsonb,uuid) RETURNS jsonb
+  - name: ops.execute_action_approval_v1
+    signature: ops.execute_action_approval_v1(text,jsonb,uuid) RETURNS jsonb
+  - name: ops.submit_accepted_hypothesis_action_for_review_v2
+    signature: ops.submit_accepted_hypothesis_action_for_review_v2(jsonb,uuid) RETURNS jsonb
+  - name: ops.execute_accepted_hypothesis_action_decision_v2
+    signature: ops.execute_accepted_hypothesis_action_decision_v2(jsonb,uuid) RETURNS jsonb
+  - name: ops.load_approved_hypothesis_execution_v1
+    signature: ops.load_approved_hypothesis_execution_v1(uuid,uuid,bigint,uuid,bigint,jsonb) RETURNS TABLE(proposal_id uuid,proposal_version
+      bigint,target_request_encrypted bytea,target_request_sha256 char(64))
+  - name: ops.execute_approved_hypothesis_v1
+    signature: ops.execute_approved_hypothesis_v1(uuid,uuid,bigint,uuid,bigint,jsonb,jsonb) RETURNS jsonb
+  - name: ops.process_hypothesis_execution_completed_v1_unfenced_0037
+    signature: ops.process_hypothesis_execution_completed_v1_unfenced_0037(jsonb,uuid) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    inventory_kind: renamed_existing
+  - name: ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037
+    signature: ops.process_hypothesis_recursion_stage_completed_v1_unfenced_0037(jsonb,uuid) RETURNS TABLE(disposition text,receipt_id
+      uuid,plan_id uuid,node_id uuid,agent_run_id uuid,job_id uuid,receipt_digest char(64),replayed boolean)
+    inventory_kind: renamed_existing

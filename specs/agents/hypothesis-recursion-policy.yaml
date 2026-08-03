@@ -1,0 +1,126 @@
+schema_version: 1
+specification_version: 13.0.0+r6c.1
+status: REVIEW_REQUIRED
+decision_state: DECISION_COMPLETE_AWAITING_INDEPENDENT_REVIEW
+implementation_state: OPEN_IMPLEMENTATION
+title: Hypothesis Recursion Policy and Execution Contract
+
+authority:
+  runtime_owner: workflow-worker
+  execution_owner: analysis-worker
+  physical_contract: db/migrations/0037_r6c_conflict_investigation.sql
+  actor: {actor_type: SERVICE, actor_id: workflow-worker}
+  rule: An accepted hypothesis starts bounded investigation only after its authorized action execution is durably SUCCEEDED. It never publishes, changes case state, merges identities, or starts claim drafting.
+
+trigger_contract:
+  root:
+    event_type: action.execution_completed.v1
+    exact_payload_keys: [executionId, generation, stateVersion, terminalOrReconciliationState, executionDigest, receiptSequence, receiptDigest, costFactIds]
+    required_action_kind: HYPOTHESIS
+    required_terminal_state: SUCCEEDED
+    root_depth: 0
+    proof: The owner routine verifies the exact active outbox payload, execution authorization generation and digest, immutable execution receipt, accepted HYPOTHESIS proposal, case, and READY AGENT_CASE dataset snapshot before any plan or run is written.
+    accepted_hypothesis_detail:
+      case_binding: caseId and expectedCaseVersion equal the accepted suggestion case and the action-proposal target identity and version.
+      statement_digest: SHA-256 over the raw statement UTF-8 bytes.
+      evidence_segment_set_digest: SHA-256 over the canonical JSON array of unique evidence_segment_id UUIDs ordered by each segment's first/minimum citation_ordinal; repeated citations to the same segment remain in the all-citation binding but contribute one set member.
+      unknown_set_digest: SHA-256 over the canonical JSON bytes of the accepted payload unknowns array in its declared order.
+      research_artifact_boundary: RUN_TOOL_ARTIFACT citations are excluded from evidenceSegmentSetDigest and remain bound by the immutable citation all-and-only verifier and OFFICIAL_UNREVIEWED review-tier gate.
+  stage:
+    event_type: agent.run_completed.v1
+    exact_payload_keys: [agent_run_id, case_id, output_digest, status]
+    required_status: SUCCEEDED
+    proof: The owner routine verifies the exact active outbox payload and immutable agent-run row before advancing a recursion node.
+  acknowledgement: Every valid trigger, including a policy/no-op/block disposition, creates or replays one immutable receipt. Changed bytes under the same trigger identity conflict.
+
+immutable_policy:
+  key: HYPOTHESIS_RECURSION
+  production_seed: forbidden
+  absent_or_disabled: inactive
+  defaults: forbidden
+  required_when_present:
+    - maxDepth
+    - caseBudgetMicrosKrw
+    - marketResearcherStageBudgetMicrosKrw
+    - skepticStageBudgetMicrosKrw
+    - providerPolicyVersion
+    - providerPolicySha256
+    - providerClassification
+    - providerCandidateIds
+    - budgetPolicyVersion
+    - budgetPolicySha256
+    - maxProviderTurns
+    - maxToolCalls
+    - deadlineInterval
+    - marketResearcherPromptId
+    - marketResearcherPromptVersion
+    - marketResearcherPromptSha256
+    - marketResearcherOutputSchemaId
+    - marketResearcherOutputSchemaVersion
+    - marketResearcherOutputSchemaSha256
+    - skepticPromptId
+    - skepticPromptVersion
+    - skepticPromptSha256
+    - skepticOutputSchemaId
+    - skepticOutputSchemaVersion
+    - skepticOutputSchemaSha256
+    - createdBy
+  digest: RFC8785_JCS_UTF8_SHA256 over the complete immutable policy payload
+
+state_machine:
+  stages: [MARKET_RESEARCHER, SKEPTIC]
+  sequence:
+    - A root HYPOTHESIS execution at depth 0 may enqueue one MARKET_RESEARCHER child at depth 1.
+    - A successful MARKET_RESEARCHER node may enqueue exactly one SKEPTIC child at parent depth plus one.
+    - A successful SKEPTIC node terminates the plan after budget settlement; it enqueues no further agent.
+  depth_rule: A child is created only when childDepth <= maxDepth. Equality is allowed; any larger depth is MAX_DEPTH_REACHED with zero new run or job.
+  dedupe_preimage_order: [caseId, hypothesisExecutionDigest, snapshotDigest, stage, depth]
+  dedupe_digest: RFC8785_JCS_UTF8_SHA256
+  claim_drafter:
+    automatic_execution: forbidden
+    gate: No claim-drafter run may be created by this state machine. A separate human-authorized path may consider drafting only after the plan has a successful SKEPTIC terminal transition.
+
+budget_contract:
+  reservation: Reserve the exact stage maximum before creating its run and job.
+  limits: Both case and stage limits are mandatory. A stage run is reserved at its exact immutable stage maximum, an over-reservation or actual cost above that maximum is a hard integrity failure, and the cumulative case cap is evaluated before the next stage is created.
+  settlement: A terminal stage settles measured cost and releases any unused reservation through the existing immutable budget receipt pattern.
+  blocked: CASE_BUDGET_BLOCKED creates no child run or job; when a plan already exists, it appends a terminal BUDGET_EXHAUSTED plan transition instead of leaving the plan ACTIVE.
+  retry: An exact trigger retry returns the original STARTED receipt and identities with replayed=true; it never writes a second reserve, run, or job. The unique dedupe key remains a storage invariant, not a separately fabricated no-op disposition.
+
+closed_dispositions:
+  started: STARTED
+  durable_no_op_or_block:
+    - POLICY_ABSENT
+    - POLICY_DISABLED
+    - MAX_DEPTH_REACHED
+    - CASE_BUDGET_BLOCKED
+    - NOT_HYPOTHESIS
+    - NOT_SUCCEEDED
+    - NODE_NOT_RECURSIVE
+    - STAGE_NOT_MARKET_RESEARCHER
+    - RUN_NOT_SUCCEEDED
+    - PLAN_TERMINAL
+  shape: STARTED alone returns planId, nodeId, agentRunId, and jobId. Every other disposition returns all four as null. Every disposition returns a receipt identity and lowercase SHA-256 digest.
+
+publication_and_safety:
+  - Recursion output remains a triage artifact and cannot publish a claim or change an authoritative case state.
+  - OFFICIAL_UNREVIEWED material may support only internal hypothesis metadata by digest; it cannot become public citation or external provider content.
+  - PERSONAL_DATA and RESTRICTED natural-person content remains ineligible for external model egress.
+  - No stage merges identities, infers family relationships, or scores, ranks, or assigns probabilities to natural persons.
+  - The investigator can use source.fetch only as FETCH_URL for an already approved official-source HTTPS URL; SEARCH_PUBLIC_WEB remains market-researcher-only.
+
+test_fixture_only_policy:
+  production_seed: false
+  authority: TEST_FIXTURE_ONLY
+  maxDepth: 2
+  caseBudgetMicrosKrw: 3000000
+  marketResearcherStageBudgetMicrosKrw: 2000000
+  skepticStageBudgetMicrosKrw: 1000000
+  note: These values exist only to traverse depth, cumulative budget, exact replay, and skeptic gates in unit/runtime smoke tests. They are not operational defaults.
+
+acceptance:
+  - A successful accepted HYPOTHESIS starts MARKET_RESEARCHER then SKEPTIC under one snapshot and immutable policy.
+  - Policy absence, disabled policy, depth overflow, and cumulative case-budget overflow create no run or job and still persist an exact acknowledgement receipt; an existing plan becomes BUDGET_EXHAUSTED on the case-budget branch.
+  - An exact duplicate trigger returns the original STARTED receipt and identities with replayed=true, with no second recursion receipt, reservation, run, or job.
+  - MARKET_RESEARCHER completion can create only SKEPTIC; SKEPTIC completion is terminal.
+  - No execution path automatically creates claim-drafter work.

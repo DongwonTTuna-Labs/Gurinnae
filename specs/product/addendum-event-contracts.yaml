@@ -260,6 +260,9 @@ logical_component_bindings:
   usage-meter:
     physical_service: workflow-worker
     module: usage_metering
+  workflow-worker:
+    physical_service: workflow-worker
+    module: workflow_hypothesis_recursion
 consumer_runtime:
   claim: INSERT ops.inbox(consumer,event_id) before handler; existing completed row returns prior result
   transaction: inbox claim, idempotent handler state mutation and handler result commit atomically where one database owns them; external requests
@@ -1902,6 +1905,7 @@ events:
     - notification-worker
     - product-fact-projector
     - audit-indexer
+    - workflow-worker
     consumer_bindings:
     - consumer: notification-worker
       physical_service: notification-worker
@@ -1927,6 +1931,16 @@ events:
       physical_service: projection-worker
       module: audit_index
       handler: handle_action_execution_completed_v1
+      inbox_key:
+      - consumer
+      - event_id
+      on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
+      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
+      ordering: reject regression; park gaps for aggregate reconciliation
+    - consumer: workflow-worker
+      physical_service: workflow-worker
+      module: workflow_hypothesis_recursion
+      handler: reconcile_hypothesis_execution_completed
       inbox_key:
       - consumer
       - event_id

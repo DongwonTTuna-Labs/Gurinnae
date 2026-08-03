@@ -202,3 +202,133 @@ operations:
     status_800_900: provider incident
     http_5xx: bounded retry
     malformed: quarantine raw bytes
+- id: dart-executive-status
+  remote_operation: exctvSttus.json
+  path: /exctvSttus.json
+  kind: person-context-list
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  - name: corp_code
+    required: true
+    type: string(8)
+  - name: bsns_year
+    required: true
+    type: yyyy
+  - name: reprt_code
+    required: true
+    type: enum:11011,11012,11013,11014
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: contextual-person-digest
+    primary_fields:
+    - rcept_no
+    - corp_code
+    - nm
+    - ofcps
+    - source_locator
+  remote_revision:
+    strategy: receipt-and-content-hash
+    fields:
+    - rcept_no
+  response_envelope:
+    status: status
+    message: message
+    items: list
+  checkpoint:
+    strategy: corp-year-report-matrix
+    partition: executive-status
+  deletion_semantics: each disclosure receipt is immutable; later receipts do not rewrite earlier observations
+  contract_source: official-open-dart-guide-exctvSttus
+  privacy_boundary:
+    admitted_person_fields:
+    - contextual_name
+    - role_title
+    - source_locator
+    - identifier_digest
+    forbidden_normalized_fields:
+    - sexdstn
+    - birth_ym
+    - adres
+    - address
+    - tel
+    - phone
+    - mxmm_shrholdr_relate
+    - relate
+    - family
+    - kinship
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes
+- id: dart-major-shareholder-status
+  remote_operation: hyslrSttus.json
+  path: /hyslrSttus.json
+  kind: holder-context-list
+  method: GET
+  request_parameters:
+  - name: crtfc_key
+    required: true
+    source: credential
+  - name: corp_code
+    required: true
+    type: string(8)
+  - name: bsns_year
+    required: true
+    type: yyyy
+  - name: reprt_code
+    required: true
+    type: enum:11011,11012,11013,11014
+  pagination:
+    strategy: none
+  remote_identity:
+    strategy: contextual-holder-observation-digest
+    primary_fields:
+    - rcept_no
+    - corp_code
+    - nm
+    - source_locator
+  remote_revision:
+    strategy: receipt-and-content-hash
+    fields:
+    - rcept_no
+  response_envelope:
+    status: status
+    message: message
+    items: list
+  checkpoint:
+    strategy: corp-year-report-matrix
+    partition: major-shareholder-status
+  deletion_semantics: each disclosure receipt is immutable; later receipts do not rewrite earlier observations
+  contract_source: official-open-dart-guide-hyslrSttus
+  privacy_boundary:
+    admitted_holder_fields:
+    - holder_name
+    - source_locator
+    - observation_digest
+    entity_type_discriminator: unavailable
+    graph_output_rows: 0
+    blocker: OPEN_DART_MAJOR_HOLDER_ENTITY_TYPE_UNAVAILABLE
+    unlock_condition: official entity-type discriminator plus an explicit human identity mapping and independently VERIFIED+APPROVED graph decision
+    forbidden_normalized_fields:
+    - sexdstn
+    - birth_ym
+    - adres
+    - address
+    - tel
+    - phone
+    - mxmm_shrholdr_relate
+    - relate
+    - family
+    - kinship
+  retry:
+    status_020: bounded backoff and quota incident
+    status_010_011_012_013: disable connector or reject request based on code
+    status_800_900: provider incident
+    http_5xx: bounded retry
+    malformed: quarantine raw bytes

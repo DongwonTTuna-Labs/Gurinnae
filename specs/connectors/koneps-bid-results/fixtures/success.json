@@ -1,0 +1,33 @@
+{
+  "fixture_origin": "synthetic-structural-not-live-evidence",
+  "connector_id": "koneps-bid-results",
+  "operation_id": "opening-goods-search",
+  "kind": "success",
+  "response": {
+    "header": { "resultCode": "00", "resultMsg": "NORMAL SERVICE." },
+    "body": {
+      "pageNo": 1,
+      "numOfRows": 100,
+      "totalCount": 1,
+      "items": {
+        "item": [
+          {
+            "bidNtceNo": "R6C-SYN-001",
+            "bidNtceOrd": "00",
+            "bidClsfcNo": "00",
+            "rbidNo": "000",
+            "bidNtceNm": "가상 공공데이터 분석 용역",
+            "opengDt": "202607311000",
+            "prtcptCnum": "3",
+            "dminsttCd": "SYN-AGENCY-01",
+            "dminsttNm": "가상 투명행정원",
+            "progrsDivCdNm": "개찰 완료",
+            "inptDt": "202607311005",
+            "opengRsltNtcCntnts": "가상 개찰 결과 안내",
+            "opengCorpInfo": "구조가 고정되지 않은 원문 참가업체 정보"
+          }
+        ]
+      }
+    }
+  }
+}
