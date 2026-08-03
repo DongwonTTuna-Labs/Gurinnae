@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "events",
-      title: "event",
+      title: "알림 유형",
       component: "KnownUnknownResponse",
       purpose: "공개·소명·정정·공식확인.",
       test_id: "pub_029__section__events",

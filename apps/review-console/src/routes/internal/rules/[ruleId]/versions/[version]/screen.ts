@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "RULE-002",
-  title: "규칙 Version 상세",
+  title: "규칙 버전 상세",
   route: "/internal/rules/{ruleId}/versions/{version}",
   archetype: "ENTITY_DETAIL",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "version identity",
+      title: "버전 식별 정보",
       component: "StatusAndRevisionHeader",
       purpose: "status·owner·hash.",
       test_id: "rule_002__section__identity",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "cohort",
-      title: "cohort",
+      title: "비교 집단",
       component: "ComparisonWorkbench",
       purpose: "include/exclude.",
       test_id: "rule_002__section__cohort",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "blockers",
-      title: "blocker",
+      title: "차단 요인",
       component: "StructuredContentSection",
       purpose: "quality guard.",
       test_id: "rule_002__section__blockers",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "diff",
-      title: "version diff",
+      title: "버전 차이",
       component: "StructuredContentSection",
       purpose: "previous.",
       test_id: "rule_002__section__diff",
@@ -76,7 +76,7 @@ export const screen = {
     },
     {
       id: "create-draft",
-      label: "다음 version 초안",
+      label: "다음 버전 초안",
       capability: "rules.propose",
       operation_id: "createRuleVersionDraft",
       interaction_kind: "COMMAND",

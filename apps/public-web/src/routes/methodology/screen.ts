@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "ai",
-      title: "AI 역할",
+      title: "인공지능 역할",
       component: "AccessManagementPanel",
       purpose: "보조·금지 권한.",
       test_id: "pub_013__section__ai",

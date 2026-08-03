@@ -6,6 +6,7 @@ import {
 } from "./mock-api-action-reads";
 import { handleExchange } from "./mock-api-exchange";
 import { mockOperationId } from "./mock-api-openapi";
+import { rowNavigationResponseBody } from "./mock-api-row-navigation";
 import { actionJourneyIds, problem, runtime } from "./mock-api-state";
 import { handleSubmissionRead } from "./mock-api-submission-reads";
 
@@ -46,12 +47,12 @@ export async function handleReadRoutes(
     const casMetric = {
       kind: "METRIC",
       visualizationId: "run-count",
-      title: "Agent 실행",
+      title: "에이전트 실행",
       value: 1,
       formattedValue: "1건",
       narrativeAlternative: "현재 케이스에 연결된 실행만 집계했습니다.",
       tableAlternative: {
-        caption: "Agent 실행",
+        caption: "에이전트 실행",
         headers: ["항목", "값"],
         rows: [["실행 건수", "1건"]],
         dataSha256: "a".repeat(64),
@@ -65,7 +66,7 @@ export async function handleReadRoutes(
       runs: [
         {
           runId: casRunId,
-          agentTypeLabel: "문서 분석 Agent",
+          agentTypeLabel: "문서 분석 에이전트",
           objective: "공개 원문과 계약 금액의 차이를 확인합니다.",
           status: "SUCCEEDED",
           statusLabel: "완료",
@@ -123,7 +124,7 @@ export async function handleReadRoutes(
         caseId: casCaseId,
         runId: casRunId,
         identity: {
-          agentTypeLabel: "문서 분석 Agent",
+          agentTypeLabel: "문서 분석 에이전트",
           objective: "공개 원문과 계약 금액의 차이를 확인합니다.",
           status: "SUCCEEDED",
           statusLabel: "완료",
@@ -177,7 +178,7 @@ export async function handleReadRoutes(
           accessibleRows: [
             {
               ordinal: 0,
-              fromLabel: "문서 분석 Agent",
+              fromLabel: "문서 분석 에이전트",
               relationLabel: "생성",
               toLabel: "검증 결과",
               sourceHref:
@@ -265,7 +266,10 @@ export async function handleReadRoutes(
     if (url.pathname === "/v1/transparency-reports") {
       return Response.json({
         items: [],
-        appliedFilters: Object.fromEntries(url.searchParams),
+        appliedFilters: {
+          periodFrom: url.searchParams.get("periodFrom") ?? undefined,
+          periodTo: url.searchParams.get("periodTo") ?? undefined,
+        },
         asOf: "2026-07-19T00:00:00Z",
       });
     }
@@ -453,10 +457,13 @@ export async function handleReadRoutes(
     const sample = operationId ? responseSamples[operationId] : undefined;
     if (!operationId || !sample)
       return problem(500, "MOCK_READ_RESPONSE_SAMPLE_MISSING");
-    return new Response(JSON.stringify(sample.body), {
-      status: sample.status,
-      headers: { "content-type": sample.mediaType },
-    });
+    return new Response(
+      JSON.stringify(rowNavigationResponseBody(operationId, sample.body)),
+      {
+        status: sample.status,
+        headers: { "content-type": sample.mediaType },
+      },
+    );
   }
   return problem(409, "SYNTHETIC_READ_ONLY", "Synthetic mutation disabled");
 }

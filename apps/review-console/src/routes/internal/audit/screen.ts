@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "AUD-001",
-  title: "감사 로그 Explorer",
+  title: "감사 로그 탐색기",
   route: "/internal/audit",
   archetype: "SEARCH_INDEX",
   sections: [
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "filters",
-      title: "risk·surface·result",
+      title: "위험·영역·결과",
       component: "UnifiedSearch",
       purpose: "high impact.",
       test_id: "aud_001__section__filters",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "export",
-      title: "export",
+      title: "내보내기",
       component: "StructuredContentSection",
       purpose: "scope·watermark.",
       test_id: "aud_001__section__export",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "export",
-      label: "감사 export 요청",
+      label: "감사 내보내기 요청",
       capability: "audit.export",
       operation_id: "createAuditExport",
       guard:

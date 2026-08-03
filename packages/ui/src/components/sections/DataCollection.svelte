@@ -39,7 +39,7 @@ const stateCopy = $derived(
     </div>
     <OperationData {runtime} {projection} mode="table" emptyLabel="현재 범위에 확인 가능한 기록이 없습니다." />
   {:else}
-    <p class="inline-state conflict" role="status">서버 권위 projection이 없어 목록을 표시할 수 없습니다.</p>
+    <p class="inline-state conflict" role="status">서버 권위 투영값이 없어 목록을 표시할 수 없습니다.</p>
   {/if}
 </section>
 

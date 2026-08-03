@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ROUTE_SCREEN_CONTRACTS } from "./generated-screen-contracts";
 import type { ScreenRuntime, ScreenViewModel } from "./index";
 import {
   breadcrumbItemsForScreen,
@@ -56,7 +57,11 @@ describe("screen chrome", () => {
   it("builds aliased breadcrumbs without changing the current route", () => {
     expect(
       breadcrumbItemsForScreen(
-        screen({ id: "PUB-004", title: "사례 상세" }),
+        screen({
+          id: "PUB-004",
+          title: "사례 상세",
+          route: "/cases/{caseSlug}/revisions/{revision}",
+        }),
         "/cases/case-123/revisions/3",
       ),
     ).toEqual([
@@ -69,6 +74,54 @@ describe("screen chrome", () => {
     expect(
       breadcrumbItemsForScreen(screen({ id: "PUB-001", route: "/" }), "/"),
     ).toEqual([]);
+  });
+
+  it.each([
+    ["/agencies/{agencySlug}", "/agencies/agency-1", "기관"],
+    ["/suppliers/{supplierSlug}", "/suppliers/supplier-1", "업체"],
+    ["/contracts/{contractId}", "/contracts/contract-1", "계약"],
+    ["/methodology/rules/{ruleId}", "/methodology/rules/rule-1", "방법론"],
+    ["/about/funding", "/about/funding", "소개"],
+    ["/correction-request/receipt", "/correction-request/receipt", "정정 요청"],
+    ["/subscription/manage", "/subscription/manage", "업데이트 구독"],
+  ] as const)("uses a Korean breadcrumb label for %s", (route, pathname, expectedLabel) => {
+    expect(
+      breadcrumbItemsForScreen(screen({ route }), pathname)[1]?.label,
+    ).toBe(expectedLabel);
+  });
+
+  it("keeps declared dynamic identifiers visible", () => {
+    expect(
+      breadcrumbItemsForScreen(
+        screen({ route: "/cases/{caseSlug}/revisions/{revision}" }),
+        "/cases/case-123/revisions/3",
+      )[2]?.label,
+    ).toBe("case-123");
+  });
+
+  it("fails closed when a static route segment has no Korean label", () => {
+    expect(() =>
+      breadcrumbItemsForScreen(
+        screen({ route: "/unmapped/detail" }),
+        "/unmapped/detail",
+      ),
+    ).toThrow("breadcrumb label missing for static route segment: unmapped");
+  });
+
+  it("has an explicit Korean label for every static contract breadcrumb", () => {
+    for (const [id, contract] of Object.entries(ROUTE_SCREEN_CONTRACTS)) {
+      const pathname = contract.route.replace(/\{[^{}]+\}/g, "dynamic-id");
+      expect(() =>
+        breadcrumbItemsForScreen(
+          screen({
+            id,
+            title: contract.objectLabel,
+            route: contract.route,
+          }),
+          pathname,
+        ),
+      ).not.toThrow();
+    }
   });
 
   it("keeps the response step table and progress boundaries", () => {

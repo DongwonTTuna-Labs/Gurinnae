@@ -3,4 +3,4 @@ import AuthorityRecordSection from "./AuthorityRecordSection.svelte";
 
 let props: ScreenSectionProps = $props();
 </script>
-<AuthorityRecordSection {...props} kicker="검토 gate" />
+<AuthorityRecordSection {...props} kicker="검토 관문" />

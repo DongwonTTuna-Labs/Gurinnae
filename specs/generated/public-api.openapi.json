@@ -8087,6 +8087,10 @@
           "accessType": {
             "type": "string"
           },
+          "officialUrl": {
+            "type": ["string", "null"],
+            "format": "uri"
+          },
           "status": {
             "type": "string"
           },
@@ -8108,6 +8112,7 @@
           "displayName",
           "owner",
           "accessType",
+          "officialUrl",
           "status",
           "coverage",
           "freshness",

@@ -1,6 +1,6 @@
 <script lang="ts">
 import { tick } from "svelte";
-import { decisionCode, requiresDecisionReason } from "../decision-contract";
+import { decisionCode, isAllowedDecisionAction } from "../decision-contract";
 import type { ScreenRuntime, ScreenViewModel } from "../index";
 import { humanFieldLabel } from "../screen-contract";
 
@@ -25,21 +25,20 @@ const baseDecisionAction = $derived(
   screen.actions.find((action) => action.id === "submit-action-decision"),
 );
 const decisionActions = $derived.by(() => {
-  const declared = screen.actions.filter((action) =>
-    [
-      "approve",
-      "request-changes",
-      "reject",
-      "recuse",
-      "accept-suggestion",
-      "reject-suggestion",
-    ].includes(action.id),
+  const declared = screen.actions.filter(
+    (action) =>
+      [
+        "approve",
+        "request-changes",
+        "reject",
+        "recuse",
+        "accept-suggestion",
+        "reject-suggestion",
+      ].includes(action.id) &&
+      isAllowedDecisionAction(action.id, runtime.allowedActionIds),
   );
   if (declared.length > 0 || !baseDecisionAction) return declared;
-  if (
-    runtime.allowedActionIds !== undefined &&
-    !runtime.allowedActionIds.includes(baseDecisionAction.id)
-  )
+  if (!isAllowedDecisionAction(baseDecisionAction.id, runtime.allowedActionIds))
     return [];
   return [
     { ...baseDecisionAction, id: "approve", label: "승인" },
@@ -230,6 +229,7 @@ function trapFocus(event: KeyboardEvent) {
           class:item-primary={item.id === "approve"}
           class="decision-button"
           id={`action-${item.id}`}
+          data-action-id={item.id}
           data-decision={item.id}
           aria-haspopup="dialog"
           onclick={(event) => open(item.id, event)}
@@ -255,7 +255,7 @@ function trapFocus(event: KeyboardEvent) {
       {/if}
       {#each (commandActionId ? fieldsFor(commandActionId) : []) as field (field.name)}
         {#if field.name !== "reason" && field.name !== "decision" && field.name !== "schemaVersion" && field.name !== "handoffId" && field.name !== "expectedHandoffVersion" && field.name !== "expectedBindingDigest" && field.name !== "reasonCode" && !field.readonly}
-          <label for={fieldId(field.name)}><span>{field.label && field.label !== field.name ? field.label : humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
+          <label for={fieldId(field.name)}><span>{humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
             {#if field.options}<select id={fieldId(field.name)} name={field.name} required={field.required} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId}>{#each field.options as option}<option value={option}>{option}</option>{/each}</select>
             {:else if field.type === "json"}<textarea id={fieldId(field.name)} name={field.name} rows="4" required={field.required} aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId}></textarea>
             {:else if field.type === "boolean"}<input id={fieldId(field.name)} type="checkbox" name={field.name} value="true" aria-invalid={fieldInvalid(field.name) ? "true" : undefined} aria-describedby={fieldHelpId} />
@@ -273,7 +273,7 @@ function trapFocus(event: KeyboardEvent) {
         {#if selected === "request-changes"}
           <label for={fieldId("changeTasks")}><span>변경 작업 목록 (JSON, 최소 1개)</span><textarea id={fieldId("changeTasks")} name="changeTasks" rows="4" bind:value={changeTasks} required aria-invalid={fieldInvalid("changeTasks") ? "true" : undefined} aria-describedby={fieldHelpId}></textarea></label>
         {:else if selected === "recuse"}
-          <label for={fieldId("conflictDeclarationId")}><span>이해충돌 선언 ID (UUID)</span><input id={fieldId("conflictDeclarationId")} name="conflictDeclarationId" type="text" bind:value={conflictDeclarationId} required aria-invalid={fieldInvalid("conflictDeclarationId") ? "true" : undefined} aria-describedby={fieldHelpId} /></label>
+          <label for={fieldId("conflictDeclarationId")}><span>이해충돌 선언 식별자 (UUID)</span><input id={fieldId("conflictDeclarationId")} name="conflictDeclarationId" type="text" bind:value={conflictDeclarationId} required aria-invalid={fieldInvalid("conflictDeclarationId") ? "true" : undefined} aria-describedby={fieldHelpId} /></label>
         {/if}
       {:else}
         <input type="hidden" name="reason" value="" />

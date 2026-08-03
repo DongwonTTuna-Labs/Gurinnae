@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-012",
-  title: "사건 Timeline",
+  title: "사건 타임라인",
   route: "/internal/cases/{caseId}/timeline",
   archetype: "WORKSPACE",
   sections: [
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "public-view",
-      title: "공개 timeline preview",
+      title: "공개 이력 미리보기",
       component: "RevisionTimeline",
       purpose: "승인된 항목.",
       test_id: "cas_012__section__public-view",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "related",
-      title: "관련 receipt",
+      title: "관련 확인서",
       component: "StructuredContentSection",
       purpose: "event link.",
       test_id: "cas_012__section__related",
@@ -63,7 +63,7 @@ export const screen = {
     },
     {
       id: "export",
-      label: "timeline export",
+      label: "타임라인 내보내기",
       capability: "audit.read",
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",

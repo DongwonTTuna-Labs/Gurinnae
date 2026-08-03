@@ -19,7 +19,7 @@ const tone = $derived(stateTone(runtime.state));
       <dd><strong>{screen.dataOperations.length}</strong><span>개</span></dd>
     </div>
     <div>
-      <dt>확인 항목</dt>
+      <dt>확인된 항목</dt>
       <dd><strong>{knownFields}</strong><span>개</span></dd>
     </div>
     <div>

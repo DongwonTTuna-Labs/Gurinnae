@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "public-copy",
-      title: "공개 excerpt",
+      title: "공개 발췌문",
       component: "StructuredContentSection",
       purpose: "원문/요약·redaction.",
       test_id: "cas_008__section__public-copy",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "timeline",
-      title: "소명 timeline",
+      title: "소명 이력",
       component: "KnownUnknownResponse",
       purpose: "reminder·extension.",
       test_id: "cas_008__section__timeline",
@@ -70,7 +70,7 @@ export const screen = {
     },
     {
       id: "approve-excerpt",
-      label: "공개 excerpt 승인",
+      label: "공개 발췌문 승인",
       capability: "responses.review",
       operation_id: "approveResponseExcerpt",
       interaction_kind: "COMMAND",

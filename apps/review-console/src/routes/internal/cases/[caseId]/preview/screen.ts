@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-014",
-  title: "공개 Preview",
+  title: "공개 미리보기",
   route: "/internal/cases/{caseId}/preview",
   archetype: "WORKSPACE",
   sections: [
     {
       order: 1,
       id: "watermark",
-      title: "preview 상태",
+      title: "미리보기 상태",
       component: "StatusAndRevisionHeader",
       purpose: "DRAFT·snapshot hash.",
       test_id: "cas_014__section__watermark",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "variants",
-      title: "viewport/print",
+      title: "화면 유형·인쇄",
       component: "StructuredContentSection",
       purpose: "compact/wide/print.",
       test_id: "cas_014__section__variants",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "refresh-preview",
-      label: "Preview 재생성",
+      label: "미리보기 재생성",
       capability: "publication.preview",
       operation_id: "previewPublication",
       interaction_kind: "COMMAND",
@@ -70,7 +70,7 @@ export const screen = {
     },
     {
       id: "view-compact",
-      label: "모바일 preview",
+      label: "모바일 미리보기",
       capability: "none",
       local_only: true,
       persistence: "browser_session",

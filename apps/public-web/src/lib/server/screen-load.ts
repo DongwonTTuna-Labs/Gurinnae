@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { invokePublicOperation } from "@gurine/api-client-public";
 import { operationFields, requiredServerValue } from "@gurine/config";
 import {
+  buildRowSelectionNavigationOptions,
   canonicalizeScreenViewModel,
   projectFetchedData,
   type ScreenField,
@@ -12,6 +13,7 @@ import {
   typedScreenViewModel,
 } from "@gurine/ui";
 import { type RequestEvent, redirect } from "@sveltejs/kit";
+import * as v from "valibot";
 import { env } from "$env/dynamic/private";
 import { publicRuntimeState } from "$lib/view-models/runtime";
 import {
@@ -48,6 +50,42 @@ import {
   persistSubmissionSession,
   readSubmissionSession,
 } from "./submission-cookie";
+
+const sourceOfficialUrlSchema = v.object({
+  data: v.object({
+    officialUrl: v.nullable(
+      v.pipe(v.string(), v.url(), v.regex(/^https?:\/\/\S+$/i)),
+    ),
+  }),
+});
+
+export const INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE =
+  "필수 검색 조건이 올바르지 않습니다.";
+
+export function publicScreenDestinations(
+  screen: ScreenViewModel,
+  pathname: string,
+  data: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, string>> {
+  const declared = serverActionDestinations(screen, pathname);
+  if (screen.id !== "PUB-017") return declared;
+  const destinations = Object.fromEntries(
+    Object.entries(declared).filter(
+      ([actionId]) => actionId !== "view-official",
+    ),
+  );
+  const officialUrl = validatedOfficialSourceUrl(data.getSource);
+  return officialUrl
+    ? { ...destinations, "view-official": officialUrl }
+    : destinations;
+}
+
+function validatedOfficialSourceUrl(response: unknown): string | undefined {
+  const result = v.safeParse(sourceOfficialUrlSchema, response);
+  return result.success
+    ? (result.output.data.officialUrl ?? undefined)
+    : undefined;
+}
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   screen = canonicalizeScreenViewModel(screen);
@@ -153,9 +191,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       }
       if (query === null) {
         if (contract.blocking) {
-          errors.push(
-            `${contract.operation_id} 필수 검색 조건이 올바르지 않습니다.`,
-          );
+          errors.push(INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE);
         }
         continue;
       }
@@ -244,6 +280,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   if (needsBotChallenge && !siteKey)
     errors.push("자동 제출 방지 검증이 구성되지 않았습니다.");
   const hasData = Object.values(data).some((value) => hasRecords(value));
+  const navigationOptions = buildRowSelectionNavigationOptions(screen.id, data);
   const runtime: ScreenRuntime = {
     state: publicRuntimeState({
       errors: errors.length,
@@ -298,7 +335,8 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),
     search: event.url.search,
-    destinations: serverActionDestinations(screen, event.url.pathname),
+    destinations: publicScreenDestinations(screen, event.url.pathname, data),
+    ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
   };
   return { screen, runtime };
 }

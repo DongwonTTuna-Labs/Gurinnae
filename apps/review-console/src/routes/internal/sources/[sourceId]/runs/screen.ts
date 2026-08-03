@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-003",
-  title: "Source 실행 기록",
+  title: "출처 실행 기록",
   route: "/internal/sources/{sourceId}/runs",
   archetype: "QUEUE",
   sections: [
     {
       order: 1,
       id: "summary",
-      title: "run health",
+      title: "실행 상태",
       component: "OperationsStatusPanel",
       purpose: "success/failure/lag.",
       test_id: "src_003__section__summary",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "runs",
-      title: "run 목록",
+      title: "실행 목록",
       component: "DataCollection",
       purpose: "records·checkpoint·duration·error.",
       test_id: "src_003__section__runs",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "schedule",
-      title: "schedule",
+      title: "실행 일정",
       component: "StructuredContentSection",
       purpose: "next run.",
       test_id: "src_003__section__schedule",

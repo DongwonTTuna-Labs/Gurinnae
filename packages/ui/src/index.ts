@@ -2,6 +2,8 @@ export { default as ScreenPage } from "./components/ScreenPage.svelte";
 export * from "./decision-contract";
 export * from "./generated-screen-journeys";
 export * from "./local-actions";
+export * from "./row-selection-navigation";
+export * from "./screen-archetype";
 export * from "./screen-chrome";
 export * from "./screen-contract";
 export * from "./screen-projection";
@@ -155,6 +157,8 @@ export type ScreenRuntime = {
     approvalDigest: string;
     href: string;
   }[];
+  /** Action-scoped, server-validated row destinations exposed as label + href only. */
+  navigationOptions?: import("./row-selection-navigation").RowSelectionNavigationOptions;
   /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
   destinations?: Readonly<Record<string, string>>;
   /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */
@@ -172,6 +176,8 @@ export type ScreenRuntime = {
 export type ScreenProjectionScalar = string | number | boolean;
 
 export type ScreenRuntimeProjectionField = {
+  /** Contextual content heading supplied by a closed specialized mapper. */
+  contextualLabel?: string;
   value: ScreenProjectionScalar | null;
   known: boolean;
   source: string;

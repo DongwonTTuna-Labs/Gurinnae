@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "delivery",
-      title: "delivery 상태",
+      title: "전송 상태",
       component: "StatusAndRevisionHeader",
       purpose: "bounce/suppression.",
       test_id: "pub_030__section__delivery",

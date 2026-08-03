@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "summary",
-      title: "readiness",
+      title: "준비도",
       component: "StructuredContentSection",
       purpose: "complete/blocking.",
       test_id: "cas_013__section__summary",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "gates",
-      title: "gate checklist",
+      title: "통과 조건 점검표",
       component: "KnownUnknownResponse",
       purpose: "evidence/response/privacy/language.",
       test_id: "cas_013__section__gates",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "reviews",
-      title: "기존 review",
+      title: "기존 검토",
       component: "DecisionReviewPanel",
       purpose: "stale/valid.",
       test_id: "cas_013__section__reviews",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "snapshot",
-      title: "snapshot 생성",
+      title: "스냅샷 생성",
       component: "StructuredContentSection",
       purpose: "included version.",
       test_id: "cas_013__section__snapshot",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "open-blocker",
-      label: "blocker 해결",
+      label: "블로커 해결",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -60,7 +60,7 @@ export const screen = {
     },
     {
       id: "create-snapshot",
-      label: "검토 snapshot 생성",
+      label: "검토 스냅샷 생성",
       capability: "review.editorial",
       operation_id: "createReviewSnapshot",
       guard: "all required gates + expected version",

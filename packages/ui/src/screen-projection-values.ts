@@ -1,4 +1,4 @@
-import { humanFieldLabel } from "./screen-contract";
+import { fieldLabel } from "./field-labels";
 import type { SafeProjectionValue } from "./screen-projection";
 
 /** Field names that must never be rendered into browser-facing text. */
@@ -6,25 +6,7 @@ export const sensitiveName =
   /(token|secret|cookie|credential|authorization|password|assertion)/i;
 
 export function labelFor(name: string): string {
-  const labels: Record<string, string> = {
-    id: "식별자",
-    status: "현재 상태",
-    state: "진행 상태",
-    summary: "요약",
-    description: "설명",
-    owner: "담당자",
-    due_at: "기한",
-    updated_at: "마지막 변경",
-    created_at: "생성 시각",
-    source: "출처",
-    evidence: "근거",
-    digest: "무결성 지문",
-    count: "건수",
-    next_action: "다음 행동",
-  };
-  if (labels[name]) return labels[name];
-  const normalized = humanFieldLabel(name);
-  return normalized === name ? "확인 항목" : normalized;
+  return fieldLabel(name);
 }
 
 /** Reduce arbitrary operation values to bounded, browser-safe text. */

@@ -11,7 +11,7 @@ let { section, runtime, projection }: ScreenSectionProps = $props();
   <div><dt>비교 기준</dt><dd>동일 단위 · 동일 기간 확인 후 비교</dd></div>
   <div><dt>해석 제한</dt><dd>순위·단정의 근거로 사용하지 않음</dd></div>
 </dl>
-{#if projection}<OperationData {runtime} {projection} mode="table" emptyLabel="비교할 수 있는 동질 record가 없습니다." />{/if}
+{#if projection}<OperationData {runtime} {projection} mode="table" emptyLabel="비교할 수 있는 동질 기록이 없습니다." />{/if}
 
 <style>
   .comparison-criteria {

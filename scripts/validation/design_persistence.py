@@ -153,7 +153,7 @@ def validate_persistence(
     )
     result.require(
         inventory_lock["base_migrations"] == len(base_migration_names)
-        and inventory_lock["additive_migrations"] == len(owner_migration_names)
+        and inventory_lock["additive_migrations"] == len(global_migration_names)
         and inventory_lock["hardening_migrations"]
         == len(global_migration_names) - len(owner_migration_names)
         and inventory_lock["post_base_migrations"] == len(global_migration_names)

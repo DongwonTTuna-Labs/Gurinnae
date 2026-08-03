@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "gates",
-      title: "최종 gate",
+      title: "최종 검증",
       component: "KnownUnknownResponse",
       purpose: "review·response·privacy·source.",
       test_id: "rev_003__section__gates",
@@ -50,7 +50,7 @@ export const screen = {
   actions: [
     {
       id: "publish",
-      label: "최신 snapshot 게시",
+      label: "최신 스냅샷 게시",
       capability: "publication.publish",
       operation_id: "publishCase",
       guard: "recent reauth + exact snapshot + idempotency",

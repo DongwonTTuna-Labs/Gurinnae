@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-003",
-  title: "연결된 Signal",
+  title: "연결된 신호",
   route: "/internal/cases/{caseId}/signals",
   archetype: "WORKSPACE",
   sections: [
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "signals",
-      title: "signal 목록",
+      title: "탐지 신호 목록",
       component: "DataCollection",
       purpose: "metric·state·link reason.",
       test_id: "cas_003__section__signals",
@@ -34,7 +34,7 @@ export const screen = {
   actions: [
     {
       id: "open-signal",
-      label: "signal 보기",
+      label: "신호 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -44,7 +44,7 @@ export const screen = {
     },
     {
       id: "link-signal",
-      label: "signal 연결",
+      label: "신호 연결",
       capability: "cases.investigate",
       operation_id: "linkSignalToCase",
       interaction_kind: "COMMAND",

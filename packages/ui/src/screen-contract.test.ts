@@ -1,6 +1,10 @@
 import { existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { decisionCode, requiresDecisionReason } from "./decision-contract";
+import {
+  decisionCode,
+  isAllowedDecisionAction,
+  requiresDecisionReason,
+} from "./decision-contract";
 import { ROUTE_SCREEN_CONTRACTS } from "./generated-screen-contracts";
 import type { ScreenViewModel } from "./index";
 import {
@@ -160,6 +164,9 @@ describe("typed screen contract", () => {
     expect(decisionCode("recuse")).toBe("RECUSE");
     expect(requiresDecisionReason("approve")).toBe(false);
     expect(requiresDecisionReason("reject")).toBe(true);
+    expect(isAllowedDecisionAction("approve", undefined)).toBe(true);
+    expect(isAllowedDecisionAction("approve", ["approve"])).toBe(true);
+    expect(isAllowedDecisionAction("approve", ["request-changes"])).toBe(false);
   });
 
   it("projects the closed BudgetOverviewResponse and blocks incomplete evidence", () => {

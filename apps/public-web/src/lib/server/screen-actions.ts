@@ -152,7 +152,7 @@ async function runAction(
     );
   }
   const indexed = operations.get(operationId);
-  if (!indexed) return fail(500, { message: "operation contract missing" });
+  if (!indexed) return fail(500, { message: "작업 계약을 찾지 못했습니다." });
   try {
     const form = await event.request.formData();
     const session = readSubmissionSession(event);

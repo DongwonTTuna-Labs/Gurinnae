@@ -12,9 +12,9 @@ import {
 } from "../../screen-chrome";
 import { stateLabel } from "../../screen-contract";
 import type { ScreenProjection } from "../../screen-projection";
+import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
 import InternalSidebar from "../InternalSidebar.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
-import SectionList from "../screen/SectionList.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
 import InternalContextRail from "./InternalContextRail.svelte";
@@ -48,10 +48,10 @@ const busy = $derived(isBusyState(runtime.state));
       {#if workspace}
         <div class="workspace-grid">
           <InternalTaskRail {screen} {runtime} />
-          <div class="workspace-panel"><SectionList variant="workspace" {screen} {runtime} {contract} {projection} /></div>
+          <div class="workspace-panel"><ArchetypeAssembly variant="workspace" {screen} {runtime} {contract} {projection} /></div>
           <InternalContextRail {screen} {runtime} {contract} />
         </div>
-      {:else}<div class="workspace-panel operation-panel"><SectionList {screen} {runtime} {contract} {projection} /></div>{/if}
+      {:else}<div class="workspace-panel operation-panel"><ArchetypeAssembly {screen} {runtime} {contract} {projection} /></div>{/if}
     </main>
   </div>
 </div>
@@ -159,6 +159,29 @@ const busy = $derived(isBusyState(runtime.state));
     gap: 0.75rem;
     align-items: start;
   }
+  @media (min-width: 1101px) {
+    .internal-main:is(
+        [data-screen-id="INT-002"],
+        [data-screen-id="CAS-005"],
+        [data-screen-id="CAS-006"],
+        [data-screen-id="CAS-009"],
+        [data-screen-id="CAS-010"],
+        [data-screen-id="CAS-011"],
+        [data-screen-id="COR-002"]
+      )
+      > .workspace-grid {
+      grid-template-columns: 7.5rem minmax(0, 1fr) 11rem;
+    }
+
+    .internal-main:is(
+        [data-screen-id="INT-002"],
+        [data-screen-id="CAS-010"],
+        [data-screen-id="CAS-011"]
+      )
+      > .workspace-grid {
+      grid-template-columns: 6rem minmax(0, 1fr) 9rem;
+    }
+  }
   .workspace-panel {
     min-width: 0;
     padding: 0.75rem;
@@ -211,11 +234,9 @@ const busy = $derived(isBusyState(runtime.state));
       width: 100%;
     }
     .workspace-grid {
-      display: flex;
-      flex-direction: column;
+      grid-template-columns: minmax(0, 1fr);
     }
     .workspace-panel {
-      order: 1;
       width: 100%;
       padding: 0.625rem;
     }

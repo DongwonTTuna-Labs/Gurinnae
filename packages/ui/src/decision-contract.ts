@@ -21,3 +21,10 @@ export function decisionCode(id: string): string {
 export function requiresDecisionReason(id: string): boolean {
   return id !== "approve";
 }
+
+export function isAllowedDecisionAction(
+  id: string,
+  allowedActionIds: readonly string[] | undefined,
+): boolean {
+  return allowedActionIds === undefined || allowedActionIds.includes(id);
+}

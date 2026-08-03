@@ -68,7 +68,7 @@ export const screen = {
     },
     {
       id: "view-governance",
-      label: "governance 보기",
+      label: "거버넌스 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

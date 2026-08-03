@@ -24,7 +24,7 @@ const stateMessage = $derived(
   projection.state === "BLOCKED"
     ? (projection.errorMessage ?? "확인이 끝나지 않아 표시를 보류했습니다.")
     : projection.state === "UNKNOWN"
-      ? "확인 가능한 typed projection이 없습니다."
+      ? "확인 가능한 서버 권위 투영값이 없습니다."
       : projection.state === "LOADING"
         ? "자료를 불러오는 중입니다."
         : projection.state === "STALE"
@@ -46,18 +46,18 @@ const destinationFor = (name: string): string | null =>
   {#if fields.length === 0}
     <p class="empty-message" data-testid="empty-state">{emptyLabel}</p>
   {:else if mode === "table"}
-    <div class="table-scroll" role="region" aria-label="확인된 projection 표"><table><caption class="sr-only">서버 권위 projection</caption><thead><tr><th scope="col">항목</th><th scope="col">값</th></tr></thead><tbody>{#each fields as field}<tr><th scope="row">{field.label}</th><td data-label={field.label}>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</td></tr>{/each}</tbody></table></div>
+    <div class="table-scroll" role="region" aria-label="확인된 투영값 표"><table><caption class="sr-only">서버 권위 투영값</caption><thead><tr><th scope="col">항목</th><th scope="col">값</th></tr></thead><tbody>{#each fields as field}<tr><th scope="row">{field.label}</th><td data-label={field.label}>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</td></tr>{/each}</tbody></table></div>
   {:else if mode === "timeline"}
     <ol class="timeline">{#each fields as field, index}<li><span class="timeline-marker" aria-hidden="true">{index + 1}</span><span class="sr-only">기록 {index + 1}</span><div><strong>{field.label}</strong><p>{display(field.value)}</p></div></li>{/each}</ol>
   {:else}
-    <div class:metric-grid={mode === "metrics"} class:record-grid={mode !== "metrics"}><article class="data-card"><h3>서버 권위 projection</h3><dl>{#each fields as field}<div><dt>{field.label}</dt><dd>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</dd></div>{/each}</dl></article></div>
+    <div class:metric-grid={mode === "metrics"} class:record-grid={mode !== "metrics"}><article class="data-card"><h3>서버 권위 투영값</h3><dl>{#each fields as field}<div><dt>{field.label}</dt><dd>{#if destinationFor(field.name)}<a href={destinationFor(field.name) ?? undefined}>{display(field.value)}</a>{:else}{display(field.value)}{/if}</dd></div>{/each}</dl></article></div>
   {/if}
   {#if unknownFields.length > 0}
     <section class="unknown-fields" aria-label="확인하지 못한 항목">
       <h3>아직 확인하지 못한 항목</h3>
       <ul>
         {#each unknownFields as field}
-          <li><strong>{field.label}</strong><span>서버 권위 projection에 이 항목이 없어 확인이 필요합니다.</span></li>
+          <li><strong>{field.label}</strong><span>서버 권위 투영값에 이 항목이 없어 확인이 필요합니다.</span></li>
         {/each}
       </ul>
     </section>

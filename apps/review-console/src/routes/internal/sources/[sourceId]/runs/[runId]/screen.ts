@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-004",
-  title: "Source 실행 상세",
+  title: "출처 실행 상세",
   route: "/internal/sources/{sourceId}/runs/{runId}",
   archetype: "OPERATIONS",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "run identity",
+      title: "실행 식별 정보",
       component: "StructuredContentSection",
       purpose: "trigger·version·time.",
       test_id: "src_004__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "scope",
-      title: "scope",
+      title: "실행 범위",
       component: "StructuredContentSection",
       purpose: "page/time/checkpoint.",
       test_id: "src_004__section__scope",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "counts",
-      title: "record flow",
+      title: "처리 건수",
       component: "StructuredContentSection",
       purpose: "fetched/new/duplicate/quarantined.",
       test_id: "src_004__section__counts",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "artifacts",
-      title: "artifacts",
+      title: "산출물",
       component: "StructuredContentSection",
       purpose: "log·schema sample·checksum.",
       test_id: "src_004__section__artifacts",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "impact",
-      title: "downstream",
+      title: "후속 영향",
       component: "StructuredContentSection",
       purpose: "jobs/rules/public.",
       test_id: "src_004__section__impact",
@@ -86,7 +86,7 @@ export const screen = {
     },
     {
       id: "open-quarantine",
-      label: "격리 record 보기",
+      label: "격리 레코드 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

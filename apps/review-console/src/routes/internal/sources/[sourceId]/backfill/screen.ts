@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-006",
-  title: "Backfill·Replay",
+  title: "백필·재실행",
   route: "/internal/sources/{sourceId}/backfill",
   archetype: "DECISION_REVIEW",
   sections: [
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "safety",
-      title: "safety",
+      title: "안전 장치",
       component: "StructuredContentSection",
       purpose: "rate/budget/kill.",
       test_id: "src_006__section__safety",
@@ -76,7 +76,7 @@ export const screen = {
     },
     {
       id: "start",
-      label: "Backfill 시작",
+      label: "백필 시작",
       capability: "sources.operate",
       operation_id: "startBackfill",
       guard: "estimate + approval + reauth",

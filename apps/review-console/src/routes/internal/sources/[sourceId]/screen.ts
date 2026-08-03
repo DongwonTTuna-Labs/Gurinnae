@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "SRC-002",
-  title: "Source 상세",
+  title: "출처 상세",
   route: "/internal/sources/{sourceId}",
   archetype: "OPERATIONS",
   sections: [
     {
       order: 1,
       id: "identity",
-      title: "source identity",
+      title: "출처 식별 정보",
       component: "StructuredContentSection",
       purpose: "owner·access·terms.",
       test_id: "src_002__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "status",
-      title: "health·SLA",
+      title: "상태·서비스 수준 목표",
       component: "StatusAndRevisionHeader",
       purpose: "last success·lag.",
       test_id: "src_002__section__status",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "checkpoint",
-      title: "checkpoint",
+      title: "처리 기준점",
       component: "StructuredContentSection",
       purpose: "pagination cursor·watermark.",
       test_id: "src_002__section__checkpoint",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "quality",
-      title: "quality metrics",
+      title: "품질 지표",
       component: "StructuredContentSection",
       purpose: "duplicate/missing/parser.",
       test_id: "src_002__section__quality",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "schema",
-      title: "schema version",
+      title: "스키마 버전",
       component: "StructuredContentSection",
       purpose: "drift.",
       test_id: "src_002__section__schema",
@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "runbook",
-      title: "runbook",
+      title: "대응 절차",
       component: "StructuredContentSection",
       purpose: "safe action.",
       test_id: "src_002__section__runbook",
@@ -76,7 +76,7 @@ export const screen = {
     },
     {
       id: "view-drift",
-      label: "schema drift",
+      label: "스키마 드리프트",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

@@ -76,7 +76,8 @@ def _valid_authority_payload() -> dict[str, object]:
             "expected_additive_migrations": list(EXPECTED_ADDITIVE_MIGRATIONS),
             "runtime_additive_migrations": list(EXPECTED_ADDITIVE_MIGRATIONS),
             "runtime_additive_migration_count": len(EXPECTED_ADDITIVE_MIGRATIONS),
-            "expected_final_migration_count": 30,
+            "expected_final_migration_count": BASE_MIGRATION_COUNT
+            + len(EXPECTED_ADDITIVE_MIGRATIONS),
         },
     }
 
@@ -292,7 +293,10 @@ def _migration_set_fixture() -> bool:
         "bad-migrations.json",
         lambda stats: stats.__setitem__(
             "runtime_additive_migrations",
-            [*EXPECTED_ADDITIVE_MIGRATIONS[:-1], "0030_wrong_but_same_count.sql"],
+            [
+                *EXPECTED_ADDITIVE_MIGRATIONS[:-1],
+                f"{EXPECTED_ADDITIVE_MIGRATIONS[-1][:4]}_wrong_but_same_count.sql",
+            ],
         ),
         "runtime_migration_set",
     )

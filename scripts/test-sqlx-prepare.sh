@@ -94,14 +94,21 @@ docker run --rm --network "$network" \
   gurine-sqlx-migrator:13.0.0
 
 # The immutable authority baseline remains 24 migrations, while the runtime
-# image must apply the complete six-file additive set as well.  Assert both
+# image must apply the complete seven-file post-base set as well.  Assert both
 # the count and the contiguous version sequence so a missing or out-of-order
 # migration cannot be hidden by a successful SQLx run.
-expected_versions="$(seq -s, 1 30)"
+expected_migration_count="$(
+  python3 "$root/scripts/verify_migrations.py" --print-runtime-count
+)"
+[[ "$expected_migration_count" =~ ^[0-9]+$ ]] || {
+  printf 'invalid expected migration count: %s\n' "$expected_migration_count" >&2
+  exit 1
+}
+expected_versions="$(seq -s, 1 "$expected_migration_count")"
 actual_migrations="$(docker exec "$postgres_container" psql -U gurine_dev -d gurine -Atc \
   "SELECT count(*) || '|' || coalesce(string_agg(version::text, ',' ORDER BY version), '') FROM _sqlx_migrations WHERE success;")"
-[[ "$actual_migrations" == "30|$expected_versions" ]] || {
-  printf 'runtime migration canary failed: expected 30|%s, found %s\n' "$expected_versions" "$actual_migrations" >&2
+[[ "$actual_migrations" == "$expected_migration_count|$expected_versions" ]] || {
+  printf 'runtime migration canary failed: expected %s|%s, found %s\n' "$expected_migration_count" "$expected_versions" "$actual_migrations" >&2
   exit 1
 }
 

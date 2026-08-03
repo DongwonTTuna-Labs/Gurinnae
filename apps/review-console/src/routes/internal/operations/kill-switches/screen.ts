@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "OPS-006",
-  title: "Kill Switch",
+  title: "킬 스위치",
   route: "/internal/operations/kill-switches",
   archetype: "DECISION_REVIEW",
   sections: [
     {
       order: 1,
       id: "active",
-      title: "활성 switch",
+      title: "활성 비상 중지",
       component: "StructuredContentSection",
       purpose: "scope·reason·expiry.",
       test_id: "ops_006__section__active",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "catalog",
-      title: "switch 목록",
+      title: "비상 중지 목록",
       component: "DataCollection",
       purpose: "safe fallback.",
       test_id: "ops_006__section__catalog",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "runbook",
-      title: "runbook",
+      title: "대응 절차",
       component: "StructuredContentSection",
       purpose: "verification.",
       test_id: "ops_006__section__runbook",
@@ -58,7 +58,7 @@ export const screen = {
   actions: [
     {
       id: "activate",
-      label: "Kill switch 활성화",
+      label: "킬 스위치 활성화",
       capability: "kill_switch.execute",
       operation_id: "activateKillSwitch",
       guard: "reauth + reason + expiry + two-person where required",

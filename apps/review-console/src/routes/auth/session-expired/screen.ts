@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "draft",
-      title: "draft 상태",
+      title: "초안 상태",
       component: "StatusAndRevisionHeader",
       purpose: "server/local 안전 보존.",
       test_id: "auth_004__section__draft",

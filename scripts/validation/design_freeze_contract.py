@@ -9,6 +9,7 @@ from typing import Any
 import yaml
 
 from generate_effective_registry import Checks, UniqueKeyLoader
+from verify_migrations import EXPECTED_ADDITIVE_MIGRATIONS
 
 
 REVIEW_ROLE_REGISTRY = "implementation-evidence/expert-review-roles.yaml"
@@ -57,15 +58,9 @@ BLOCKER_KEYS = frozenset(
 )
 FINAL_STATUS = "FINAL"
 CLOSED = "CLOSED_CURRENT_TRUTH"
-EXPECTED_ADDITIVE_MIGRATIONS = (
-    "0025_evidence_snapshots_and_search.sql",
-    "0026_agent_action_approval.sql",
-    "0027_communication_consent_delivery.sql",
-    "0028_governance_operations.sql",
-    "0029_product_economics.sql",
-    "0030_v13_submission_session_hardening.sql",
-)
-EXPECTED_ADDITIVE_ORDINALS = list(range(25, 31))
+EXPECTED_ADDITIVE_ORDINALS = [
+    int(migration_name[:4]) for migration_name in EXPECTED_ADDITIVE_MIGRATIONS
+]
 FINDING_HEADING_RE = re.compile(
     r"^#{2,6}\s+([A-Z][A-Z0-9-]*-[0-9]{3})\b", re.MULTILINE
 )

@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "RULE-001",
-  title: "탐지 규칙 Registry",
+  title: "탐지 규칙 등록부",
   route: "/internal/rules",
   archetype: "SEARCH_INDEX",
   sections: [
@@ -52,7 +52,7 @@ export const screen = {
     },
     {
       id: "propose-version",
-      label: "새 version 제안",
+      label: "새 버전 제안",
       capability: "rules.propose",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

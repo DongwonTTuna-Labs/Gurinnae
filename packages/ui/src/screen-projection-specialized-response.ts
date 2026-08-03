@@ -1,3 +1,4 @@
+import { explicitKoreanContextLabel, fieldLabel } from "./field-labels";
 import type { ProjectionField } from "./screen-projection";
 import type { SpecializedProjection } from "./screen-projection-specialized-types";
 import { toRsp003ViewModel } from "./view-models/rsp-003";
@@ -70,7 +71,9 @@ export function responseSpecializedFields(
       fields: [
         {
           name: sectionId,
-          label: heading ?? sectionId,
+          label: heading
+            ? explicitKoreanContextLabel(heading)
+            : fieldLabel(sectionId),
           value: body,
           known: body !== null,
           source: `getFundingContent.data.sections[${sectionId}]`,
@@ -132,23 +135,27 @@ export function responseSpecializedFields(
     }
     if (sectionId === "questions") {
       const fields: ProjectionField[] = vm.questions.flatMap(
-        (answer, index) =>
-          [
+        (answer, index) => {
+          const questionLabel = answer.questionLabel
+            ? explicitKoreanContextLabel(answer.questionLabel)
+            : `질문 ${index + 1}`;
+          return [
             {
               name: `question_${index + 1}`,
-              label: answer.questionLabel ?? `질문 ${index + 1}`,
+              label: questionLabel,
               value: answer.questionId,
               known: answer.questionId !== null,
               source: "getResponseDraft.answers[].questionId",
             },
             {
               name: `answer_${index + 1}`,
-              label: `${answer.questionLabel ?? `질문 ${index + 1}`} 답변`,
+              label: `${questionLabel} 답변`,
               value: answer.text,
               known: answer.text !== null,
               source: "getResponseDraft.answers[].text",
             },
-          ] satisfies ProjectionField[],
+          ] satisfies ProjectionField[];
+        },
       );
       fields.push({
         name: "answers",

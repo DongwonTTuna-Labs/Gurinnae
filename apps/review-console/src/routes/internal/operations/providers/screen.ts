@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "status",
-      title: "provider health",
+      title: "공급자 상태",
       component: "StatusAndRevisionHeader",
       purpose: "service/status/last checked.",
       test_id: "ops_005__section__status",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "quotas",
-      title: "quota",
+      title: "사용 한도",
       component: "StructuredContentSection",
       purpose: "usage/reset.",
       test_id: "ops_005__section__quotas",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "latency",
-      title: "latency/error",
+      title: "지연·오류",
       component: "StructuredContentSection",
       purpose: "SLO.",
       test_id: "ops_005__section__latency",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "fallback",
-      title: "fallback",
+      title: "대체 경로",
       component: "StructuredContentSection",
       purpose: "allowed routing.",
       test_id: "ops_005__section__fallback",
@@ -49,7 +49,7 @@ export const screen = {
     {
       order: 6,
       id: "incidents",
-      title: "incident",
+      title: "장애 이력",
       component: "OperationsStatusPanel",
       purpose: "impact/history.",
       test_id: "ops_005__section__incidents",
@@ -68,7 +68,7 @@ export const screen = {
     },
     {
       id: "disable-routing",
-      label: "Routing 중지",
+      label: "라우팅 중지",
       capability: "kill_switch.execute",
       operation_id: "disableProviderRouting",
       guard: "scope + reason",

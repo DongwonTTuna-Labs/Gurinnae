@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "board",
-      title: "가설 board",
+      title: "가설 현황판",
       component: "StructuredContentSection",
       purpose: "OPEN/SUPPORTED/CONTRADICTED/RESOLVED.",
       test_id: "cas_007__section__board",

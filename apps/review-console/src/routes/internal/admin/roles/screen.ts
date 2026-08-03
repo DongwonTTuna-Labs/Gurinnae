@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "catalog",
-      title: "role catalog",
+      title: "역할 목록",
       component: "StatusAndRevisionHeader",
       purpose: "description/status.",
       test_id: "adm_003__section__catalog",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "capabilities",
-      title: "capability matrix",
+      title: "권한 행렬",
       component: "StructuredContentSection",
       purpose: "read/write/high impact.",
       test_id: "adm_003__section__capabilities",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "conflicts",
-      title: "SoD",
+      title: "직무 분리",
       component: "AccessManagementPanel",
       purpose: "conflicting roles.",
       test_id: "adm_003__section__conflicts",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "grants",
-      title: "grant stats",
+      title: "권한 부여 현황",
       component: "StructuredContentSection",
       purpose: "count/expiry.",
       test_id: "adm_003__section__grants",
@@ -78,7 +78,7 @@ export const screen = {
     },
     {
       id: "export-matrix",
-      label: "권한 matrix 다운로드",
+      label: "권한 매트릭스 다운로드",
       capability: "audit.read",
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",

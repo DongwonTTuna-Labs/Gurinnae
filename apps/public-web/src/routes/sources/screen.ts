@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "status",
-      title: "source 상태 요약",
+      title: "출처 상태 요약",
       component: "StatusAndRevisionHeader",
       purpose: "healthy/stale/incident.",
       test_id: "pub_016__section__status",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "list",
-      title: "source 목록",
+      title: "출처 목록",
       component: "CoverageStatement",
       purpose: "owner·type·coverage·last sync.",
       test_id: "pub_016__section__list",
@@ -42,7 +42,7 @@ export const screen = {
   actions: [
     {
       id: "open-source",
-      label: "source 상세",
+      label: "출처 상세",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",

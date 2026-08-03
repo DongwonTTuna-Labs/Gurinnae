@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-001",
-  title: "사건 Queue",
+  title: "사건 대기열",
   route: "/internal/cases",
   archetype: "QUEUE",
   sections: [
     {
       order: 1,
       id: "views",
-      title: "queue 보기",
+      title: "업무 대기열",
       component: "DataCollection",
       purpose: "investigation/editorial/review/publish.",
       test_id: "cas_001__section__views",

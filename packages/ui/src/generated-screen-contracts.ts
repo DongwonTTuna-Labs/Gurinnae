@@ -207,10 +207,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "PUB-005": {
     route: "/cases/{caseSlug}/revisions/{revision}",
-    objectLabel: "사건 공개 revision",
+    objectLabel: "사건 공개 개정본",
     persona: "공개 독자·연구자",
     primaryActionId: "view-latest",
-    primaryActionLabel: "최신 revision 보기",
+    primaryActionLabel: "최신 개정본 보기",
     sections: [
       {
         id: "revision-banner",
@@ -697,7 +697,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "데이터 범위",
     persona: "공개 독자·연구자",
     primaryActionId: "open-source",
-    primaryActionLabel: "source 상세",
+    primaryActionLabel: "출처 상세",
     sections: [
       {
         id: "summary",
@@ -741,7 +741,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "데이터 출처",
     persona: "공개 독자·연구자",
     primaryActionId: "open-source",
-    primaryActionLabel: "source 상세",
+    primaryActionLabel: "출처 상세",
     sections: [
       {
         id: "status",
@@ -778,7 +778,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "데이터 출처 상세",
     persona: "공개 독자·연구자",
     primaryActionId: "view-official",
-    primaryActionLabel: "공식 source 열기",
+    primaryActionLabel: "공식 출처 열기",
     sections: [
       {
         id: "identity",
@@ -2250,7 +2250,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SIG-001": {
     route: "/internal/signals",
-    objectLabel: "Signal Queue",
+    objectLabel: "신호 대기열",
     persona: "조사 담당자",
     primaryActionId: "assign",
     primaryActionLabel: "담당자 지정",
@@ -2287,7 +2287,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SIG-002": {
     route: "/internal/signals/{signalId}",
-    objectLabel: "Signal 검토",
+    objectLabel: "신호 검토",
     persona: "조사 담당자",
     primaryActionId: "promote",
     primaryActionLabel: "사건으로 승격",
@@ -2352,7 +2352,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-001": {
     route: "/internal/cases",
-    objectLabel: "사건 Queue",
+    objectLabel: "사건 대기열",
     persona: "조사 담당자",
     primaryActionId: "assign",
     primaryActionLabel: "담당자 지정",
@@ -2389,7 +2389,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-002": {
     route: "/internal/cases/{caseId}/overview",
-    objectLabel: "사건 Overview",
+    objectLabel: "사건 개요",
     persona: "조사 담당자",
     primaryActionId: "transition",
     primaryActionLabel: "상태 전이",
@@ -2433,10 +2433,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-003": {
     route: "/internal/cases/{caseId}/signals",
-    objectLabel: "연결된 Signal",
+    objectLabel: "연결된 신호",
     persona: "조사 담당자",
     primaryActionId: "link-signal",
-    primaryActionLabel: "signal 연결",
+    primaryActionLabel: "신호 연결",
     sections: [
       {
         id: "summary",
@@ -2551,10 +2551,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-006": {
     route: "/internal/cases/{caseId}/claims",
-    objectLabel: "공개 Claim 작성",
+    objectLabel: "공개 주장 작성",
     persona: "조사 담당자",
     primaryActionId: "add-claim",
-    primaryActionLabel: "Claim 추가",
+    primaryActionLabel: "주장 추가",
     sections: [
       {
         id: "summary",
@@ -2628,7 +2628,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "소명 관리",
     persona: "조사 담당자",
     primaryActionId: "approve-excerpt",
-    primaryActionLabel: "공개 excerpt 승인",
+    primaryActionLabel: "공개 발췌문 승인",
     sections: [
       {
         id: "requests",
@@ -2720,7 +2720,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-010": {
     route: "/internal/cases/{caseId}/agent-runs",
-    objectLabel: "Agent 실행",
+    objectLabel: "에이전트 실행",
     persona: "조사 담당자",
     primaryActionId: "start-run",
     primaryActionLabel: "새 조사 실행",
@@ -2757,7 +2757,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-011": {
     route: "/internal/cases/{caseId}/agent-runs/{runId}",
-    objectLabel: "Agent 실행 상세",
+    objectLabel: "에이전트 실행 상세",
     persona: "조사 담당자",
     primaryActionId: "accept-suggestion",
     primaryActionLabel: "제안 채택",
@@ -2822,7 +2822,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-012": {
     route: "/internal/cases/{caseId}/timeline",
-    objectLabel: "사건 Timeline",
+    objectLabel: "사건 타임라인",
     persona: "조사 담당자",
     primaryActionId: "filter",
     primaryActionLabel: "이벤트 필터",
@@ -2862,7 +2862,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "검토 준비도",
     persona: "조사 담당자",
     primaryActionId: "open-blocker",
-    primaryActionLabel: "blocker 해결",
+    primaryActionLabel: "블로커 해결",
     sections: [
       {
         id: "summary",
@@ -2903,10 +2903,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-014": {
     route: "/internal/cases/{caseId}/preview",
-    objectLabel: "공개 Preview",
+    objectLabel: "공개 미리보기",
     persona: "조사 담당자",
     primaryActionId: "refresh-preview",
-    primaryActionLabel: "Preview 재생성",
+    primaryActionLabel: "미리보기 재생성",
     sections: [
       {
         id: "watermark",
@@ -2991,7 +2991,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "CAS-016": {
     route: "/internal/cases/{caseId}/audit",
-    objectLabel: "사건 Audit",
+    objectLabel: "사건 감사",
     persona: "조사 담당자",
     primaryActionId: "open-event",
     primaryActionLabel: "이벤트 상세",
@@ -3028,7 +3028,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "REV-001": {
     route: "/internal/review",
-    objectLabel: "검토 Queue",
+    objectLabel: "검토 대기열",
     persona: "조사 담당자",
     primaryActionId: "assign-reviewer",
     primaryActionLabel: "검토자 배정",
@@ -3065,7 +3065,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "REV-002": {
     route: "/internal/review/{snapshotId}",
-    objectLabel: "독립 Snapshot 검토",
+    objectLabel: "독립 스냅샷 검토",
     persona: "조사 담당자",
     primaryActionId: "request-changes",
     primaryActionLabel: "변경 요청",
@@ -3119,7 +3119,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
     objectLabel: "게시 확인·영수증",
     persona: "조사 담당자",
     primaryActionId: "publish",
-    primaryActionLabel: "최신 snapshot 게시",
+    primaryActionLabel: "최신 스냅샷 게시",
     sections: [
       {
         id: "target",
@@ -3160,7 +3160,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "COR-001": {
     route: "/internal/corrections",
-    objectLabel: "정정 Queue",
+    objectLabel: "정정 대기열",
     persona: "조사 담당자",
     primaryActionId: "assign",
     primaryActionLabel: "담당자 배정",
@@ -3197,7 +3197,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "COR-002": {
     route: "/internal/corrections/{correctionId}",
-    objectLabel: "정정 Workspace",
+    objectLabel: "정정 작업공간",
     persona: "조사 담당자",
     primaryActionId: "reject-request",
     primaryActionLabel: "정정하지 않음 결정",
@@ -3255,10 +3255,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-001": {
     route: "/internal/sources",
-    objectLabel: "Source Registry",
+    objectLabel: "출처 등록부",
     persona: "조사 담당자",
     primaryActionId: "ack-incident",
-    primaryActionLabel: "incident 확인",
+    primaryActionLabel: "인시던트 확인",
     sections: [
       {
         id: "health",
@@ -3299,7 +3299,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-002": {
     route: "/internal/sources/{sourceId}",
-    objectLabel: "Source 상세",
+    objectLabel: "출처 상세",
     persona: "조사 담당자",
     primaryActionId: "start-manual-run",
     primaryActionLabel: "수동 실행 요청",
@@ -3357,7 +3357,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-003": {
     route: "/internal/sources/{sourceId}/runs",
-    objectLabel: "Source 실행 기록",
+    objectLabel: "출처 실행 기록",
     persona: "조사 담당자",
     primaryActionId: "retry-run",
     primaryActionLabel: "안전한 재시도",
@@ -3394,7 +3394,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-004": {
     route: "/internal/sources/{sourceId}/runs/{runId}",
-    objectLabel: "Source 실행 상세",
+    objectLabel: "출처 실행 상세",
     persona: "조사 담당자",
     primaryActionId: "retry-failed",
     primaryActionLabel: "실패 구간 재시도",
@@ -3452,7 +3452,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-005": {
     route: "/internal/sources/{sourceId}/schema-drift",
-    objectLabel: "Schema Drift",
+    objectLabel: "스키마 드리프트",
     persona: "조사 담당자",
     primaryActionId: "reject-mapping",
     primaryActionLabel: "변경 요청",
@@ -3510,7 +3510,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "SRC-006": {
     route: "/internal/sources/{sourceId}/backfill",
-    objectLabel: "Backfill·Replay",
+    objectLabel: "백필·재실행",
     persona: "조사 담당자",
     primaryActionId: "estimate",
     primaryActionLabel: "영향 계산",
@@ -3568,7 +3568,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "RULE-001": {
     route: "/internal/rules",
-    objectLabel: "탐지 규칙 Registry",
+    objectLabel: "탐지 규칙 등록부",
     persona: "조사 담당자",
     primaryActionId: "open-rule",
     primaryActionLabel: "규칙 보기",
@@ -3605,10 +3605,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "RULE-002": {
     route: "/internal/rules/{ruleId}/versions/{version}",
-    objectLabel: "규칙 Version 상세",
+    objectLabel: "규칙 버전 상세",
     persona: "조사 담당자",
     primaryActionId: "create-draft",
-    primaryActionLabel: "다음 version 초안",
+    primaryActionLabel: "다음 버전 초안",
     sections: [
       {
         id: "identity",
@@ -3663,7 +3663,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "RULE-003": {
     route: "/internal/rules/{ruleId}/versions/{version}/evaluation",
-    objectLabel: "규칙 평가·Shadow",
+    objectLabel: "규칙 평가·섀도 실행",
     persona: "조사 담당자",
     primaryActionId: "run-evaluation",
     primaryActionLabel: "평가 실행",
@@ -3779,10 +3779,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "OPS-001": {
     route: "/internal/operations",
-    objectLabel: "운영 Overview",
+    objectLabel: "운영 개요",
     persona: "조사 담당자",
     primaryActionId: "open-incident",
-    primaryActionLabel: "incident 열기",
+    primaryActionLabel: "인시던트 열기",
     sections: [
       {
         id: "incidents",
@@ -3837,7 +3837,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "OPS-002": {
     route: "/internal/operations/jobs",
-    objectLabel: "작업 Queue·DLQ",
+    objectLabel: "작업 대기열·DLQ",
     persona: "조사 담당자",
     primaryActionId: "retry-selected",
     primaryActionLabel: "선택 작업 재시도",
@@ -4041,10 +4041,10 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "OPS-006": {
     route: "/internal/operations/kill-switches",
-    objectLabel: "Kill Switch",
+    objectLabel: "킬 스위치",
     persona: "조사 담당자",
     primaryActionId: "activate",
-    primaryActionLabel: "Kill switch 활성화",
+    primaryActionLabel: "킬 스위치 활성화",
     sections: [
       {
         id: "active",
@@ -4092,7 +4092,7 @@ export const ROUTE_SCREEN_CONTRACTS = {
   },
   "AUD-001": {
     route: "/internal/audit",
-    objectLabel: "감사 로그 Explorer",
+    objectLabel: "감사 로그 탐색기",
     persona: "조사 담당자",
     primaryActionId: "verify-integrity",
     primaryActionLabel: "무결성 검증",

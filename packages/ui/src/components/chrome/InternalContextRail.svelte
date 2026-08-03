@@ -179,7 +179,6 @@ const guidance = $derived(
 
   @media (max-width: 620px) {
     .context-rail {
-      order: 2;
       width: 100%;
     }
 

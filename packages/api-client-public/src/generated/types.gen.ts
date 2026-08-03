@@ -916,6 +916,7 @@ export type Source = {
     displayName: string;
     owner: string;
     accessType: string;
+    officialUrl: string | null;
     status: string;
     coverage: CoverageModel;
     freshness: FreshnessModel;

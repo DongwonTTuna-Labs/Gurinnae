@@ -224,12 +224,12 @@ export function toInt002ViewModel(
       "listActionApprovalQueue.items",
     ),
     handoffUnknown: projection(
-      "제안 payload와 외부 채널 권한은 상세 승인 surface에서 확인",
+      "제안 내용과 외부 채널 권한은 상세 승인 화면에서 확인",
       approvalItems.length > 0 ? "REVIEW_REQUIRED" : "EMPTY",
       [
         fact(
           "상세 제안",
-          approvalItems.length > 0 ? "승인 전 상세 payload 확인 필요" : null,
+          approvalItems.length > 0 ? "승인 전 상세 내용 확인 필요" : null,
         ),
       ],
       queueAsOf,

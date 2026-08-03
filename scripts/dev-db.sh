@@ -78,21 +78,32 @@ up() {
 }
 
 migrate() {
-  local expected_versions actual_migrations internal_url
+  local expected_migration_count expected_versions actual_migrations external_url
   require_running
   wait_ready
-  internal_url="postgresql://${database_user}:${database_password}@postgres:5432/${database}"
-  DATABASE_URL="$internal_url" \
-    MIGRATOR_DATABASE_URL="$internal_url" \
-    GURINE_ENV=test \
-    dev_compose run --rm --no-deps --build migrator
+  expected_migration_count="$(
+    python3 "$root/scripts/verify_migrations.py" --print-runtime-count
+  )"
+  [[ "$expected_migration_count" =~ ^[0-9]+$ ]] ||
+    fail "invalid expected migration count: $expected_migration_count"
+  # The prepare database must be able to migrate before new SQLx metadata
+  # exists. Building the shared Rust image here creates a cycle because that
+  # image compiles the whole workspace with SQLX_OFFLINE=true. The pinned host
+  # sqlx CLI preserves the same migration ledger and checksum checks without
+  # compiling application queries first.
+  external_url="postgresql://${database_user}:${database_password}@127.0.0.1:${host_port}/${database}"
+  cargo sqlx migrate run \
+    --no-dotenv \
+    --source "$root/db/migrations" \
+    --target-version "$expected_migration_count" \
+    --database-url "$external_url"
 
-  expected_versions="$(seq -s, 1 30)"
+  expected_versions="$(seq -s, 1 "$expected_migration_count")"
   actual_migrations="$(docker exec "$container" psql -U "$database_user" -d "$database" -Atc \
     "SELECT count(*) || '|' || coalesce(string_agg(version::text, ',' ORDER BY version), '') FROM _sqlx_migrations WHERE success;")"
-  [[ "$actual_migrations" == "30|$expected_versions" ]] ||
-    fail "migration canary expected 30|$expected_versions, found $actual_migrations"
-  printf 'dev-db: migrations 1..30 applied\n'
+  [[ "$actual_migrations" == "$expected_migration_count|$expected_versions" ]] ||
+    fail "migration canary expected $expected_migration_count|$expected_versions, found $actual_migrations"
+  printf 'dev-db: migrations 1..%s applied\n' "$expected_migration_count"
 }
 
 url() {

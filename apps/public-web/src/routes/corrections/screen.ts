@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "feed",
-      title: "구독·feed",
+      title: "구독·정정 알림",
       component: "RevisionAndCorrectionPanel",
       purpose: "정정 알림.",
       test_id: "pub_018__section__feed",

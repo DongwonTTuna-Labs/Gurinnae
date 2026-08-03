@@ -216,7 +216,7 @@ async function runAction(
   const operationId = stringProperty(action, "operation_id");
   if (!operationId) throw redirect(303, screen.route);
   const indexed = operations.get(operationId);
-  if (!indexed) return fail(500, { message: "operation contract missing" });
+  if (!indexed) return fail(500, { message: "작업 계약을 찾지 못했습니다." });
   let submittedFormData: Record<string, unknown> = {};
   try {
     const form = await event.request.formData();

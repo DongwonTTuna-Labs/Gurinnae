@@ -6,9 +6,9 @@ import type {
 } from "../../index";
 import { isBusyState } from "../../screen-chrome";
 import type { ScreenProjection } from "../../screen-projection";
+import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
 import ResponseHeader from "../ResponseHeader.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
-import SectionList from "../screen/SectionList.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
 
@@ -30,7 +30,7 @@ const busy = $derived(isBusyState(runtime.state));
   <ResponseHeader requestLabel="내부 인증" />
   <main id="main-content" data-testid={projection.focus.main} data-focus-target={projection.focus.main} class="form-main auth-main" data-screen-id={screen.id} data-archetype={screen.archetype} aria-busy={busy}>
     <ScreenHeading variant="auth" {screen} {runtime} {contract} {projection} />
-    <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} /><div class="form-card"><SectionList variant="form" {screen} {runtime} {contract} {projection} /></div>
+    <StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} /><div class="form-card"><ArchetypeAssembly variant="form" {screen} {runtime} {contract} {projection} /></div>
   </main>
 </div>
 

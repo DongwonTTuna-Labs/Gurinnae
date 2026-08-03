@@ -10,10 +10,10 @@ import {
   statusSectionIdForScreen,
 } from "../../screen-chrome";
 import type { ScreenProjection } from "../../screen-projection";
+import ArchetypeAssembly from "../archetypes/ArchetypeAssembly.svelte";
 import PublicHeader from "../PublicHeader.svelte";
 import ScreenSection from "../ScreenSection.svelte";
 import ScreenHeading from "../screen/ScreenHeading.svelte";
-import SectionList from "../screen/SectionList.svelte";
 import StateBadge from "../screen/StateBadge.svelte";
 import StateSummary from "../screen/StateSummary.svelte";
 import PublicFooter from "./PublicFooter.svelte";
@@ -47,7 +47,7 @@ const busy = $derived(isBusyState(runtime.state));
     {#if evidenceLanding}<StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />{/if}
     <ScreenHeading variant={home ? "public-home" : "public"} {screen} {runtime} {contract} {projection} />
     {#if !evidenceLanding}<StateBadge variant="live" {screen} {runtime} {projection} /><StateSummary {screen} {runtime} {projection} />{/if}
-    <SectionList {screen} {runtime} {contract} {projection} skipStatus={evidenceLanding} />
+    <ArchetypeAssembly {screen} {runtime} {contract} {projection} skipStatus={evidenceLanding} />
   </main>
   <PublicFooter />
 </div>

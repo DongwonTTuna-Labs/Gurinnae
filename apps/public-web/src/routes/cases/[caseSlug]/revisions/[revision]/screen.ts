@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "PUB-005",
-  title: "사건 공개 revision",
+  title: "사건 공개 개정본",
   route: "/cases/{caseSlug}/revisions/{revision}",
   archetype: "EVIDENCE_LANDING",
   sections: [
     {
       order: 1,
       id: "revision-banner",
-      title: "revision 안내",
+      title: "개정본 안내",
       component: "StatusAndRevisionHeader",
       purpose: "과거본 여부와 최신본 링크.",
       test_id: "pub_005__section__revision-banner",
@@ -42,7 +42,7 @@ export const screen = {
   actions: [
     {
       id: "view-latest",
-      label: "최신 revision 보기",
+      label: "최신 개정본 보기",
       capability: "none",
       interaction_kind: "NAVIGATION",
       assurance_level: "NONE",
@@ -62,7 +62,7 @@ export const screen = {
     },
     {
       id: "copy-citation",
-      label: "이 revision 인용",
+      label: "이 개정본 인용",
       capability: "none",
       local_only: true,
       persistence: "none",

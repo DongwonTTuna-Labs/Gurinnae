@@ -12,7 +12,7 @@
 | `PUB-002` | `/search` | 통합 검색 | `anonymous` | `SEARCH_INDEX` |
 | `PUB-003` | `/cases` | 공개 사례 | `anonymous` | `SEARCH_INDEX` |
 | `PUB-004` | `/cases/{caseSlug}` | 사건 상세 | `anonymous` | `EVIDENCE_LANDING` |
-| `PUB-005` | `/cases/{caseSlug}/revisions/{revision}` | 사건 공개 revision | `anonymous` | `EVIDENCE_LANDING` |
+| `PUB-005` | `/cases/{caseSlug}/revisions/{revision}` | 사건 공개 개정본 | `anonymous` | `EVIDENCE_LANDING` |
 | `PUB-006` | `/cases/{caseSlug}/reproduce` | 계산 재현 | `anonymous` | `ENTITY_DETAIL` |
 | `PUB-007` | `/agencies` | 기관 | `anonymous` | `SEARCH_INDEX` |
 | `PUB-008` | `/agencies/{agencySlug}` | 기관 상세 | `anonymous` | `ENTITY_DETAIL` |
@@ -68,48 +68,47 @@
 | `INT-002` | `/internal/my-work` | 내 작업 | `oidc` | `QUEUE` |
 | `INT-003` | `/internal/search` | 내부 검색 | `oidc` | `SEARCH_INDEX` |
 | `INT-004` | `/internal/notifications` | 알림 | `oidc` | `QUEUE` |
-| `SIG-001` | `/internal/signals` | Signal Queue | `oidc` | `QUEUE` |
-| `SIG-002` | `/internal/signals/{signalId}` | Signal 검토 | `oidc` | `DECISION_REVIEW` |
-| `CAS-001` | `/internal/cases` | 사건 Queue | `oidc` | `QUEUE` |
-| `CAS-002` | `/internal/cases/{caseId}/overview` | 사건 Overview | `oidc` | `WORKSPACE` |
-| `CAS-003` | `/internal/cases/{caseId}/signals` | 연결된 Signal | `oidc` | `WORKSPACE` |
+| `SIG-001` | `/internal/signals` | 신호 대기열 | `oidc` | `QUEUE` |
+| `SIG-002` | `/internal/signals/{signalId}` | 신호 검토 | `oidc` | `DECISION_REVIEW` |
+| `CAS-001` | `/internal/cases` | 사건 대기열 | `oidc` | `QUEUE` |
+| `CAS-002` | `/internal/cases/{caseId}/overview` | 사건 개요 | `oidc` | `WORKSPACE` |
+| `CAS-003` | `/internal/cases/{caseId}/signals` | 연결된 신호 | `oidc` | `WORKSPACE` |
 | `CAS-004` | `/internal/cases/{caseId}/evidence` | 근거 | `oidc` | `WORKSPACE` |
 | `CAS-005` | `/internal/cases/{caseId}/evidence/{evidenceId}` | 근거 검증 | `oidc` | `WORKSPACE` |
-| `CAS-006` | `/internal/cases/{caseId}/claims` | 공개 Claim 작성 | `oidc` | `WORKSPACE` |
+| `CAS-006` | `/internal/cases/{caseId}/claims` | 공개 주장 작성 | `oidc` | `WORKSPACE` |
 | `CAS-007` | `/internal/cases/{caseId}/hypotheses` | 조사 가설 | `oidc` | `WORKSPACE` |
 | `CAS-008` | `/internal/cases/{caseId}/responses` | 소명 관리 | `oidc` | `WORKSPACE` |
 | `CAS-009` | `/internal/cases/{caseId}/responses/new` | 소명 요청 작성 | `oidc` | `GUIDED_FORM` |
-| `CAS-010` | `/internal/cases/{caseId}/agent-runs` | Agent 실행 | `oidc` | `WORKSPACE` |
-| `CAS-011` | `/internal/cases/{caseId}/agent-runs/{runId}` | Agent 실행 상세 | `oidc` | `WORKSPACE` |
-| `CAS-012` | `/internal/cases/{caseId}/timeline` | 사건 Timeline | `oidc` | `WORKSPACE` |
+| `CAS-010` | `/internal/cases/{caseId}/agent-runs` | 에이전트 실행 | `oidc` | `WORKSPACE` |
+| `CAS-011` | `/internal/cases/{caseId}/agent-runs/{runId}` | 에이전트 실행 상세 | `oidc` | `WORKSPACE` |
+| `CAS-012` | `/internal/cases/{caseId}/timeline` | 사건 타임라인 | `oidc` | `WORKSPACE` |
 | `CAS-013` | `/internal/cases/{caseId}/review` | 검토 준비도 | `oidc` | `WORKSPACE` |
-| `CAS-014` | `/internal/cases/{caseId}/preview` | 공개 Preview | `oidc` | `WORKSPACE` |
+| `CAS-014` | `/internal/cases/{caseId}/preview` | 공개 미리보기 | `oidc` | `WORKSPACE` |
 | `CAS-015` | `/internal/cases/{caseId}/corrections` | 사건 정정·철회 | `oidc` | `WORKSPACE` |
-| `CAS-016` | `/internal/cases/{caseId}/audit` | 사건 Audit | `oidc` | `WORKSPACE` |
-| `REV-001` | `/internal/review` | 검토 Queue | `oidc` | `QUEUE` |
-| `REV-002` | `/internal/review/{snapshotId}` | 독립 Snapshot 검토 | `oidc` | `DECISION_REVIEW` |
+| `CAS-016` | `/internal/cases/{caseId}/audit` | 사건 감사 | `oidc` | `WORKSPACE` |
+| `REV-001` | `/internal/review` | 검토 대기열 | `oidc` | `QUEUE` |
+| `REV-002` | `/internal/review/{snapshotId}` | 독립 스냅샷 검토 | `oidc` | `DECISION_REVIEW` |
 | `REV-003` | `/internal/review/{snapshotId}/publish` | 게시 확인·영수증 | `oidc` | `DECISION_REVIEW` |
-| `COR-001` | `/internal/corrections` | 정정 Queue | `oidc` | `QUEUE` |
-| `COR-002` | `/internal/corrections/{correctionId}` | 정정 Workspace | `oidc` | `WORKSPACE` |
-| `SRC-001` | `/internal/sources` | Source Registry | `oidc` | `OPERATIONS` |
-| `SRC-002` | `/internal/sources/{sourceId}` | Source 상세 | `oidc` | `OPERATIONS` |
-| `SRC-003` | `/internal/sources/{sourceId}/runs` | Source 실행 기록 | `oidc` | `QUEUE` |
-| `SRC-004` | `/internal/sources/{sourceId}/runs/{runId}` | Source 실행 상세 | `oidc` | `OPERATIONS` |
-| `SRC-005` | `/internal/sources/{sourceId}/schema-drift` | Schema Drift | `oidc` | `DECISION_REVIEW` |
-| `SRC-006` | `/internal/sources/{sourceId}/backfill` | Backfill·Replay | `oidc` | `DECISION_REVIEW` |
-| `RULE-001` | `/internal/rules` | 탐지 규칙 Registry | `oidc` | `SEARCH_INDEX` |
-| `RULE-002` | `/internal/rules/{ruleId}/versions/{version}` | 규칙 Version 상세 | `oidc` | `ENTITY_DETAIL` |
-| `RULE-003` | `/internal/rules/{ruleId}/versions/{version}/evaluation` | 규칙 평가·Shadow | `oidc` | `OPERATIONS` |
+| `COR-001` | `/internal/corrections` | 정정 대기열 | `oidc` | `QUEUE` |
+| `COR-002` | `/internal/corrections/{correctionId}` | 정정 작업공간 | `oidc` | `WORKSPACE` |
+| `SRC-001` | `/internal/sources` | 출처 등록부 | `oidc` | `OPERATIONS` |
+| `SRC-002` | `/internal/sources/{sourceId}` | 출처 상세 | `oidc` | `OPERATIONS` |
+| `SRC-003` | `/internal/sources/{sourceId}/runs` | 출처 실행 기록 | `oidc` | `QUEUE` |
+| `SRC-004` | `/internal/sources/{sourceId}/runs/{runId}` | 출처 실행 상세 | `oidc` | `OPERATIONS` |
+| `SRC-005` | `/internal/sources/{sourceId}/schema-drift` | 스키마 드리프트 | `oidc` | `DECISION_REVIEW` |
+| `SRC-006` | `/internal/sources/{sourceId}/backfill` | 백필·재실행 | `oidc` | `DECISION_REVIEW` |
+| `RULE-001` | `/internal/rules` | 탐지 규칙 등록부 | `oidc` | `SEARCH_INDEX` |
+| `RULE-002` | `/internal/rules/{ruleId}/versions/{version}` | 규칙 버전 상세 | `oidc` | `ENTITY_DETAIL` |
+| `RULE-003` | `/internal/rules/{ruleId}/versions/{version}/evaluation` | 규칙 평가·섀도 실행 | `oidc` | `OPERATIONS` |
 | `RULE-004` | `/internal/rules/{ruleId}/versions/{version}/activation` | 규칙 활성화 | `oidc` | `DECISION_REVIEW` |
-| `OPS-001` | `/internal/operations` | 운영 Overview | `oidc` | `OPERATIONS` |
-| `OPS-002` | `/internal/operations/jobs` | 작업 Queue·DLQ | `oidc` | `QUEUE` |
+| `OPS-001` | `/internal/operations` | 운영 개요 | `oidc` | `OPERATIONS` |
+| `OPS-002` | `/internal/operations/jobs` | 작업 대기열·DLQ | `oidc` | `QUEUE` |
 | `OPS-003` | `/internal/operations/jobs/{jobId}` | 작업 상세 | `oidc` | `OPERATIONS` |
 | `OPS-004` | `/internal/operations/budgets` | 비용·예산 | `oidc` | `OPERATIONS` |
 | `OPS-005` | `/internal/operations/providers` | 외부 공급자 상태 | `oidc` | `OPERATIONS` |
-| `OPS-006` | `/internal/operations/kill-switches` | Kill Switch | `oidc` | `DECISION_REVIEW` |
-| `AUD-001` | `/internal/audit` | 감사 로그 Explorer | `oidc` | `SEARCH_INDEX` |
+| `OPS-006` | `/internal/operations/kill-switches` | 킬 스위치 | `oidc` | `DECISION_REVIEW` |
+| `AUD-001` | `/internal/audit` | 감사 로그 탐색기 | `oidc` | `SEARCH_INDEX` |
 | `ADM-001` | `/internal/admin/users` | 사용자·접근 관리 | `oidc` | `SEARCH_INDEX` |
 | `ADM-002` | `/internal/admin/users/{userId}` | 사용자 상세·역할 | `oidc` | `DECISION_REVIEW` |
 | `ADM-003` | `/internal/admin/roles` | 역할 정의 | `oidc` | `ENTITY_DETAIL` |
 | `ACC-001` | `/internal/account` | 내 계정·세션 | `oidc` | `ENTITY_DETAIL` |
-

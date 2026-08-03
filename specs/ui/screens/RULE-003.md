@@ -1,4 +1,4 @@
-# RULE-003 — 규칙 평가·Shadow
+# RULE-003 — 규칙 평가·섀도 실행
 
 상태: **FINAL / REQUIRED COMPLETE**  
 Route: `/internal/rules/{ruleId}/versions/{version}/evaluation`  
@@ -52,7 +52,7 @@ gold·false-positive·historical·shadow 결과와 threshold 민감도를 평가
 | Action ID | Label | Interaction | Assurance | Capability | Operation |
 |---|---|---|---|---|---|
 | `run-evaluation` | 평가 실행 | `COMMAND` | `ACTIVE_SESSION` | `rules.propose` | `runRuleEvaluation` |
-| `start-shadow` | Shadow 실행 | `COMMAND` | `ACTIVE_SESSION` | `rules.propose` | `startRuleShadow` |
+| `start-shadow` | 섀도 실행 | `COMMAND` | `ACTIVE_SESSION` | `rules.propose` | `startRuleShadow` |
 | `open-sample` | 사례 보기 | `NAVIGATION` | `NONE` | `none` | `local-only` |
 
 Primary action: `run-evaluation`

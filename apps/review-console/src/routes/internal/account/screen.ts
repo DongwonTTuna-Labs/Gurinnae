@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "내 identity",
+      title: "신원 정보",
       component: "StructuredContentSection",
       purpose: "IdP·조직.",
       test_id: "acc_001__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "roles",
-      title: "역할·scope",
+      title: "역할·권한 범위",
       component: "AccessManagementPanel",
       purpose: "read-only.",
       test_id: "acc_001__section__roles",

@@ -3,6 +3,8 @@ import type { ScreenRuntime, ScreenViewModel } from "./index";
 type ScreenAction = ScreenViewModel["actions"][number];
 
 const staticTargets: Record<string, string> = {
+  "AUTH-001:sign-in": "/auth/login",
+  "AUTH-004:sign-in-again": "/auth/login",
   "PUB-001:search": "/search",
   "PUB-001:browse-cases": "/cases",
   "PUB-003:open-case": "/cases",

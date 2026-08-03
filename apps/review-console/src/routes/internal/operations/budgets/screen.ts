@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "envelope",
-      title: "예산 envelope",
+      title: "예산 범위",
       component: "AgentSuggestionPanel",
       purpose: "daily/monthly.",
       test_id: "ops_004__section__envelope",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "forecast",
-      title: "forecast",
+      title: "지출 전망",
       component: "StructuredContentSection",
       purpose: "confidence/assumption.",
       test_id: "ops_004__section__forecast",

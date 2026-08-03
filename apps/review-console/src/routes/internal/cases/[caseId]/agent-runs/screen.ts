@@ -2,7 +2,7 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "CAS-010",
-  title: "Agent 실행",
+  title: "에이전트 실행",
   route: "/internal/cases/{caseId}/agent-runs",
   archetype: "WORKSPACE",
   sections: [

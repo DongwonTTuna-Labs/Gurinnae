@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "job identity",
+      title: "작업 식별 정보",
       component: "StructuredContentSection",
       purpose: "type·aggregate·created.",
       test_id: "ops_003__section__identity",
@@ -17,7 +17,7 @@ export const screen = {
     {
       order: 2,
       id: "state",
-      title: "상태·lease",
+      title: "상태·실행 소유권",
       component: "StatusAndRevisionHeader",
       purpose: "owner/fencing/heartbeat.",
       test_id: "ops_003__section__state",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "attempts",
-      title: "attempt history",
+      title: "시도 이력",
       component: "StructuredContentSection",
       purpose: "error/fingerprint/backoff.",
       test_id: "ops_003__section__attempts",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "payload",
-      title: "payload reference",
+      title: "입력 자료 참조",
       component: "StructuredContentSection",
       purpose: "redacted.",
       test_id: "ops_003__section__payload",
@@ -41,7 +41,7 @@ export const screen = {
     {
       order: 5,
       id: "effects",
-      title: "side effects",
+      title: "후속 반영",
       component: "StructuredContentSection",
       purpose: "outbox/inbox/projection.",
       test_id: "ops_003__section__effects",
@@ -57,7 +57,7 @@ export const screen = {
     {
       order: 7,
       id: "audit",
-      title: "event",
+      title: "이벤트",
       component: "StructuredContentSection",
       purpose: "commands.",
       test_id: "ops_003__section__audit",

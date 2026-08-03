@@ -2,14 +2,14 @@ import type { ScreenViewModel } from "@gurine/ui";
 
 export const screen = {
   id: "OPS-002",
-  title: "작업 Queue·DLQ",
+  title: "작업 대기열·DLQ",
   route: "/internal/operations/jobs",
   archetype: "QUEUE",
   sections: [
     {
       order: 1,
       id: "summary",
-      title: "queue health",
+      title: "대기열 상태",
       component: "DataCollection",
       purpose: "backlog/oldest/DLQ.",
       test_id: "ops_002__section__summary",
@@ -25,7 +25,7 @@ export const screen = {
     {
       order: 3,
       id: "jobs",
-      title: "job 목록",
+      title: "작업 목록",
       component: "DataCollection",
       purpose: "attempt/lease/next retry.",
       test_id: "ops_002__section__jobs",
@@ -33,7 +33,7 @@ export const screen = {
     {
       order: 4,
       id: "bulk",
-      title: "제한 bulk",
+      title: "제한된 일괄 처리",
       component: "StructuredContentSection",
       purpose: "pause/assign category.",
       test_id: "ops_002__section__bulk",
@@ -71,7 +71,7 @@ export const screen = {
     },
     {
       id: "pause-queue",
-      label: "Queue 일시 중지",
+      label: "대기열 일시 중지",
       capability: "jobs.operate",
       operation_id: "pauseJobQueue",
       guard: "impact + reason",

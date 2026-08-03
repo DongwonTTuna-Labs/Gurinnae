@@ -9,7 +9,7 @@ export const screen = {
     {
       order: 1,
       id: "identity",
-      title: "요청 identity",
+      title: "요청 식별 정보",
       component: "CoverageStatement",
       purpose: "요청 ID·조직·사건 공개 범위.",
       test_id: "rsp_001__section__identity",
