@@ -1,0 +1,173 @@
+schema_version: 1
+proposal_version: 2026-08-03.0041-f9-natural-person-name-guard-closure.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0041_f9_natural_person_name_guard_closure.sql
+  migration_sha256: 050a83161d53c6efe534d6216198443b1b90767482638235b6103da6953988c5
+  migration_line_count: 1477
+  pglast_statement_count: 60
+  exact_relations: []
+  exact_new_relation_count: 0
+  relation_delta: 0
+  altered_relations:
+  - editorial.cases
+  - editorial.named_person_publication_policies
+  compatibility_views: []
+  purpose: F9 forward-only natural-person name publication-guard closure for canonical public-text hashing, deterministic
+    title-adjacent candidate-span lower-bound coverage, exact application scan binding, and guarded publication ownership
+  relation_count_rule: 0041 contains no CREATE TABLE or CREATE VIEW statement; every ALTER, routine replacement, trigger
+    replacement, ACL, comment, and static policy insert adds zero relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0040 remain byte-preserved; all physical changes are forward-only in
+    0041
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  seed_rule: 0041 inserts exactly one immutable active r6d-named-person-publication-v2 policy row; it seeds no assessment,
+    finding, legal override, publication receipt, audit event, outbox event, or event-registry row
+  legacy_rule: the immutable v1 policy row remains valid historical authority; new assessment and publication paths select
+    the exact active v2 policy and do not rewrite historical receipts
+  slug_rule: editorial.cases receives a NOT VALID lowercase-hyphen slug shape constraint so existing rows can be listed and
+    repaired while new affected writes remain fenced; the replacement case trigger independently rejects an invalid changed
+    public slug
+  public_text_rule: the canonical public-text tree and digest include the public slug and the current-schema evidence
+    sourceUrl field, while rejecting malformed or unsupported structured text and invalid JSON pointers
+  sql_lower_bound_rule: SQL deterministically derives TITLE_ADJACENT_KOREAN_NAME candidate spans across canonical public-text
+    leaves and appends a title finding only when no supplied finding already occupies the same JSON pointer and UTF-16 span;
+    this is span-coverage lower-bound enforcement, not proof that every persisted candidate retains that detector kind
+  registered_person_exact_rule: SQL independently validates a supplied REGISTERED_PERSON_EXACT span digest and current
+    digest-only registered-person binding against the exact registered-set digest; it neither decrypts registered names nor
+    proves the public-text span equals the bound person's name, and it claims no detector completeness
+  assessment_rule: the SECURITY DEFINER assessment owner binds the request, actor context, current case and review snapshot,
+    v2 policy and ruleset, public payload and public-text digests, registered-name-set digest, ordered findings, idempotency,
+    audit receipt, and any legal override in one transaction
+  publication_guard_rule: preview, publish, and correction require a current exact assessment; publish additionally requires
+    an exact unexpired preview assessment, while publish and correction require independent editorial review and, for nonzero
+    findings, the exact legal-override authority chain
+  fail_closed_rule: malformed or oversized lower-bound input, stale scope or registered set, digest or finding mismatch, or
+    missing or ambiguous policy, assessment, review, preview, override, or owner receipt produces no unguarded protected
+    publication transition
+statement_inventory:
+  create_table_count: 0
+  create_view_count: 0
+  owner_routine_count: 16
+  trigger_count: 1
+  explicit_index_count: 0
+  event_registry_upsert_count: 0
+  pglast_statement_count: 60
+  object_inventory_sha256: 70b5bd0bac980678ba05c6490a9b3dfafc10fad414ea6781924baf9326722fad
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views,
+    altered_relations, routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes
+    are inventoried separately
+existing_relation_changes:
+- relation: editorial.cases
+  authority: NOT VALID public-slug shape constraint plus forward replacement of the cases_r6d_publication_guard trigger in
+    0041
+  alter_statement_sha256:
+  - 4289d4653b070e9afb36e0c3e662d2f43c30b5a946e34a02ec0f1bc6208dfb70
+- relation: editorial.named_person_publication_policies
+  authority: exact v1-or-v2 policy shape-constraint replacement and one immutable active v2 policy insertion in 0041
+  alter_statement_sha256:
+  - 5c89bf389f1431eb551979819247c142d3cbae33a34a3bd6152411c88946fea4
+  - 16bf95dc4b8cc154511c26d79a8465c46356b20678c514d2d90dbd4041b34251
+compatibility_views: {}
+view_inventory: []
+tables: {}
+owner_routines:
+- signature: editorial.r6d_public_slug_valid_v1(p_slug text) RETURNS boolean
+  canonical_ddl_sha256: 0791cf2d6631184ace22f0ad7f58280ee7a325e5e43fe944dfb76cd72caf64c0
+- signature: editorial.list_r6d_invalid_public_slugs_v1() RETURNS TABLE (case_id uuid, slug_length integer, violation_codes
+    text[])
+  canonical_ddl_sha256: 6471d42bb14a0b43fb1c9498358212bd087a2418fc8ddc15831141520be4a700
+- signature: editorial.r6d_public_text_tree_v1(p_payload jsonb) RETURNS jsonb
+  canonical_ddl_sha256: 871d480014bbe33fb77d410615eaabdfd0aae0f00c27f36e6ba0cc8e1aab9bc3
+- signature: editorial.r6d_public_text_sha256_v1(p_payload jsonb) RETURNS char(64)
+  canonical_ddl_sha256: 53898deeb091291445aa9959bf5d6587a9971a63f1831a3944b18d4777bbfbbd
+- signature: editorial.r6d_json_pointer_text_v1(p_document jsonb, p_pointer text) RETURNS text
+  canonical_ddl_sha256: b04e50c62cd21120ca0e6de2b5bea58fc1eb7338c319088fb45ea3d63c424cbd
+- signature: editorial.r6d_public_text_leaves_f9_v1(p_node jsonb, p_pointer text) RETURNS TABLE (json_pointer text, text_value
+    text)
+  canonical_ddl_sha256: 09f46a446fb3edce53f1ee4db67ad0031462f3da84193f22fb849eb308d4a359
+- signature: editorial.r6d_title_separator_f9_v1(p_character text) RETURNS boolean
+  canonical_ddl_sha256: 41812f98cb40b2cbeade8e94ab100b44b21f511d3f65eee3097d265e46273d2b
+- signature: editorial.r6d_title_tokens_f9_v1(p_text text) RETURNS TABLE (start_character integer, end_character integer,
+    token_text text)
+  canonical_ddl_sha256: c1f29a979183bc380320a75f99b17314a49ee66f917e769eff2fd23d146955f1
+- signature: editorial.r6d_title_token_f9_v1(p_value text) RETURNS boolean
+  canonical_ddl_sha256: ff1b86ac46ebd54196541a595d3714beeb6bef4e511783010f05d85e8b4c129e
+- signature: editorial.r6d_name_prefix_characters_f9_v1(p_value text) RETURNS integer
+  canonical_ddl_sha256: ca50b88ee8916eb64d7a57fce796f6f5766c094ecc1fa38cac286cf7c1981b8a
+- signature: editorial.r6d_utf16_units_f9_v1(p_value text) RETURNS integer
+  canonical_ddl_sha256: 2d07caa404aca56b23b5b2eaf1b7d8587ca1c9c352aee7a7bae51389bd5f7b23
+- signature: editorial.r6d_title_finding_f9_v1(p_pointer text, p_text text, p_start integer, p_length integer) RETURNS jsonb
+  canonical_ddl_sha256: a2f28e0c5c8f3d2ae6d3460370d2e4c36066e577972eb94ac4809ef86969c270
+- signature: editorial.r6d_title_lower_bound_findings_f9_v1(p_payload jsonb) RETURNS jsonb
+  canonical_ddl_sha256: f544e6010c6a1154469d5c9ceda0a98b8f0bf64a318c321b3fcc9d4300010813
+- signature: editorial.record_named_person_publication_assessment_v1(p_request jsonb) RETURNS jsonb
+  canonical_ddl_sha256: 9da504c1eeeec761bac230935766e5e89ee4d845b704c1ced15226bd3db054f6
+- signature: editorial.assert_r6d_publication_guard_v2(p_case_id uuid, p_review_snapshot_id uuid, p_publication_state
+    editorial.publication_state, p_public_payload jsonb, p_public_payload_sha256 char(64), p_guard_context text) RETURNS uuid
+  canonical_ddl_sha256: e37eebad90042009985f5f8a9e13a5dc4cda1a51277f72e5fc2b394e601b486a
+- signature: editorial.guard_r6d_case_publication_v2() RETURNS trigger
+  canonical_ddl_sha256: 57ce7929426c84aff5c46ca2c0b3245938bdc1f48ca0fff76c2948ec8ccfc565
+trigger_inventory:
+- statement: CREATE TRIGGER cases_r6d_publication_guard BEFORE UPDATE ON editorial.cases FOR EACH ROW EXECUTE PROCEDURE
+    editorial.guard_r6d_case_publication_v2()
+  canonical_ddl_sha256: b6ee3ad1498ba62d718968bb4258266a4a7863947345c86fccd9fbfbd4f43b1d
+index_inventory: []
+event_registry_contract:
+  statement: 0041 contains no ops.event_types upsert and no decision-marker registry block
+  exact_upsert_count: 0
+  events_in_order: []
+  forward_overrides: []
+  inherited_emit_dependencies: []
+privilege_contract:
+  owner_role: gurine_migrator owns all sixteen listed routines
+  public_execute_rule: PUBLIC EXECUTE is explicitly revoked from every listed routine
+  explicit_execute_grants:
+    editorial.list_r6d_invalid_public_slugs_v1():
+    - gurine_control_api
+    - gurine_auditor
+    editorial.record_named_person_publication_assessment_v1(jsonb):
+    - gurine_control_api
+    editorial.assert_r6d_publication_guard_v2(uuid,uuid,editorial.publication_state,jsonb,char(64),text):
+    - gurine_control_api
+  internal_routine_rule: all other routines are reached only through owner-controlled routine composition or the installed
+    trigger; 0041 grants them to no runtime role
+  relation_acl_rule: 0041 changes no relation privilege and grants no direct DML on an existing relation
+natural_person_guard_authority:
+  policy_version: r6d-named-person-publication-v2
+  detector_kinds:
+  - REGISTERED_PERSON_EXACT
+  - TITLE_ADJACENT_KOREAN_NAME
+  ambiguous_disposition: BLOCK_HUMAN_REVIEW
+  sql_lower_bound: TITLE_ADJACENT_KOREAN_NAME_ONLY
+  registered_exact_completeness: APPLICATION_KEY_REQUIRED_OUTSIDE_SQL_LOWER_BOUND
+  bounded_lower_bound_statement: SQL provides an independent mandatory lower bound over title-adjacent candidate span
+    coverage only; it appends a TITLE_ADJACENT_KOREAN_NAME finding when no application finding occupies that span, does not
+    require the persisted detector kind when another finding covers the span, and is not a complete application-scanner
+    replacement
+  registered_person_exact_statement: REGISTERED_PERSON_EXACT completeness is explicitly not claimed by 0041 SQL because
+    decrypting registered names requires application-held key authority; SQL checks the supplied span digest and digest-only
+    person binding independently, but cannot prove that the span text equals the bound registered person's name
+  identity_merge_rule: identity-merge use remains FORBIDDEN
+  finding_outcome_rule: zero persisted findings produces PASS; one or more persisted findings produces BLOCKED and marks legal
+    review required, while PREVIEW may retain that blocked assessment without a legal override
+known_fail_closed_boundaries:
+  registered_person_exact_completeness: NOT_CLAIMED; absence of a SQL-generated REGISTERED_PERSON_EXACT finding is not evidence
+    that the application-key-backed scan is complete or that no registered name occurs
+  lower_bound_limits: more than 10000 public-text leaves, a leaf over 1048576 UTF-8 bytes, or more than 10000 findings is
+    rejected rather than truncated or accepted
+  active_policy_selection: zero or multiple active v2 policy rows fail as missing or ambiguous authority
+  legacy_slug_validation: the NOT VALID constraint deliberately does not prove all pre-0041 slugs valid; operators can use the
+    explicitly granted inventory routine to enumerate invalid legacy values
+  event_emission: 0041 registers and emits no new event type; existing audit and publication receipt authority remains owned by
+    prior migrations
+verification_obligations:
+- pglast parses exactly 60 statements with one BEGIN first and one terminal COMMIT last
+- CREATE TABLE, CREATE VIEW, explicit index, and event-registry upsert inventories are all empty and relation_delta is zero
+- all 16 routine signatures, one trigger statement, and two altered-relation targets reproduce the current pglast inventory
+- migration_sha256, every canonical DDL hash, and object_inventory_sha256 reproduce from the current SQL bytes
+- PUBLIC EXECUTE is revoked from every listed routine and only the three exact runtime/audit entry points receive explicit
+  EXECUTE grants
+- the SQL title-adjacent candidate-span coverage is enforced as a bounded lower bound without claiming detector-kind
+  preservation or REGISTERED_PERSON_EXACT semantic-match completeness
+OPEN_QUESTIONS: []

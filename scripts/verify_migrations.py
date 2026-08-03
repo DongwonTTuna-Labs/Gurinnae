@@ -33,6 +33,7 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0038_r6d_legal_hardening.sql",
     "0039_r6d_authority_closure.sql",
     "0040_r6d_privacy_authority_closure.sql",
+    "0041_f9_natural_person_name_guard_closure.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS

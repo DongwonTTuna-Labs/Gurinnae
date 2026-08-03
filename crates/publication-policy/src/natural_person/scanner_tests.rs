@@ -113,6 +113,54 @@ fn unicode_normalization_cannot_hide_a_registered_or_title_adjacent_name() -> Te
 }
 
 #[test]
+fn test_only_zero_width_characters_cannot_hide_a_synthetic_name() -> TestResult {
+    for ignored in ['\u{200b}', '\u{feff}', '\u{00ad}'] {
+        for repeat in [1, 24] {
+            let obscured_name = format!("테{}스트인", ignored.to_string().repeat(repeat));
+            let registered_document = PublicTextNode::text(&obscured_name);
+            let registered_assessment =
+                scan_public_text(&registered_document, &[registered("테스트인")?])?;
+            assert_eq!(
+                registered_assessment.findings.len(),
+                1,
+                "U+{:04X} repeated {repeat} times",
+                ignored as u32
+            );
+
+            let titled_text = format!("대표이사 {obscured_name}은 답변함");
+            let titled_document = PublicTextNode::text(&titled_text);
+            let titled_assessment = scan_public_text(&titled_document, &[])?;
+            assert_eq!(
+                titled_assessment.findings.len(),
+                1,
+                "U+{:04X} repeated {repeat} times",
+                ignored as u32
+            );
+            assert_eq!(
+                titled_assessment.findings[0].basis,
+                NaturalPersonFindingBasis::TitleAdjacentKoreanName
+            );
+        }
+    }
+    Ok(())
+}
+
+#[test]
+fn test_only_quoted_title_and_synthetic_name_remain_adjacent() -> TestResult {
+    let document = PublicTextNode::text("「대표이사」 \"테스트인\"");
+    let assessment = scan_public_text(&document, &[])?;
+
+    assert_eq!(assessment.findings.len(), 1);
+    assert_eq!(assessment.findings[0].start_utf16, 8);
+    assert_eq!(assessment.findings[0].end_utf16, 12);
+    assert_eq!(
+        assessment.findings[0].basis,
+        NaturalPersonFindingBasis::TitleAdjacentKoreanName
+    );
+    Ok(())
+}
+
+#[test]
 fn exported_registered_name_normalization_is_the_scanner_canonical_form() -> TestResult {
     assert_eq!(canonical_registered_person_name(" 김·하 늘 "), "김하늘");
     let document = PublicTextNode::text("김하늘");
@@ -160,7 +208,7 @@ fn ruleset_digest_and_finding_wire_shape_are_versioned() -> TestResult {
     assert_eq!(NATURAL_PERSON_RULESET_VERSION, "ko-named-individual-v1");
     assert_eq!(
         natural_person_ruleset_sha256(),
-        "12cef82152a675eb9a7263c8cda984faa0da1ff676b0ff614db9437cf49d30fc"
+        "3b6449ab94c887b9b31ddb10481acfc132d4db29fcbadb394fa88c7305ec09c4"
     );
     let document = PublicTextNode::text("이현우 사장");
     let assessment = scan_public_text(&document, &[])?;

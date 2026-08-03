@@ -86,6 +86,29 @@ INSERT INTO public.case_revisions(
   '2025-01-02T00:00:00Z'
 );
 
+-- TEST_ONLY: persisted malformed content proves revision responses fail closed.
+INSERT INTO public.cases(
+  id,slug,title,public_state,latest_revision,summary,published_at,updated_at,source_freshness
+) VALUES (
+  'd9f90000-0000-4000-8000-000000000001','test-only-non-object-revision',
+  'TEST_ONLY 비객체 revision fixture','PUBLISHED_EXPLAINED',1,
+  'TEST_ONLY public projection persistence boundary fixture',
+  '2024-01-02T00:00:00Z','2024-01-02T00:00:00Z',
+  '{"asOf":"2024-01-02T00:00:00Z","status":"STALE"}'
+);
+
+WITH fixture(payload) AS (
+  VALUES ('{"content":"TEST_ONLY_NON_OBJECT_CONTENT"}'::jsonb)
+)
+INSERT INTO public.case_revisions(
+  case_id,revision,state,payload,payload_sha256,published_at
+)
+SELECT
+  'd9f90000-0000-4000-8000-000000000001',1,'PUBLISHED_EXPLAINED',payload,
+  encode(extensions.digest(ops.canonical_jsonb_v1(payload),'sha256'),'hex'),
+  '2024-01-02T00:00:00Z'
+FROM fixture;
+
 INSERT INTO public.corrections(id,case_id,source_revision,target_revision,summary,reason,published_at)
 VALUES('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee','dddddddd-dddd-4ddd-8ddd-dddddddddddd',1,2,'표기 정정','원자료 표기 확인','2026-07-12T01:00:00Z');
 

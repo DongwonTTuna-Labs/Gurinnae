@@ -96,6 +96,28 @@ INSERT INTO editorial.cases(id,public_slug,title,investigation_state,publication
 VALUES('cf321e0d-61f0-5c81-9d84-2a8087dd3a29','control-transition-guard-negative','Transition guard negative fixture','INVESTIGATING','NEVER_PUBLISHED','No response request is attached to this case','LOW',1)
 ON CONFLICT DO NOTHING;
 
+-- TEST_ONLY: a plainly synthetic Korean slug is staged only at the pre-F9
+-- upgrade boundary. Post-0041 fixture consumers skip it so they cannot bypass
+-- the forward NOT VALID constraint on newly inserted rows.
+DO $f9_legacy_slug_fixture$
+BEGIN
+  IF NOT EXISTS(
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='editorial.cases'::regclass
+      AND conname='cases_public_slug_f9_shape_ck'
+  ) THEN
+    INSERT INTO editorial.cases(
+      id,public_slug,title,investigation_state,publication_state,
+      summary,priority,version
+    ) VALUES(
+      'f9000000-0000-4000-8000-000000000001','테스트-가공인',
+      'TEST_ONLY legacy invalid slug case','INVESTIGATING','NEVER_PUBLISHED',
+      'TEST_ONLY synthetic fixture; not a natural person','LOW',1
+    ) ON CONFLICT DO NOTHING;
+  END IF;
+END
+$f9_legacy_slug_fixture$;
+
 INSERT INTO editorial.review_snapshots(id,case_id,case_version,snapshot_sha256,snapshot_payload,automated_gate_results,created_by)
 VALUES('04935ea9-f702-552c-aedc-425382a2d2b3','148b09d5-aa28-5351-b471-9ef333a3e410',1,repeat('1',64),'{}','{}','75cccee2-bca8-53c5-90d4-0949f63d8e52')
 ON CONFLICT DO NOTHING;

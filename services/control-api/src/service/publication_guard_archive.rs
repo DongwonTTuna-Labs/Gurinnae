@@ -6,6 +6,7 @@ pub(super) fn archive_publication_text_tree(
     object: &Map<String, Value>,
 ) -> Result<PublicTextNode<'_>, ServiceError> {
     let mut fields = Vec::new();
+    push_required_text(&mut fields, object, "slug")?;
     push_required_text(&mut fields, object, "title")?;
     push_required_text(&mut fields, object, "summary")?;
     push_required_text(&mut fields, object, "non_conclusion")?;
@@ -238,16 +239,18 @@ mod tests {
 
     #[test]
     fn archive_tree_covers_sections_data_and_all_public_prose_groups() {
+        // TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
         let payload = json!({
             "schema_version":"1.0.0",
+            "slug":"test-only-archive",
             "title":"계약 검토",
             "summary":"가상 자료",
             "non_conclusion":"확정 판단 아님",
             "sections":[{"heading":"확인 내용","blocks":[
-                {"type":"TABLE","text":null,"data":{"담당":"김민수 전 장관"}}
+                {"type":"TABLE","text":null,"data":{"담당":"테스트인 전 장관"}}
             ]}],
             "claims":[{"text_ko":"계약 사실"}],
-            "evidence":[{"summary":"공식 문서","public_excerpt":"김민수 서명", "source":{"locator":{"value":"3쪽"}}}],
+            "evidence":[{"summary":"공식 문서","public_excerpt":"테스트인 서명", "source":{"locator":{"value":"3쪽"}}}],
             "subjects":[{"display_name":"가상 기관"}],
             "methodology":{"limitations":["기간 한계"],"calculation":{"설명":"자료 비교"}},
             "responses":[{"party":"가상 기관","display_text":"추가 확인 중"}],
@@ -256,8 +259,13 @@ mod tests {
         });
         let object = payload.as_object().expect("archive object");
         let tree = archive_publication_text_tree(object).expect("archive text tree");
-        let registered = RegisteredPersonName::new("김민수").expect("registered person");
+        let registered = RegisteredPersonName::new("테스트인").expect("registered person");
         let assessment = scan_public_text(&tree, &[registered]).expect("archive scan");
+
+        assert_eq!(
+            assessment.public_text_sha256,
+            "cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9"
+        );
 
         assert!(assessment.findings.iter().any(|finding| {
             finding.path == "/sections/0/blocks/0/data/담당"
@@ -268,6 +276,26 @@ mod tests {
                 .findings
                 .iter()
                 .any(|finding| finding.path == "/evidence/0/public_excerpt")
+        );
+
+        let mut changed_slug_payload = payload;
+        changed_slug_payload["slug"] = json!("test-only-테스트인");
+        let changed_slug_object = changed_slug_payload
+            .as_object()
+            .expect("changed archive object");
+        let changed_slug_tree =
+            archive_publication_text_tree(changed_slug_object).expect("changed archive text tree");
+        let changed_registered =
+            RegisteredPersonName::new("테스트인").expect("changed registered person");
+        let changed_slug_assessment = scan_public_text(&changed_slug_tree, &[changed_registered])
+            .expect("changed archive scan");
+        assert!(changed_slug_assessment.findings.iter().any(|finding| {
+            finding.path == "/slug"
+                && finding.basis == NaturalPersonFindingBasis::RegisteredPersonExact
+        }));
+        assert_ne!(
+            assessment.public_text_sha256,
+            changed_slug_assessment.public_text_sha256
         );
     }
 }

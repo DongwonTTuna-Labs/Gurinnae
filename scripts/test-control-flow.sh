@@ -28,10 +28,12 @@ bash scripts/wait-postgres-container.sh "$container" "$database"
 r6d_legacy_boundary_migration="db/migrations/0038_r6d_legal_hardening.sql"
 r6d_authority_closure_migration="db/migrations/0039_r6d_authority_closure.sql"
 r6d_privacy_authority_closure_migration="db/migrations/0040_r6d_privacy_authority_closure.sql"
+r6d_f9_name_guard_closure_migration="db/migrations/0041_f9_natural_person_name_guard_closure.sql"
 for migration in db/migrations/*.sql; do
   if [[ "$migration" == "$r6d_legacy_boundary_migration" \
     || "$migration" == "$r6d_authority_closure_migration" \
-    || "$migration" == "$r6d_privacy_authority_closure_migration" ]]; then
+    || "$migration" == "$r6d_privacy_authority_closure_migration" \
+    || "$migration" == "$r6d_f9_name_guard_closure_migration" ]]; then
     continue
   fi
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
@@ -52,6 +54,10 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
 # forward-only privacy snapshot and legal-hold bindings.
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   <"$r6d_privacy_authority_closure_migration" >/dev/null
+# 0041 observes the legacy slug fixture, installs the NOT VALID check, and
+# closes the named-person scanner/DB lower-bound gap without rewriting it.
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  <"$r6d_f9_name_guard_closure_migration" >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
   -d "$database" < db/test-fixtures/r6d-approved-policy-authority.sql \
   >/dev/null

@@ -20,8 +20,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 40 ]]; then
-  printf 'expected exactly 40 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 41 ]]; then
+  printf 'expected exactly 41 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -39,6 +39,12 @@ done
 if [[ "$(basename "${migrations[39]}")" != \
   '0040_r6d_privacy_authority_closure.sql' ]]; then
   printf 'migration 0040 filename is not the R6d privacy authority closure\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[40]}")" != \
+  '0041_f9_natural_person_name_guard_closure.sql' ]]; then
+  printf 'migration 0041 filename is not the F9 natural-person name guard closure\n' >&2
   exit 1
 fi
 
@@ -64,6 +70,11 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[39]}" >/dev/null
 
+# Apply the F9 forward-only closure after 0040 has classified the committed
+# legacy rows.  This preserves the pre-0040 fixture boundary exactly.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" <"${migrations[40]}" >/dev/null
+
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
@@ -74,4 +85,4 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql
 
-printf 'R6d privacy authority closure PostgreSQL runtime: PASS\n'
+printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=41, final=0041)\n'

@@ -310,6 +310,12 @@ _R6D_INVENTORY_CONTRACTS = (
         '0040',
         0,
     ),
+    (
+        '0041_f9_natural_person_name_guard_closure.sql',
+        '0041-f9-natural-person-name-guard-closure.yaml',
+        '0041',
+        0,
+    ),
 )
 
 

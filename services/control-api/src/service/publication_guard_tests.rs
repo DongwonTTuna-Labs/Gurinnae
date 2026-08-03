@@ -8,21 +8,24 @@ use super::*;
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 fn payload() -> Value {
+    // TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
     json!({
         "publicationState":"PUBLISHED_ANOMALY",
+        "slug":"test-only-case",
         "title":"가상 계약 점검",
         "summary":"계약 자료 비교",
         "nonConclusion":"현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
         "agencyName":"가상시청",
         "contractName":"정보화 사업",
-        "claims":[{"text":"박민수 대표 관련 자료","limitations":["재직 기간 미확인"]}],
+        "claims":[{"text":"테스트인 대표 관련 자료","limitations":["재직 기간 미확인"]}],
         "evidence":[{
             "title":"계약서",
             "documentTitle":"계약 원문",
             "publisher":"가상시청",
+            "sourceUrl":"https://official.example/contracts/test-only-person",
             "pageAnchor":"3쪽",
             "sourceLocator":"https://official.example/contracts/1",
-            "publicExcerpt":"박민수 대표 서명"
+            "publicExcerpt":"테스트인 대표 서명"
         }],
         "responses":[{"partyName":"가상 주식회사","excerpt":"추가 확인 중"}]
     })
@@ -32,9 +35,18 @@ fn payload() -> Value {
 fn scanner_tree_covers_nested_public_text_without_scanning_internal_ids() -> TestResult {
     let payload = payload();
     let tree = publication_text_tree(&payload)?;
-    let registered = RegisteredPersonName::new("박민수")?;
+    let registered = RegisteredPersonName::new("테스트인")?;
     let assessment = scan_public_text(&tree, &[registered])?;
 
+    assert_eq!(public_text_leaf(&tree, "/slug")?, "test-only-case");
+    assert_eq!(
+        public_text_leaf(&tree, "/evidence/0/sourceUrl")?,
+        "https://official.example/contracts/test-only-person"
+    );
+    assert_eq!(
+        assessment.public_text_sha256,
+        "dc337255b4957ee87689575b67c32abc983cf2cbdd7891746abc248b1caf8eec"
+    );
     assert!(assessment.findings.iter().any(|finding| {
         finding.path == "/claims/0/text"
             && finding.basis == NaturalPersonFindingBasis::RegisteredPersonExact
@@ -50,6 +62,23 @@ fn scanner_tree_covers_nested_public_text_without_scanning_internal_ids() -> Tes
             .findings
             .iter()
             .all(|finding| !finding.path.contains("Id"))
+    );
+
+    let mut changed_slug = payload.clone();
+    changed_slug["slug"] = json!("test-only-case-changed");
+    let changed_slug_tree = publication_text_tree(&changed_slug)?;
+    assert_ne!(
+        assessment.public_text_sha256,
+        scan_public_text(&changed_slug_tree, &[])?.public_text_sha256
+    );
+
+    let mut changed_source_url = payload.clone();
+    changed_source_url["evidence"][0]["sourceUrl"] =
+        json!("https://official.example/contracts/test-only-person-changed");
+    let changed_source_url_tree = publication_text_tree(&changed_source_url)?;
+    assert_ne!(
+        assessment.public_text_sha256,
+        scan_public_text(&changed_source_url_tree, &[])?.public_text_sha256
     );
     Ok(())
 }
@@ -154,8 +183,8 @@ fn registered_person_set_and_finding_bindings_use_only_opaque_digests() -> TestR
         context_id: Uuid::parse_str("10000000-0000-4000-8000-000000000032")?,
         person_name_digest: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
             .to_owned(),
-        normalized_name: "박민수".to_owned(),
-        display_name: "박민수".to_owned(),
+        normalized_name: "테스트인".to_owned(),
+        display_name: "테스트인".to_owned(),
     };
     let payload = payload();
     let tree = publication_text_tree(&payload)?;
@@ -200,7 +229,7 @@ fn registered_person_set_and_finding_bindings_use_only_opaque_digests() -> TestR
     );
     assert_eq!(wire["findings"][0]["jsonPointer"], "/claims/0/text");
     assert_eq!(wire["findings"][0]["startUtf16"], 0);
-    assert_eq!(wire["findings"][0]["endUtf16"], 3);
+    assert_eq!(wire["findings"][0]["endUtf16"], 4);
     assert_eq!(
         wire["findings"][0]["contextId"],
         contexts[0].context_id.to_string()
@@ -244,10 +273,12 @@ fn duplicate_canonical_registered_person_names_fail_closed() -> TestResult {
 
 #[test]
 fn ambiguous_title_finding_has_no_person_identity_binding() -> TestResult {
+    // TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
     let payload = json!({
         "publicationState":"PUBLISHED_ANOMALY",
+        "slug":"test-only-case",
         "title":"계약 기록",
-        "summary":"대표이사 김하늘은 답변함",
+        "summary":"대표이사 테스트인은 답변함",
         "nonConclusion":"현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
         "claims":[],
         "evidence":[],
@@ -275,7 +306,7 @@ fn ambiguous_title_finding_has_no_person_identity_binding() -> TestResult {
     );
     assert_eq!(wire["findings"][0]["jsonPointer"], "/summary");
     assert_eq!(wire["findings"][0]["startUtf16"], 5);
-    assert_eq!(wire["findings"][0]["endUtf16"], 8);
+    assert_eq!(wire["findings"][0]["endUtf16"], 9);
     assert!(wire["findings"][0]["contextId"].is_null());
     Ok(())
 }

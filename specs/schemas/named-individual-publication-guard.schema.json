@@ -28,7 +28,7 @@
           "const": "ko-named-individual-v1"
         },
         "rulesetSha256": {
-          "const": "12cef82152a675eb9a7263c8cda984faa0da1ff676b0ff614db9437cf49d30fc"
+          "const": "3b6449ab94c887b9b31ddb10481acfc132d4db29fcbadb394fa88c7305ec09c4"
         },
         "publicTextSha256": {
           "$ref": "common.schema.json#/$defs/sha256"
