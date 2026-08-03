@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.kill_switches SET state='INACTIVE',deactivated_by=$2,deactivated_at=clock_timestamp(),updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "150757988b9301bb340fdb96274e9ae65477e6124745bfd23affbda2aa5a36e8"
+}

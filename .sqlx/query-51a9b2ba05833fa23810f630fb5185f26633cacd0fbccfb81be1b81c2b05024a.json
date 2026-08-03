@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',s.id,'signalType',s.signal_type,'severity',s.severity,'status',s.status::text,'score',s.score,'version',s.version,'linkedAt',cs.linked_at) ORDER BY cs.linked_at DESC),'[]'::jsonb) FROM editorial.case_signals cs JOIN core.anomaly_signals s ON s.id=cs.signal_id WHERE cs.case_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "51a9b2ba05833fa23810f630fb5185f26633cacd0fbccfb81be1b81c2b05024a"
+}

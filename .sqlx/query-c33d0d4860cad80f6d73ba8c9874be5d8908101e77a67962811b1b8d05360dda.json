@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'status',status,'format',format,'scope',scope, 'from',from_at,'to',to_at,'objectType',object_type,'objectId',object_id, 'watermarkPolicy',watermark_policy,'createdAt',created_at,'startedAt',started_at, 'completedAt',completed_at,'expiresAt',expires_at,'rowCount',row_count, 'contentSha256',content_sha256,'downloadUrl',NULL::text, 'failureCode',failure_code,'links','[]'::jsonb) FROM ops.audit_exports WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c33d0d4860cad80f6d73ba8c9874be5d8908101e77a67962811b1b8d05360dda"
+}

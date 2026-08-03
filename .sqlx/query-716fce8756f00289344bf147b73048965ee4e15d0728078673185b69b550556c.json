@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_appeal_queue_v1()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_appeal_queue_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "716fce8756f00289344bf147b73048965ee4e15d0728078673185b69b550556c"
+}

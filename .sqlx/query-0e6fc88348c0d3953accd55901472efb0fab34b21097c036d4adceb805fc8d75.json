@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.cases SET investigation_state=$2::editorial.investigation_state WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "editorial.investigation_state",
+            "kind": {
+              "Enum": [
+                "SIGNAL_DETECTED",
+                "TRIAGE",
+                "INVESTIGATING",
+                "AWAITING_RESPONSE",
+                "EDITORIAL_REVIEW",
+                "LEGAL_REVIEW",
+                "READY_TO_PUBLISH",
+                "CLOSED"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0e6fc88348c0d3953accd55901472efb0fab34b21097c036d4adceb805fc8d75"
+}

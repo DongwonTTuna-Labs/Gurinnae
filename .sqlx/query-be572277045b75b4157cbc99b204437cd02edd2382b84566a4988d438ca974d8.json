@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.append_audit_event($1,'USER',$2,$3,$4,'AgentSuggestion',$5,'agents.review','SUCCESS',$6,$7,$8)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "append_audit_event",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "be572277045b75b4157cbc99b204437cd02edd2382b84566a4988d438ca974d8"
+}

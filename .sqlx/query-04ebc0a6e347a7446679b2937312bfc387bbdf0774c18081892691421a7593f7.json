@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.role_change_proposals(id,role_id,add_capabilities, remove_capabilities,reason,status,proposed_by) VALUES($1,$2,$3,$4,$5,'REVIEW',$6)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb",
+        "Jsonb",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "04ebc0a6e347a7446679b2937312bfc387bbdf0774c18081892691421a7593f7"
+}

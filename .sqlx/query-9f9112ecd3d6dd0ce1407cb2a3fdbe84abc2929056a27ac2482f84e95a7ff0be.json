@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.review_decisions(review_snapshot_id,reviewer_id,decision, reason,criteria,reviewer_independence,reauth_context_hash) VALUES($1,$2,$3::editorial.review_decision,$4,$5,$6,$7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "editorial.review_decision",
+            "kind": {
+              "Enum": [
+                "APPROVE",
+                "REJECT",
+                "CHANGES_REQUIRED"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Jsonb",
+        "Jsonb",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9f9112ecd3d6dd0ce1407cb2a3fdbe84abc2929056a27ac2482f84e95a7ff0be"
+}

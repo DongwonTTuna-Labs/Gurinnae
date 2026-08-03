@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.rule_evaluations(id,rule_version_id,dataset_snapshot_id, evaluation_profile,status,requested_by,reason) VALUES($1,$2,$3,'SHADOW','QUEUED',$4,$5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dfe63b1e069be68fefaf725419c743647d29ae7a3aa8e4c6e94fe289d50318ac"
+}

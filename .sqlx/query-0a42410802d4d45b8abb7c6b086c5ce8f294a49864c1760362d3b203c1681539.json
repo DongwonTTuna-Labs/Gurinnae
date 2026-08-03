@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.response_requests SET recipient_email_hash=COALESCE($2,recipient_email_hash), recipient_email_encrypted=COALESCE($3,recipient_email_encrypted), questions=COALESCE($4,questions),due_at=COALESCE($5,due_at), requested_publication_scope=COALESCE($6,requested_publication_scope) WHERE id=$1 AND status='DRAFT'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bytea",
+        "Jsonb",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0a42410802d4d45b8abb7c6b086c5ce8f294a49864c1760362d3b203c1681539"
+}

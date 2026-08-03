@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_versions SET status=$2,effective_at=$3, activation_evaluation_digest=$4,activation_rollout=$5,activation_reason=$6 WHERE id=$1 AND status IN ('DRAFT','SHADOW','SCHEDULED')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Bpchar",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e3afbf371d294536c785074f15918c043facc91baafae2d9a293cdceab410309"
+}

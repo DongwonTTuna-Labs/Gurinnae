@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',u.id,'email',u.email,'displayName',u.display_name,'status',u.status,'rolesVersion',COALESCE((SELECT max(ur.version) FROM ops.user_roles ur WHERE ur.user_id=u.id AND ur.revoked_at IS NULL),0),'version',u.version,'lastLoginAt',u.last_login_at) ORDER BY u.display_name),'[]'::jsonb) FROM ops.users u",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5d9ecdaaaa27f477e4ffaf47acfca5aba788ce1aaf5aa65ab80b948b0be16383"
+}

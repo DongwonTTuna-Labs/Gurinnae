@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_incident_v1($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_incident_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e7bb61d50856cd9642ee38d23730a58b17d7b60ce651e12883891e889130e458"
+}

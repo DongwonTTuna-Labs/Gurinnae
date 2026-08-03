@@ -1,0 +1,160 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,transaction_kind,nonce_hash,pkce_verifier_encrypted,safe_return_to,session_id, action_context,action_digest,idempotency_key_sha256,issuer_url,redirect_uri,expires_at FROM ops.oidc_transactions WHERE state_hash=$1 AND consumed_at IS NULL AND expires_at>clock_timestamp() FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "transaction_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "transaction_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "nonce_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "nonce_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "pkce_verifier_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "pkce_verifier_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "safe_return_to",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "safe_return_to"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "session_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "action_context",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "action_context"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "action_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "action_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "idempotency_key_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "idempotency_key_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "issuer_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "issuer_url"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "redirect_uri",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "redirect_uri"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.oidc_transactions",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "245d074d3be2e80a345be30c9d3a4fa3683f9ed81c26ce4607af0020b9d68b3e"
+}

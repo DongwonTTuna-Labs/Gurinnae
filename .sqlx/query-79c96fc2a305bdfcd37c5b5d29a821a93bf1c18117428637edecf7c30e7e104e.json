@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_execution_receipt_v1($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_execution_receipt_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "79c96fc2a305bdfcd37c5b5d29a821a93bf1c18117428637edecf7c30e7e104e"
+}

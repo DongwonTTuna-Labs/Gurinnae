@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.tasks SET title=$3,status=$4,priority=$5, assignee_user_id=COALESCE($6,assignee_user_id),assigned_by=$7, assignment_reason=COALESCE($8,assignment_reason), completed_at=CASE WHEN $4='DONE' THEN clock_timestamp() ELSE NULL END WHERE task_type=$1 AND object_type=$1 AND object_id=$2 AND status<>'CANCELLED'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e3e7d4fd7a1cd700b9b1131ef08cd528fc674e8f49e28803f8e99ab4a052d897"
+}

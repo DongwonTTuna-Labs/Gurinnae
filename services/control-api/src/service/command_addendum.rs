@@ -1,12 +1,12 @@
 #[derive(sqlx::FromRow)]
 struct AddendumCommandRow {
-    aggregate_id: Uuid,
-    aggregate_version: i64,
-    status: String,
-    accepted_at: OffsetDateTime,
-    response_body: Value,
-    receipt_digest: String,
-    audit_event_id: Uuid,
+    aggregate_id: Option<Uuid>,
+    aggregate_version: Option<i64>,
+    status: Option<String>,
+    accepted_at: Option<OffsetDateTime>,
+    response_body: Option<Value>,
+    receipt_digest: Option<String>,
+    audit_event_id: Option<Uuid>,
     outbox_event_id: Option<Uuid>,
 }
 
@@ -30,42 +30,51 @@ async fn addendum_command(
     }
     let mut payload = prepare_addendum_payload(operation, request, field_keys, payload)?;
     bind_actor_assertion_fields(operation, claims, &key, &mut payload);
-    let row = sqlx::query_as::<_, AddendumCommandRow>(
+    let row = sqlx::query_as!(
+        AddendumCommandRow,
         "SELECT aggregate_id,aggregate_version,status,accepted_at,response_body,receipt_digest,audit_event_id,outbox_event_id \
          FROM ops.apply_control_addendum_command($1,$2,$3,$4,$5,$6,$7)",
+        operation.id,
+        &payload,
+        actor_id,
+        session_id,
+        request_id,
+        &key.key_hash,
+        &key.request_hash,
     )
-    .bind(operation.id)
-    .bind(&payload)
-    .bind(actor_id)
-    .bind(session_id)
-    .bind(request_id)
-    .bind(&key.key_hash)
-    .bind(&key.request_hash)
     .fetch_one(&mut *transaction)
     .await
     .map_err(|error| {
         tracing::error!(operation = operation.id, error = %error, "addendum owner command failed");
         db(error)
     })?;
+    let aggregate_id = required_sqlx_value(row.aggregate_id)?;
+    let aggregate_version = required_sqlx_value(row.aggregate_version)?;
+    let status = required_sqlx_value(row.status)?;
+    let accepted_at = required_sqlx_value(row.accepted_at)?;
+    let response_body = required_sqlx_value(row.response_body)?;
+    let receipt_digest = required_sqlx_value(row.receipt_digest)?;
+    let audit_event_id = required_sqlx_value(row.audit_event_id)?;
     let _persisted_receipt_metadata = (
-        row.aggregate_version,
-        &row.status,
-        row.accepted_at,
-        &row.receipt_digest,
-        row.audit_event_id,
+        aggregate_version,
+        &status,
+        accepted_at,
+        &receipt_digest,
+        audit_event_id,
         row.outbox_event_id,
     );
-    let response = response_for(operation, &row.response_body)?;
-    sqlx::query(
+    let response = response_for(operation, &response_body)?;
+    sqlx::query!(
         "UPDATE ops.idempotency_keys SET response_status=$3,response_body=$4,resource_type=$5,resource_id=$6 \
          WHERE scope=$1 AND key_hash=$2",
+        &key.scope,
+        &key.key_hash,
+        i32::from(operation.success_status),
+        &response,
+        gurine_api_contracts::addendum::persistence_owner(operation.id)
+            .ok_or(ServiceError::Persistence)?,
+        aggregate_id.to_string(),
     )
-    .bind(&key.scope)
-    .bind(&key.key_hash)
-    .bind(i32::from(operation.success_status))
-    .bind(&response)
-    .bind(gurine_api_contracts::addendum::persistence_owner(operation.id).ok_or(ServiceError::Persistence)?)
-    .bind(row.aggregate_id.to_string())
     .execute(&mut *transaction)
     .await
     .map_err(db)?;

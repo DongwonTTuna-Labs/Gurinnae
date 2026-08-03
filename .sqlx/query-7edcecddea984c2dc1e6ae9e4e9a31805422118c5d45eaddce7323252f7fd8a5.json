@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_cost_export_projection_v1($1::timestamptz, $2::timestamptz, $3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_cost_export_projection_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7edcecddea984c2dc1e6ae9e4e9a31805422118c5d45eaddce7323252f7fd8a5"
+}

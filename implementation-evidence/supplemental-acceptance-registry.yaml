@@ -87,8 +87,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "17016bc24f9f9b22f51b9855e0e9bafccddca3260e0d633cbdce96ab2f142ce2",
-      "size": 14003
+      "sha256": "aefe60cdbfa41dbce48d28a524285d81b4a93d1e2cad37ba31c4fb5a4591553a",
+      "size": 14134
     },
     {
       "path": "infra/images.lock",

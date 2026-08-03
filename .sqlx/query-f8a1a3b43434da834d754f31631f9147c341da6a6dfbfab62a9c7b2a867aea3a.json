@@ -1,0 +1,120 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT e.id,e.title,e.evidence_type,e.source_url,e.source_locator,e.content_sha256, e.redacted_public_excerpt,e.classification::text classification,e.verification_status FROM editorial.evidence e WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) ORDER BY array_position($2::uuid[],e.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "evidence_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "evidence_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "source_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "source_url"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "source_locator",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "source_locator"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "redacted_public_excerpt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "redacted_public_excerpt"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "classification",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "verification_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "verification_status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      null,
+      false
+    ]
+  },
+  "hash": "f8a1a3b43434da834d754f31631f9147c341da6a6dfbfab62a9c7b2a867aea3a"
+}

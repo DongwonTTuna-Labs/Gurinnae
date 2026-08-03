@@ -1,0 +1,66 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT title,summary,investigation_state::text investigation_state, publication_state::text publication_state,version FROM editorial.cases WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "investigation_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "publication_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "version"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      null,
+      null,
+      false
+    ]
+  },
+  "hash": "091ce80a7a26d2d39d05ecfaf47f96e05aea1d07f4d2c1c36368ddf4c698dc5c"
+}

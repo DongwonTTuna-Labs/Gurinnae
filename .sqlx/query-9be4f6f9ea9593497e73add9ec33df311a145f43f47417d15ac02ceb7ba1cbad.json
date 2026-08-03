@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.idempotency_keys(scope,key_hash,request_hash,expires_at) VALUES($1,$2,$3,clock_timestamp()+interval '24 hours') ON CONFLICT(scope,key_hash) DO UPDATE SET request_hash=EXCLUDED.request_hash,response_status=NULL,response_body=NULL, resource_type=NULL,resource_id=NULL,created_at=clock_timestamp(), expires_at=EXCLUDED.expires_at WHERE ops.idempotency_keys.expires_at<=clock_timestamp()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9be4f6f9ea9593497e73add9ec33df311a145f43f47417d15ac02ceb7ba1cbad"
+}

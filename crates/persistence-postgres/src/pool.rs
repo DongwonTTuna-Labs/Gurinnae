@@ -25,8 +25,7 @@ pub async fn connect(config: &PoolConfig) -> Result<PgPool, PoolError> {
         .connect(&config.database_url)
         .await
         .map_err(PoolError::Connect)?;
-    sqlx::query("SELECT 1")
-        .execute(&pool)
+    sqlx::Executor::execute(&pool, sqlx::query_scalar!("SELECT 1"))
         .await
         .map_err(PoolError::Readiness)?;
     Ok(pool)

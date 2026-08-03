@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority, assignee_user_id,due_at,assigned_by,assignment_reason) VALUES('ACCESS_REVIEW','ACCESS_REVIEW',$1,'Access review','OPEN','HIGH',$2,$3,$4,$5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "af7f882bce8949e687a3672137131de7e568b39807f959e5d289b66973b8aaf2"
+}

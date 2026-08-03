@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',id,'caseId',case_id,'sourceRevision',source_revision, 'targetRevision',target_revision,'summary',summary,'reason',reason,'affectedClaimIds', affected_claim_ids,'replacementContent',replacement_content,'status',status, 'assignedUserId',assigned_user_id,'resolution',resolution,'version',version) FROM editorial.corrections WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "51fa15903e5710216f8db46d53431760fe68d45b36f430e8c195ee0d22baf718"
+}

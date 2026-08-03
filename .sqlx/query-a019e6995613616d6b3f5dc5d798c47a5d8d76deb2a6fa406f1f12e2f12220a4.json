@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.cases SET lead_investigator_id=$2 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a019e6995613616d6b3f5dc5d798c47a5d8d76deb2a6fa406f1f12e2f12220a4"
+}

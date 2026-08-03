@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.agent_suggestions SET status='ACCEPTED',decision_reason=$2,decided_by=$3,decided_at=clock_timestamp(),version=version+1,decision_kind='ACCEPT',decision_sha256=CAST($4 AS char(64)),decision_audit_event_id=$5,materialized_target_type='ACTION_PROPOSAL_DRAFT',materialized_target_id=$6,materialized_target_version=1,materialized_target_digest=CAST($7 AS char(64)),materialized_action_proposal_id=$6,materialization_receipt_sha256=CAST($8 AS char(64)) WHERE id=$1 AND version=$9",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Uuid",
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d71944ce2f9b5337a4af340b87bdef194b9af9ad902e43636ffebbe39aca52ad"
+}

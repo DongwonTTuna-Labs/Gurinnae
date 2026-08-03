@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('historicalRuns',count(*),'historicalRecords', COALESCE(sum(records_seen),0),'historicalChanges',COALESCE(sum(records_changed),0)) FROM ops.source_runs WHERE source_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "92ac37396a4a1827886934b208a761ac0c5b1932227061803df0483b2e259aad"
+}

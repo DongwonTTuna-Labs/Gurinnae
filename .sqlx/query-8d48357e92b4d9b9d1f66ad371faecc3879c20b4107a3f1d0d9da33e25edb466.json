@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_versions SET status='ACTIVE',effective_at=clock_timestamp(), retired_at=NULL WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8d48357e92b4d9b9d1f66ad371faecc3879c20b4107a3f1d0d9da33e25edb466"
+}

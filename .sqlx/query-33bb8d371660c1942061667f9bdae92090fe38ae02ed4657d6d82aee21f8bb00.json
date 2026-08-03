@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM editorial.claim_evidence WHERE claim_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "33bb8d371660c1942061667f9bdae92090fe38ae02ed4657d6d82aee21f8bb00"
+}

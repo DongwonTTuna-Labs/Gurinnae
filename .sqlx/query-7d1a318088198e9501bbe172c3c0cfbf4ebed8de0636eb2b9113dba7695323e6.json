@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.hypothesis_evidence(hypothesis_id,evidence_id,relation,added_by) VALUES($1,$2,$3,$4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7d1a318088198e9501bbe172c3c0cfbf4ebed8de0636eb2b9113dba7695323e6"
+}

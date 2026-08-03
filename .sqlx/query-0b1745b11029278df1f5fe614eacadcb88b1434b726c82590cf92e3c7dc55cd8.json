@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.publication_revisions(case_id,revision,state,review_snapshot_id, public_payload,public_payload_sha256,preview_sha256,published_by,supersedes_revision,reason) VALUES($1,$2,$3::editorial.publication_state,$4,$5,$6,$7,$8,$9,$10)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        {
+          "Custom": {
+            "name": "editorial.publication_state",
+            "kind": {
+              "Enum": [
+                "NEVER_PUBLISHED",
+                "PUBLISHED_ANOMALY",
+                "PUBLISHED_EXPLAINED",
+                "OFFICIALLY_CONFIRMED",
+                "CORRECTED",
+                "RETRACTED",
+                "TEMPORARILY_RESTRICTED"
+              ]
+            }
+          }
+        },
+        "Uuid",
+        "Jsonb",
+        "Bpchar",
+        "Bpchar",
+        "Uuid",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0b1745b11029278df1f5fe614eacadcb88b1434b726c82590cf92e3c7dc55cd8"
+}

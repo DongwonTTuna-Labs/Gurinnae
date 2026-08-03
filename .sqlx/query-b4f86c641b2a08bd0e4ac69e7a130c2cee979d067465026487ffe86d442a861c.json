@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority, assignee_user_id,assigned_by,assignment_reason,completed_at) VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8, CASE WHEN $4='DONE' THEN clock_timestamp() ELSE NULL END)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Uuid",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b4f86c641b2a08bd0e4ac69e7a130c2cee979d067465026487ffe86d442a861c"
+}

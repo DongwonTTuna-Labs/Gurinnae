@@ -68,13 +68,13 @@ pub(super) async fn lock_schema_mapping(
     decision: &SchemaMappingDecision,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<Option<String>, ServiceError> {
-    let candidates = sqlx::query(
+    let candidates = sqlx::query!(
         "SELECT mapping_version,mapping_digest,status FROM ops.schema_mappings \
          WHERE schema_drift_id=$1 AND (mapping_version=$2 OR mapping_digest=$3) FOR UPDATE",
+        decision.drift,
+        decision.mapping_version,
+        &decision.digest,
     )
-    .bind(decision.drift)
-    .bind(decision.mapping_version)
-    .bind(&decision.digest)
     .fetch_all(&mut **tx)
     .await
     .map_err(db)?;
@@ -84,16 +84,12 @@ pub(super) async fn lock_schema_mapping(
     let Some(row) = candidates.first() else {
         return Ok(None);
     };
-    let version = row.try_get::<i32, _>("mapping_version").map_err(db)?;
-    let digest = row
-        .try_get::<String, _>("mapping_digest")
-        .map_err(db)?
-        .trim()
-        .to_owned();
+    let version = row.mapping_version;
+    let digest = row.mapping_digest.trim().to_owned();
     if version != decision.mapping_version || digest != decision.digest {
         return Err(ServiceError::VersionConflict);
     }
-    row.try_get::<String, _>("status").map(Some).map_err(db)
+    Ok(Some(row.status.clone()))
 }
 
 pub(super) async fn approve_schema_mapping(
@@ -118,17 +114,17 @@ pub(super) async fn insert_approved_schema_mapping(
         .field_mappings
         .as_ref()
         .ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.schema_mappings(schema_drift_id,mapping_version,mapping_digest, \
          field_mappings,status,proposed_by,decided_by,decision_reason,decided_at) \
          VALUES($1,$2,$3,$4,'APPROVED',$5,$5,$6,clock_timestamp())",
+        decision.drift,
+        decision.mapping_version,
+        &decision.digest,
+        field_mappings,
+        actor,
+        &decision.reason,
     )
-    .bind(decision.drift)
-    .bind(decision.mapping_version)
-    .bind(&decision.digest)
-    .bind(field_mappings)
-    .bind(actor)
-    .bind(&decision.reason)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -144,17 +140,17 @@ pub(super) async fn update_approved_schema_mapping(
         .field_mappings
         .as_ref()
         .ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.schema_mappings SET field_mappings=$4,status='APPROVED',decided_by=$5, \
          decision_reason=$6,decided_at=clock_timestamp() WHERE schema_drift_id=$1 \
          AND mapping_version=$2 AND mapping_digest=$3 AND status='DRAFT'",
+        decision.drift,
+        decision.mapping_version,
+        &decision.digest,
+        field_mappings,
+        actor,
+        &decision.reason,
     )
-    .bind(decision.drift)
-    .bind(decision.mapping_version)
-    .bind(&decision.digest)
-    .bind(field_mappings)
-    .bind(actor)
-    .bind(&decision.reason)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -177,16 +173,16 @@ pub(super) async fn reject_schema_mapping(
         Some("DRAFT") => {}
         Some(_) => return Err(ServiceError::VersionConflict),
     }
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.schema_mappings SET status='REJECTED',decided_by=$4, \
          decision_reason=$5,decided_at=clock_timestamp() WHERE schema_drift_id=$1 \
          AND mapping_version=$2 AND mapping_digest=$3 AND status='DRAFT'",
+        decision.drift,
+        decision.mapping_version,
+        &decision.digest,
+        actor,
+        &decision.reason,
     )
-    .bind(decision.drift)
-    .bind(decision.mapping_version)
-    .bind(&decision.digest)
-    .bind(actor)
-    .bind(&decision.reason)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -203,14 +199,15 @@ pub(super) async fn finish_schema_drift_decision(
     status: &str,
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    let changed =
-        sqlx::query("UPDATE ops.schema_drifts SET status=$2 WHERE id=$1 AND status='OPEN'")
-            .bind(drift)
-            .bind(status)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?
-            .rows_affected();
+    let changed = sqlx::query!(
+        "UPDATE ops.schema_drifts SET status=$2 WHERE id=$1 AND status='OPEN'",
+        drift,
+        status,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed == 1 {
         Ok(())
     } else {
@@ -224,11 +221,13 @@ pub(super) async fn replace_claim_relations(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     if let Some(values) = payload.get("evidenceIds") {
-        sqlx::query("DELETE FROM editorial.claim_evidence WHERE claim_id=$1")
-            .bind(claim)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?;
+        sqlx::query!(
+            "DELETE FROM editorial.claim_evidence WHERE claim_id=$1",
+            claim,
+        )
+        .execute(&mut **tx)
+        .await
+        .map_err(db)?;
         let ids = values
             .as_array()
             .ok_or(ServiceError::InvalidRequest)?
@@ -241,37 +240,39 @@ pub(super) async fn replace_claim_relations(
             })
             .collect::<Result<Vec<_>, _>>()?;
         for (index, evidence) in ids.into_iter().enumerate() {
-            sqlx::query(
+            sqlx::query!(
                 "INSERT INTO editorial.claim_evidence(claim_id,evidence_id,citation_label, \
                  citation_order,supports) VALUES($1,$2,$3,$4,'FACT')",
+                claim,
+                evidence,
+                format!("E{}", index + 1),
+                i32::try_from(index + 1).map_err(|_| ServiceError::InvalidRequest)?,
             )
-            .bind(claim)
-            .bind(evidence)
-            .bind(format!("E{}", index + 1))
-            .bind(i32::try_from(index + 1).map_err(|_| ServiceError::InvalidRequest)?)
             .execute(&mut **tx)
             .await
             .map_err(db)?;
         }
     }
     if let Some(values) = payload.get("responseIds") {
-        sqlx::query("DELETE FROM editorial.claim_responses WHERE claim_id=$1")
-            .bind(claim)
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?;
+        sqlx::query!(
+            "DELETE FROM editorial.claim_responses WHERE claim_id=$1",
+            claim,
+        )
+        .execute(&mut **tx)
+        .await
+        .map_err(db)?;
         let ids = values.as_array().ok_or(ServiceError::InvalidRequest)?;
         for response in ids {
             let response = response
                 .as_str()
                 .and_then(|value| Uuid::parse_str(value).ok())
                 .ok_or(ServiceError::InvalidRequest)?;
-            sqlx::query(
+            sqlx::query!(
                 "INSERT INTO editorial.claim_responses(claim_id,response_id,relation) \
                  VALUES($1,$2,'RESPONDS')",
+                claim,
+                response,
             )
-            .bind(claim)
-            .bind(response)
             .execute(&mut **tx)
             .await
             .map_err(db)?;
@@ -287,14 +288,14 @@ pub(super) async fn enqueue_runtime_job(
     payload: Value,
     dedupe_key: String,
 ) -> Result<(), ServiceError> {
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) \
          VALUES($1,$2,$3,$4,8)",
+        job_type,
+        queue,
+        payload,
+        dedupe_key,
     )
-    .bind(job_type)
-    .bind(queue)
-    .bind(payload)
-    .bind(dedupe_key)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -316,40 +317,40 @@ pub(super) async fn upsert_task(
     actor: Uuid,
     reason: Option<&str>,
 ) -> Result<(), ServiceError> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.tasks SET title=$3,status=$4,priority=$5, \
          assignee_user_id=COALESCE($6,assignee_user_id),assigned_by=$7, \
          assignment_reason=COALESCE($8,assignment_reason), \
          completed_at=CASE WHEN $4='DONE' THEN clock_timestamp() ELSE NULL END \
          WHERE task_type=$1 AND object_type=$1 AND object_id=$2 AND status<>'CANCELLED'",
+        task_type,
+        object_id,
+        title,
+        status,
+        priority,
+        assignee,
+        actor,
+        reason,
     )
-    .bind(task_type)
-    .bind(object_id)
-    .bind(title)
-    .bind(status)
-    .bind(priority)
-    .bind(assignee)
-    .bind(actor)
-    .bind(reason)
     .execute(&mut **tx)
     .await
     .map_err(db)?
     .rows_affected();
     if changed == 0 {
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority, \
              assignee_user_id,assigned_by,assignment_reason,completed_at) \
              VALUES($1,$1,$2,$3,$4,$5,$6,$7,$8, \
              CASE WHEN $4='DONE' THEN clock_timestamp() ELSE NULL END)",
+            task_type,
+            object_id,
+            title,
+            status,
+            priority,
+            assignee,
+            actor,
+            reason,
         )
-        .bind(task_type)
-        .bind(object_id)
-        .bind(title)
-        .bind(status)
-        .bind(priority)
-        .bind(assignee)
-        .bind(actor)
-        .bind(reason)
         .execute(&mut **tx)
         .await
         .map_err(db)?;
@@ -368,11 +369,13 @@ pub(super) async fn replace_hypothesis_relations(
     {
         return Ok(());
     }
-    sqlx::query("DELETE FROM editorial.hypothesis_evidence WHERE hypothesis_id=$1")
-        .bind(hypothesis)
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?;
+    sqlx::query!(
+        "DELETE FROM editorial.hypothesis_evidence WHERE hypothesis_id=$1",
+        hypothesis,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
     for (key, relation) in [
         ("supportingEvidenceIds", "SUPPORTS"),
         ("contradictingEvidenceIds", "CONTRADICTS"),
@@ -383,14 +386,14 @@ pub(super) async fn replace_hypothesis_relations(
                     .as_str()
                     .and_then(|value| Uuid::parse_str(value).ok())
                     .ok_or(ServiceError::InvalidRequest)?;
-                sqlx::query(
+                sqlx::query!(
                     "INSERT INTO editorial.hypothesis_evidence(hypothesis_id,evidence_id,relation,added_by) \
                      VALUES($1,$2,$3,$4)",
+                    hypothesis,
+                    evidence,
+                    relation,
+                    actor,
                 )
-                .bind(hypothesis)
-                .bind(evidence)
-                .bind(relation)
-                .bind(actor)
                 .execute(&mut **tx)
                 .await
                 .map_err(db)?;

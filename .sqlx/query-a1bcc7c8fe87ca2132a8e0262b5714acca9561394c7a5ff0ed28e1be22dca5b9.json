@@ -1,0 +1,97 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT usage_root_fact_id, usage_fact_id, usage_fact_digest, meter_kind::text,\n                period_start, period_end, measurement_state::text,\n                membership_kind::text, current_invoice_id, current_membership_digest,\n                blocker_code\n           FROM ops.read_invoice_membership_v1($1,$2,$3,$4,$5)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "usage_root_fact_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "usage_fact_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "usage_fact_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "meter_kind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "period_start",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "period_end",
+        "type_info": "Date",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "measurement_state",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "membership_kind",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "current_invoice_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "current_membership_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "blocker_code",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Date",
+        "Date",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a1bcc7c8fe87ca2132a8e0262b5714acca9561394c7a5ff0ed28e1be22dca5b9"
+}

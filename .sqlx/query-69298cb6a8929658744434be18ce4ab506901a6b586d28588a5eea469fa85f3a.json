@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_versions SET status='ROLLED_BACK',retired_at=clock_timestamp(), activation_reason=$2 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "69298cb6a8929658744434be18ce4ab506901a6b586d28588a5eea469fa85f3a"
+}

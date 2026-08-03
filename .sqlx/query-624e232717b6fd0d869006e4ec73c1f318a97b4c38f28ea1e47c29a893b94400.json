@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT selected_job_ids FROM ops.job_query_snapshots WHERE id=$1 AND actor_user_id=$2 AND expires_at>clock_timestamp()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "selected_job_ids",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "ops.job_query_snapshots",
+            "name": "selected_job_ids"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "624e232717b6fd0d869006e4ec73c1f318a97b4c38f28ea1e47c29a893b94400"
+}

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.users SET status='DISABLED' WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7f00b2a5018f3d337041fa2a404826a7450d39cde6f2b283c68e47d893f2ccf6"
+}

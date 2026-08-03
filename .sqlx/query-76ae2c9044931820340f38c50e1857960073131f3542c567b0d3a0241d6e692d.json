@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.claim_responses(claim_id,response_id,relation) VALUES($1,$2,'RESPONDS')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "76ae2c9044931820340f38c50e1857960073131f3542c567b0d3a0241d6e692d"
+}

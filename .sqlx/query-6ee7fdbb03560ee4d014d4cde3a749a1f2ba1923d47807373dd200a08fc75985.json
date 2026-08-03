@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT public_excerpt FROM editorial.responses WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_excerpt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.responses",
+            "name": "public_excerpt"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "6ee7fdbb03560ee4d014d4cde3a749a1f2ba1923d47807373dd200a08fc75985"
+}

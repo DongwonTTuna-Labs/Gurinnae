@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('requestCount',count(*),'sentCount',count(*) FILTER (WHERE status='SENT'), 'submittedCount',count(*) FILTER (WHERE status='SUBMITTED'),'pendingVerificationCount', (SELECT count(*) FROM editorial.responses WHERE case_id=$1 AND verified_at IS NULL), 'blockers','[]'::jsonb) FROM editorial.response_requests WHERE case_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ab90f6fc515b29cd0012c290eb12c33f910a5a96b83a70102da03599b7d45bb9"
+}

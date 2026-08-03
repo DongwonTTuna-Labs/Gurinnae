@@ -1,0 +1,53 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT request_hash,response_status,response_body FROM ops.idempotency_keys WHERE scope=$1 AND key_hash=$2 AND expires_at>clock_timestamp()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "request_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.idempotency_keys",
+            "name": "request_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "response_status",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.idempotency_keys",
+            "name": "response_status"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "response_body",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.idempotency_keys",
+            "name": "response_body"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "06989e28512fa8b728151d06e9495a4ddcf1ab6e663bece8c9b5a4c26f5eb04d"
+}

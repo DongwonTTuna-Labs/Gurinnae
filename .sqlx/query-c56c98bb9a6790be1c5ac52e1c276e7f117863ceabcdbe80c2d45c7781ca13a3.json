@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.hypotheses(id,case_id,statement,status,unknowns,created_by) VALUES($1,$2,$3,'OPEN',$4,$5)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c56c98bb9a6790be1c5ac52e1c276e7f117863ceabcdbe80c2d45c7781ca13a3"
+}

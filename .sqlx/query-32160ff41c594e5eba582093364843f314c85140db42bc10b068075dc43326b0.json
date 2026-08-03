@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM editorial.hypothesis_evidence WHERE hypothesis_id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "32160ff41c594e5eba582093364843f314c85140db42bc10b068075dc43326b0"
+}

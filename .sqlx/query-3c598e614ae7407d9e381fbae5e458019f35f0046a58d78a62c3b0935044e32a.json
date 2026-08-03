@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(item),'[]'::jsonb) FROM (SELECT jsonb_build_object('resultType','CASE','id',id,'title',title,'summary',summary) item,updated_at sort_at FROM editorial.cases WHERE title ILIKE $1 ESCAPE '\\' OR summary ILIKE $1 ESCAPE '\\' UNION ALL SELECT jsonb_build_object('resultType','EVIDENCE','id',id,'title',title,'summary',description),updated_at FROM editorial.evidence WHERE title ILIKE $1 ESCAPE '\\' OR description ILIKE $1 ESCAPE '\\' ORDER BY sort_at DESC LIMIT 100) results",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3c598e614ae7407d9e381fbae5e458019f35f0046a58d78a62c3b0935044e32a"
+}

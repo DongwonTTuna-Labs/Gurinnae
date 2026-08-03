@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'signalType',signal_type,'targetType',target_type,'targetId',target_id,'score',score,'severity',severity,'status',status::text,'assignedUserId',assigned_user_id,'version',version,'createdAt',created_at,'duplicateSignalId',duplicate_signal_id,'duplicateRelationship',duplicate_relationship) ORDER BY created_at DESC),'[]'::jsonb) FROM core.anomaly_signals",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ac936779c5de9a3cdeec9eec1a5d27c243e0b50ab926f43776ca764f1b40ecc8"
+}

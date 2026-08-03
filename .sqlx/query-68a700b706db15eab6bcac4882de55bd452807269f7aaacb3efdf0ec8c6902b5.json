@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM editorial.review_snapshots s JOIN editorial.cases c ON c.id=s.case_id WHERE s.id=$1 AND s.case_id=$2 AND c.current_review_snapshot_id=$1 AND s.unresolved_blockers='[]'::jsonb)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "68a700b706db15eab6bcac4882de55bd452807269f7aaacb3efdf0ec8c6902b5"
+}

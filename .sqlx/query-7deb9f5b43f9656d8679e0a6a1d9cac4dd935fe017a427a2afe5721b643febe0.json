@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.schema_mappings SET status='REJECTED',decided_by=$4, decision_reason=$5,decided_at=clock_timestamp() WHERE schema_drift_id=$1 AND mapping_version=$2 AND mapping_digest=$3 AND status='DRAFT'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bpchar",
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7deb9f5b43f9656d8679e0a6a1d9cac4dd935fe017a427a2afe5721b643febe0"
+}

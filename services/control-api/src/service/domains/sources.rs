@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(in crate::service) enum Command {
     AcknowledgeSourceIncident,
@@ -129,12 +135,12 @@ async fn acknowledge_source_incident(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let source = string_value(payload, "sourceId").ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.source_incidents SET status='ACKNOWLEDGED',acknowledged_by=$2, \
          acknowledged_at=clock_timestamp() WHERE source_id=$1 AND status='OPEN'",
+        source,
+        actor,
     )
-    .bind(source)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -151,12 +157,12 @@ async fn pause_backfill(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let run = uuid_value(payload, &["backfillRunId"]).ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.source_runs SET status='PAUSED',request_reason=$2 \
          WHERE id=$1 AND mode IN ('BACKFILL','DRY_RUN') AND status='RUNNING'",
+        run,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
     )
-    .bind(run)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
     .execute(&mut **tx)
     .await
     .map_err(db)?
@@ -173,12 +179,14 @@ async fn pause_source(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let source = string_value(payload, "sourceId").ok_or(ServiceError::InvalidRequest)?;
-    let changed = sqlx::query("UPDATE ops.source_registry SET enabled=false WHERE source_id=$1")
-        .bind(source)
-        .execute(&mut **tx)
-        .await
-        .map_err(db)?
-        .rows_affected();
+    let changed = sqlx::query!(
+        "UPDATE ops.source_registry SET enabled=false WHERE source_id=$1",
+        source,
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?
+    .rows_affected();
     if changed != 1 {
         return Err(ServiceError::NotFound);
     }
@@ -192,30 +200,27 @@ async fn retry_source_run(
     tx: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
     let source_run = uuid_value(payload, &["sourceRunId"]).ok_or(ServiceError::InvalidRequest)?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT source_id,mode,checkpoint_before FROM ops.source_runs \
          WHERE id=$1 AND status IN ('FAILED','CANCELLED')",
+        source_run,
     )
-    .bind(source_run)
     .fetch_optional(&mut **tx)
     .await
     .map_err(db)?
     .ok_or(ServiceError::VersionConflict)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_runs(id,source_id,mode,checkpoint_before,status, \
          retry_of_source_run_id,request_reason,requested_by) \
          VALUES($1,$2,$3,$4,'QUEUED',$5,$6,$7)",
+        Uuid::new_v4(),
+        row.source_id,
+        row.mode,
+        row.checkpoint_before,
+        source_run,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(Uuid::new_v4())
-    .bind(row.try_get::<String, _>("source_id").map_err(db)?)
-    .bind(row.try_get::<String, _>("mode").map_err(db)?)
-    .bind(
-        row.try_get::<Option<Value>, _>("checkpoint_before")
-            .map_err(db)?,
-    )
-    .bind(source_run)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -240,28 +245,29 @@ async fn start_backfill(
         Some("execute") => "BACKFILL",
         _ => return Err(ServiceError::InvalidRequest),
     };
-    let allowed: bool = sqlx::query_scalar(
+    let allowed: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.source_registry \
          WHERE source_id=$1 AND enabled AND legal_status='APPROVED')",
+        source,
     )
-    .bind(source)
     .fetch_one(&mut **tx)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     if !allowed {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_runs(id,source_id,mode,status,requested_from,requested_to, \
          request_reason,requested_by) VALUES($1,$2,$3,'QUEUED',$4,$5,$6,$7)",
+        id,
+        source,
+        mode,
+        from,
+        to,
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        actor,
     )
-    .bind(id)
-    .bind(source)
-    .bind(mode)
-    .bind(from)
-    .bind(to)
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -290,26 +296,27 @@ async fn start_source_run(
         Some("full") => "FULL",
         _ => return Err(ServiceError::InvalidRequest),
     };
-    let allowed: bool = sqlx::query_scalar(
+    let allowed: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.source_registry \
          WHERE source_id=$1 AND enabled AND legal_status='APPROVED')",
+        source,
     )
-    .bind(source)
     .fetch_one(&mut **tx)
     .await
-    .map_err(db)?;
+    .map_err(db)?
+    .ok_or_else(unexpected_null)?;
     if !allowed {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.source_runs(id,source_id,mode,status,request_reason,requested_by) \
          VALUES($1,$2,$3,'QUEUED',$4,$5)",
+        id,
+        source,
+        mode,
+        payload.get("reason").and_then(Value::as_str),
+        actor,
     )
-    .bind(id)
-    .bind(source)
-    .bind(mode)
-    .bind(payload.get("reason").and_then(Value::as_str))
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -347,7 +354,7 @@ async fn list_internal_sources(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let items: Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('sourceId',source_id,'displayName',display_name,'connectorType',connector_type,'ownerTeam',owner_team,'enabled',enabled,'legalStatus',legal_status,'version',version,'updatedAt',updated_at) ORDER BY source_id),'[]'::jsonb) FROM ops.source_registry").fetch_one(pool).await.map_err(db)?;
+    let items: Value = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('sourceId',source_id,'displayName',display_name,'connectorType',connector_type,'ownerTeam',owner_team,'enabled',enabled,'legalStatus',legal_status,'version',version,'updatedAt',updated_at) ORDER BY source_id),'[]'::jsonb) FROM ops.source_registry").fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     Ok(json!({"items":items,"appliedFilters":parameters,
         "asOf":format_time(OffsetDateTime::now_utc())?}))
 }
@@ -359,7 +366,7 @@ async fn list_source_runs(
     let source = parameters
         .get("sourceId")
         .ok_or(ServiceError::InvalidRequest)?;
-    let items: Value = sqlx::query_scalar("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'sourceId',source_id,'mode',mode,'status',status,'recordsSeen',records_seen,'recordsChanged',records_changed,'version',version,'startedAt',started_at,'completedAt',completed_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.source_runs WHERE source_id=$1").bind(source).fetch_one(pool).await.map_err(db)?;
+    let items: Value = sqlx::query_scalar!("SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'sourceId',source_id,'mode',mode,'status',status,'recordsSeen',records_seen,'recordsChanged',records_changed,'version',version,'startedAt',started_at,'completedAt',completed_at) ORDER BY created_at DESC),'[]'::jsonb) FROM ops.source_runs WHERE source_id=$1", source).fetch_one(pool).await.map_err(db)?.ok_or_else(unexpected_null)?;
     Ok(json!({"items":items,"appliedFilters":parameters,
         "asOf":format_time(OffsetDateTime::now_utc())?}))
 }

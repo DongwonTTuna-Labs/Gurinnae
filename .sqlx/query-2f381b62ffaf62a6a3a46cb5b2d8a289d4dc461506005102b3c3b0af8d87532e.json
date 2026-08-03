@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM core.rule_versions target JOIN core.rule_versions current ON current.id=$1 WHERE target.id=$2 AND target.rule_id=current.rule_id AND target.status IN ('RETIRED','ROLLED_BACK','ACTIVE'))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2f381b62ffaf62a6a3a46cb5b2d8a289d4dc461506005102b3c3b0af8d87532e"
+}

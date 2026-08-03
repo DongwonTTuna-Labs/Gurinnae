@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) FROM unnest($1::uuid[]) AS selected(id) LEFT JOIN editorial.claims c ON c.id=selected.id AND c.case_id=$2 WHERE c.id IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1e4046b1a3312e890e0b58a7a3cfc3f9c59172e6c0d0780149ed70095f915a9f"
+}

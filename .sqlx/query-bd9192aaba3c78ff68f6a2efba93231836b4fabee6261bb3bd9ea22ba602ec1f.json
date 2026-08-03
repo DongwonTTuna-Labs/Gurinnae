@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT case_id,case_version,snapshot_sha256,snapshot_payload,automated_gate_results, unresolved_blockers,created_by,created_at FROM editorial.review_snapshots WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "case_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "case_version"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "snapshot_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "snapshot_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "automated_gate_results",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "automated_gate_results"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "unresolved_blockers",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "unresolved_blockers"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_by",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "created_by"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "bd9192aaba3c78ff68f6a2efba93231836b4fabee6261bb3bd9ea22ba602ec1f"
+}

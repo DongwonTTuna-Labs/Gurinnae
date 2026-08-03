@@ -136,16 +136,16 @@ async fn verify_audit_integrity(
     if expected.is_some_and(|value| !is_sha256(value)) {
         return Err(ServiceError::InvalidRequest);
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.audit_verification_runs(id,mode,from_event_id,to_event_id, \
          expected_chain_head,status,requested_by) VALUES($1,$2,$3,$4,$5,'QUEUED',$6)",
+        id,
+        mode,
+        from,
+        to,
+        expected,
+        actor,
     )
-    .bind(id)
-    .bind(mode)
-    .bind(from)
-    .bind(to)
-    .bind(expected)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -167,28 +167,28 @@ async fn create_audit_export(
     let expires_at = OffsetDateTime::now_utc()
         .checked_add(time::Duration::seconds(seconds))
         .ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.audit_exports(id,requested_by,from_at,to_at,format,scope,object_type,object_id,reason,watermark_policy,expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+        id,
+        actor,
+        timestamp_value(payload, "from")?.ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "to")?.ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "format").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?,
+        payload.get("objectType").and_then(Value::as_str),
+        payload.get("objectId").and_then(Value::as_str),
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "watermarkPolicy").ok_or(ServiceError::InvalidRequest)?,
+        expires_at,
     )
-    .bind(id)
-    .bind(actor)
-    .bind(timestamp_value(payload, "from")?.ok_or(ServiceError::InvalidRequest)?)
-    .bind(timestamp_value(payload, "to")?.ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "format").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?)
-    .bind(payload.get("objectType").and_then(Value::as_str))
-    .bind(payload.get("objectId").and_then(Value::as_str))
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "watermarkPolicy").ok_or(ServiceError::InvalidRequest)?)
-    .bind(expires_at)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key) VALUES('AUDIT_EXPORT','audit-export',$1,$2)",
+        json!({"auditExportId":id}),
+        format!("audit-export:{id}"),
     )
-    .bind(json!({"auditExportId":id}))
-    .bind(format!("audit-export:{id}"))
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -205,42 +205,52 @@ async fn place_legal_hold(
     // Match the research-fetch owner preflight lock. A legal hold placement
     // therefore cannot commit between rights admission and artifact record.
     let held_object = uuid_value(payload, &["objectId"]).ok_or(ServiceError::InvalidRequest)?;
-    sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 13))")
-        .bind(held_object.to_string())
+    sqlx::query!(
+        "SELECT pg_advisory_xact_lock(hashtextextended($1, 13))",
+        held_object.to_string(),
+    )
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
+    if let Some(case_id) = uuid_value(payload, &["caseId"]) {
+        sqlx::query!(
+            "SELECT pg_advisory_xact_lock(hashtextextended($1, 13))",
+            case_id.to_string(),
+        )
         .execute(&mut **tx)
         .await
         .map_err(db)?;
-    if let Some(case_id) = uuid_value(payload, &["caseId"]) {
-        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 13))")
-            .bind(case_id.to_string())
-            .execute(&mut **tx)
-            .await
-            .map_err(db)?;
     }
     // Fetch admission locks the exact affected-id atoms as text.  Acquire
     // those same locks before inserting the hold so placement cannot commit
     // between the admission check and the immutable fetch record.
-    sqlx::query(
+    sqlx::query!(
         "SELECT pg_advisory_xact_lock(hashtextextended(value, 13)) FROM jsonb_array_elements_text(COALESCE($1::jsonb, '[]'::jsonb)) ORDER BY value",
+        payload
+            .get("affectedIds")
+            .cloned()
+            .unwrap_or_else(|| json!([])),
     )
-    .bind(payload.get("affectedIds").cloned().unwrap_or_else(|| json!([])))
     .execute(&mut **tx)
     .await
     .map_err(db)?;
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO editorial.legal_holds(id,case_id,review_snapshot_id,object_type,object_id,scope,affected_ids,reason,authority_reference,expires_at,placed_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)",
+        id,
+        uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?,
+        uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "objectType").ok_or(ServiceError::InvalidRequest)?,
+        held_object,
+        string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?,
+        payload
+            .get("affectedIds")
+            .cloned()
+            .unwrap_or_else(|| json!([])),
+        string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?,
+        string_value(payload, "authorityReference").ok_or(ServiceError::InvalidRequest)?,
+        timestamp_value(payload, "expiresAt")?,
+        actor,
     )
-    .bind(id)
-    .bind(uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?)
-    .bind(uuid_value(payload, &["reviewSnapshotId"]).ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "objectType").ok_or(ServiceError::InvalidRequest)?)
-    .bind(held_object)
-    .bind(string_value(payload, "scope").ok_or(ServiceError::InvalidRequest)?)
-    .bind(payload.get("affectedIds").cloned().unwrap_or_else(|| json!([])))
-    .bind(string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?)
-    .bind(string_value(payload, "authorityReference").ok_or(ServiceError::InvalidRequest)?)
-    .bind(timestamp_value(payload, "expiresAt")?)
-    .bind(actor)
     .execute(&mut **tx)
     .await
     .map_err(db)?;
@@ -253,7 +263,7 @@ async fn get_audit_export(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "auditExportId")?;
-    sqlx::query_scalar::<_, Value>(
+    sqlx::query_scalar!(
         "SELECT jsonb_build_object('id',id,'status',status,'format',format,'scope',scope, \
          'from',from_at,'to',to_at,'objectType',object_type,'objectId',object_id, \
          'watermarkPolicy',watermark_policy,'createdAt',created_at,'startedAt',started_at, \
@@ -261,12 +271,17 @@ async fn get_audit_export(
          'contentSha256',content_sha256,'downloadUrl',NULL::text, \
          'failureCode',failure_code,'links','[]'::jsonb) \
          FROM ops.audit_exports WHERE id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
-    .ok_or(ServiceError::NotFound)
+    .ok_or(ServiceError::NotFound)?
+    .ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })
 }
 
 async fn get_retention_request(
@@ -278,13 +293,11 @@ async fn get_retention_request(
         .or_else(|| parameters.get("id"))
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or(ServiceError::InvalidRequest)?;
-    let value: Option<Value> =
-        sqlx::query_scalar::<_, Option<Value>>("SELECT ops.read_retention_request_v1($1)")
-            .bind(id)
-            .fetch_optional(pool)
-            .await
-            .map_err(db)?
-            .flatten();
+    let value: Option<Value> = sqlx::query_scalar!("SELECT ops.read_retention_request_v1($1)", id)
+        .fetch_optional(pool)
+        .await
+        .map_err(db)?
+        .flatten();
     let Some(value) = value else {
         return Err(ServiceError::NotFound);
     };
@@ -296,15 +309,29 @@ async fn retention_queue_query(
     _parameters: &BTreeMap<String, String>,
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
-    let query = match operation {
-        "listRetentionRequests" => "SELECT ops.read_retention_queue_v1()",
-        "listRecordClassSchedules" => "SELECT ops.read_record_class_schedule_queue_v1()",
+    let items: Value = match operation {
+        "listRetentionRequests" => sqlx::query_scalar!("SELECT ops.read_retention_queue_v1()")
+            .fetch_one(pool)
+            .await
+            .map_err(db)?
+            .ok_or_else(|| {
+                db(sqlx::Error::Decode(Box::new(
+                    sqlx::error::UnexpectedNullError,
+                )))
+            })?,
+        "listRecordClassSchedules" => {
+            sqlx::query_scalar!("SELECT ops.read_record_class_schedule_queue_v1()")
+                .fetch_one(pool)
+                .await
+                .map_err(db)?
+                .ok_or_else(|| {
+                    db(sqlx::Error::Decode(Box::new(
+                        sqlx::error::UnexpectedNullError,
+                    )))
+                })?
+        }
         _ => return Err(ServiceError::Persistence),
     };
-    let items: Value = sqlx::query_scalar(query)
-        .fetch_one(pool)
-        .await
-        .map_err(db)?;
     let items = match operation {
         "listRetentionRequests" => normalize_retention_queue_items(items),
         "listRecordClassSchedules" => normalize_record_class_schedule_items(items),

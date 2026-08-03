@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH grouped AS ( SELECT d.source_id,max(d.retrieved_at) retrieved_at,bool_and(d.status='PARSED') current, COALESCE(jsonb_agg(d.prompt_injection_flags ORDER BY d.retrieved_at) FILTER (WHERE d.prompt_injection_flags<>'[]'::jsonb),'[]'::jsonb) prompt_flags FROM editorial.evidence e JOIN raw.source_documents d ON d.id=e.source_document_id WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) GROUP BY d.source_id ) SELECT jsonb_build_object( 'freshness',COALESCE(jsonb_object_agg(source_id,jsonb_build_object( 'retrievedAt',retrieved_at,'status',CASE WHEN current THEN 'CURRENT' ELSE 'STALE' END, 'promptInjectionFlags',prompt_flags)),'{}'::jsonb), 'blockers',COALESCE(jsonb_agg(jsonb_build_object( 'code',CASE WHEN NOT current THEN 'SOURCE_FRESHNESS_BLOCKED' ELSE 'PROMPT_INJECTION_FLAGGED' END,'sourceId',source_id)) FILTER (WHERE NOT current OR prompt_flags<>'[]'::jsonb),'[]'::jsonb)) FROM grouped",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2901b4647e7a96163a9143482303b27fba55361a66944a7ec1655c40d696ba63"
+}

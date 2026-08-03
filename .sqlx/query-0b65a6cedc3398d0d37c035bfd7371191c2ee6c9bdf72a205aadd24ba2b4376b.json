@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',r.id,'agentType',r.agent_type,'objective',r.objective,'status',r.status,'maxCost',r.max_cost::text,'actualCost',r.actual_cost::text,'version',r.version,'createdAt',r.created_at,'inputSnapshotHash',r.input_snapshot_hash,'validation',COALESCE((SELECT jsonb_agg(jsonb_build_object('status',v.validation_status,'schemaStatus',v.schema_status,'citationStatus',v.citation_status,'policyStatus',v.policy_status,'failureCode',v.failure_code,'validatedAt',v.validated_at) ORDER BY v.validated_at DESC) FROM ops.agent_output_validations v WHERE v.agent_run_id=r.id),'[]'::jsonb),'suggestionCounts',jsonb_build_object('pending',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='PENDING'),0),'accepted',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='ACCEPTED'),0),'rejected',COALESCE((SELECT count(*) FROM ops.agent_suggestions s WHERE s.agent_run_id=r.id AND s.status='REJECTED'),0)),'sourceUseCount',COALESCE((SELECT count(*) FROM ops.agent_source_uses u WHERE u.agent_run_id=r.id),0),'budgetLedger',COALESCE(ops.read_agent_run_budget_projection_v1(r.id),'{}'::jsonb)) ORDER BY r.created_at DESC),'[]'::jsonb) FROM ops.agent_runs r WHERE r.case_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0b65a6cedc3398d0d37c035bfd7371191c2ee6c9bdf72a205aadd24ba2b4376b"
+}

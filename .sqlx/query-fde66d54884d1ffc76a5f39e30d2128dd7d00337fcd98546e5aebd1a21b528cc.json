@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.rotate_session_csrf($1,$2,$3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rotate_session_csrf",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "fde66d54884d1ffc76a5f39e30d2128dd7d00337fcd98546e5aebd1a21b528cc"
+}

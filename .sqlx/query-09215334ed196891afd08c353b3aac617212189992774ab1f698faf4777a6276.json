@@ -1,0 +1,54 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mapping_version,mapping_digest,status FROM ops.schema_mappings WHERE schema_drift_id=$1 AND (mapping_version=$2 OR mapping_digest=$3) FOR UPDATE",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mapping_version",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "ops.schema_mappings",
+            "name": "mapping_version"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "mapping_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.schema_mappings",
+            "name": "mapping_digest"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.schema_mappings",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "09215334ed196891afd08c353b3aac617212189992774ab1f698faf4777a6276"
+}

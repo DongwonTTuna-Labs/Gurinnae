@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.create_step_up_authorization($1,$2,$3,$4,$5)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "create_step_up_authorization",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bpchar",
+        "Bpchar",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "5b1b7d5fb3420fdd3e0246c5061a542e9e29d0e297373641c99a4a6fa0dd9584"
+}

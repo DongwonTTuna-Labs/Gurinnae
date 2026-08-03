@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'name',name,'surface',surface,'query',query,'isDefault',is_default,'version',version,'createdAt',created_at,'updatedAt',updated_at) ORDER BY updated_at DESC),'[]'::jsonb) FROM ops.saved_views WHERE user_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "61138e73dec5268988b4c37db093d56504c639ac71fb6034c1a74fb7dc4cb0ad"
+}

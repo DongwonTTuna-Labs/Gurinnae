@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'ruleId',rule_id,'versionName',version,'name',name,'status',status,'effectiveAt',effective_at,'rowVersion',row_version) ORDER BY rule_id,created_at DESC),'[]'::jsonb) FROM core.rule_versions",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e644fb47113d1b606b4600b01f4b8036a3a4906cca458fbbd841f7181aba9b6c"
+}

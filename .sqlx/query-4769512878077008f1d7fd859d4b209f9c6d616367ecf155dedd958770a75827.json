@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.kill_switches SET expires_at= GREATEST(COALESCE(expires_at,clock_timestamp()),clock_timestamp())+interval '1 hour', updated_at=clock_timestamp() WHERE id=$1 AND state='ACTIVE'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4769512878077008f1d7fd859d4b209f9c6d616367ecf155dedd958770a75827"
+}

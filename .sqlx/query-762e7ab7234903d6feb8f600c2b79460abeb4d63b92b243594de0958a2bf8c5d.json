@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT v.rule_id,upper(s.target_type) target_type,s.target_id, COALESCE(c.agency_id,lc.agency_id,cc.agency_id) agency_id, COALESCE(c.supplier_id,lc.supplier_id,cc.supplier_id) supplier_id, a.id \"direct_agency_id?\",u.id \"direct_supplier_id?\" FROM editorial.case_signals cs JOIN core.anomaly_signals s ON s.id=cs.signal_id JOIN core.rule_versions v ON v.id=s.rule_version_id LEFT JOIN core.contracts c ON upper(s.target_type)='CONTRACT' AND c.id=s.target_id LEFT JOIN core.contract_line_items li ON upper(s.target_type) IN ('LINE_ITEM','CONTRACT_LINE_ITEM') AND li.id=s.target_id LEFT JOIN core.contracts lc ON lc.id=li.contract_id LEFT JOIN core.contract_changes ch ON upper(s.target_type)='CONTRACT_CHANGE' AND ch.id=s.target_id LEFT JOIN core.contracts cc ON cc.id=ch.contract_id LEFT JOIN core.agencies a ON upper(s.target_type)='AGENCY' AND a.id=s.target_id LEFT JOIN core.suppliers u ON upper(s.target_type)='SUPPLIER' AND u.id=s.target_id WHERE cs.case_id=$1 ORDER BY v.rule_id,s.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rule_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.rule_versions",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "target_type",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "target_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.anomaly_signals",
+            "name": "target_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "agency_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "supplier_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "direct_agency_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.agencies",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "direct_supplier_id?",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.suppliers",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null,
+      false,
+      null,
+      null,
+      false,
+      false
+    ]
+  },
+  "hash": "762e7ab7234903d6feb8f600c2b79460abeb4d63b92b243594de0958a2bf8c5d"
+}

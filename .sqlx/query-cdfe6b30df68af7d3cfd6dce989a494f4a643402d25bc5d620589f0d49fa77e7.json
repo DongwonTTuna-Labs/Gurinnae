@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('queueName',q.queue, 'queued',q.queued,'running',q.running,'failed',q.failed)),'[]'::jsonb) FROM ( SELECT queue,count(*) FILTER (WHERE status='QUEUED') queued, count(*) FILTER (WHERE status IN ('LEASED','RUNNING')) running, count(*) FILTER (WHERE status IN ('FAILED','DEAD_LETTER')) failed FROM ops.jobs GROUP BY queue ORDER BY queue) q",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cdfe6b30df68af7d3cfd6dce989a494f4a643402d25bc5d620589f0d49fa77e7"
+}

@@ -16,13 +16,16 @@ pub async fn append(
     transaction: &mut Transaction<'_, Postgres>,
     event: &OutboxEvent<'_>,
 ) -> Result<Uuid, sqlx::Error> {
-    sqlx::query_scalar("SELECT ops.enqueue_outbox($1, $2, $3, $4, $5, $6)")
-        .bind(event.aggregate_type)
-        .bind(event.aggregate_id)
-        .bind(event.aggregate_version)
-        .bind(event.event_type)
-        .bind(event.payload)
-        .bind(event.occurred_at)
-        .fetch_one(&mut **transaction)
-        .await
+    sqlx::query_scalar!(
+        "SELECT ops.enqueue_outbox($1, $2, $3, $4, $5, $6)",
+        event.aggregate_type,
+        event.aggregate_id,
+        event.aggregate_version,
+        event.event_type,
+        event.payload,
+        event.occurred_at,
+    )
+    .fetch_one(&mut **transaction)
+    .await?
+    .ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
 }

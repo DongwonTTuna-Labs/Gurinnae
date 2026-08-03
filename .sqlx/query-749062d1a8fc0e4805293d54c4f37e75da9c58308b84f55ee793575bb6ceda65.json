@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.cases SET current_review_snapshot_id=$2 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "749062d1a8fc0e4805293d54c4f37e75da9c58308b84f55ee793575bb6ceda65"
+}

@@ -1,0 +1,133 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id AS session_id,u.id AS user_id,u.email::text,u.display_name,s.auth_time,s.step_up_at, s.expires_at,s.csrf_rotated_at,u.version AS roles_version, COALESCE(array_agg(DISTINCT r.code) FILTER (WHERE r.code IS NOT NULL),'{}') AS role_codes, COALESCE(array_agg(DISTINCT rc.capability_code) FILTER (WHERE rc.capability_code IS NOT NULL),'{}') AS capabilities FROM ops.sessions s JOIN ops.users u ON u.id=s.user_id LEFT JOIN ops.user_roles ur ON ur.user_id=u.id AND ur.revoked_at IS NULL AND (ur.expires_at IS NULL OR ur.expires_at>clock_timestamp()) LEFT JOIN ops.roles r ON r.id=ur.role_id LEFT JOIN ops.role_capabilities rc ON rc.role_id=r.id WHERE s.session_token_hash=$1 AND s.revoked_at IS NULL AND s.expires_at>clock_timestamp() AND u.status='ACTIVE' GROUP BY s.id,u.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.users",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "display_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.users",
+            "name": "display_name"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "auth_time",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "auth_time"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "step_up_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "step_up_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "expires_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "csrf_rotated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.sessions",
+            "name": "csrf_rotated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "roles_version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.users",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "role_codes",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "capabilities",
+        "type_info": "TextArray",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "f12a8b6a35a07819fc2ab583c9cf8a929dc03cc452826ea179b90e978a63383d"
+}

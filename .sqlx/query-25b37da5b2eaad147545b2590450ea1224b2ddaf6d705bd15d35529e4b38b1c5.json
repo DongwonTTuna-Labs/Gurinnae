@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.corrections SET triage_decision=$2,priority=$3, triage_reason=$4,status=$5 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "25b37da5b2eaad147545b2590450ea1224b2ddaf6d705bd15d35529e4b38b1c5"
+}

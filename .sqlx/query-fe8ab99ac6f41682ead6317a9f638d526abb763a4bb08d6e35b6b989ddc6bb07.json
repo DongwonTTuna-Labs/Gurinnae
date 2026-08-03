@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.evidence SET verification_status=$2,verified_by=$3, verified_at=CASE WHEN $2='VERIFIED' THEN clock_timestamp() ELSE NULL END WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fe8ab99ac6f41682ead6317a9f638d526abb763a4bb08d6e35b6b989ddc6bb07"
+}

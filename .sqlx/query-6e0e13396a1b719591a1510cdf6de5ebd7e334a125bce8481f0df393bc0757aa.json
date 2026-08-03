@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.jobs SET status='QUEUED',run_after=clock_timestamp(),lease_owner=NULL, lease_token=NULL,lease_expires_at=NULL,last_error_code=NULL,last_error_detail=$2, completed_at=NULL,version=version+1 WHERE id=ANY($1::uuid[]) AND status IN ('FAILED','DEAD_LETTER')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6e0e13396a1b719591a1510cdf6de5ebd7e334a125bce8481f0df393bc0757aa"
+}

@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('id',d.id,'sourceId',d.source_id,'detectedAt',d.detected_at, 'fingerprintBefore',d.fingerprint_before,'fingerprintAfter',d.fingerprint_after, 'addedFields',d.added_fields,'removedFields',d.removed_fields,'changedFields',d.changed_fields, 'sampleDocumentIds',d.sample_document_ids,'status',d.status,'impact',d.impact,'version',d.version, 'mappings',COALESCE((SELECT jsonb_agg(jsonb_build_object('id',m.id,'mappingVersion', m.mapping_version,'mappingDigest',m.mapping_digest,'fieldMappings',m.field_mappings, 'status',m.status,'decisionReason',m.decision_reason) ORDER BY m.mapping_version) FROM ops.schema_mappings m WHERE m.schema_drift_id=d.id),'[]'::jsonb)) FROM ops.schema_drifts d WHERE d.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "f58fb91a02e671d06a7659899e1001c47ebad7209e67346b1934c91295e7e901"
+}

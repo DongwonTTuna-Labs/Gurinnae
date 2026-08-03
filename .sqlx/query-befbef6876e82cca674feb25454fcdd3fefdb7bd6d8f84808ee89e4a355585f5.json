@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.publication_access_decisions(id,publication_revision_id, scope,affected_ids,state,reason,expires_at,placed_by) VALUES($1,$2,$3,$4,'ACTIVE',$5,$6,$7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Timestamptz",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "befbef6876e82cca674feb25454fcdd3fefdb7bd6d8f84808ee89e4a355585f5"
+}

@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',x.id,'caseId',x.case_id,'caseTitle',c.title,'status',x.status,'summary',x.summary,'priority',x.priority,'assignedUserId',x.assigned_user_id,'version',x.version) ORDER BY x.updated_at DESC),'[]'::jsonb) FROM editorial.corrections x JOIN editorial.cases c ON c.id=x.case_id WHERE x.status IN ('DRAFT','REVIEW')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "e5e0657f64125142cbc45b5c164e4d9f12f118f8de8e14d91968b925b0309508"
+}

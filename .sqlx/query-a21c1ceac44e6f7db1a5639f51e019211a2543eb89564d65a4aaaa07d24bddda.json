@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT core.record_supplier_identity_resolution_v1($1::jsonb)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "record_supplier_identity_resolution_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a21c1ceac44e6f7db1a5639f51e019211a2543eb89564d65a4aaaa07d24bddda"
+}

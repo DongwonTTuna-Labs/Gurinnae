@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.jobs SET run_after=$2 WHERE job_type='RULE_ACTIVATION' AND dedupe_key=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "09b878a715773e173f2c9796ab04733e8b12f087439585c6bffbbef27c6371ba"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object('userId',u.id,'email',u.email,'displayName',u.display_name, 'status',u.status,'rolesVersion',$3::bigint,'sessionId',$2::text) FROM ops.users u WHERE u.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "03b5e074cd1b6f6d2ce2df14c9ea14739f6fe0ecce83edb0cd59199beecab072"
+}

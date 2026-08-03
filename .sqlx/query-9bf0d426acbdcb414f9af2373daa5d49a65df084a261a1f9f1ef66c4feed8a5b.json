@@ -1,0 +1,79 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.version,c.current_review_snapshot_id,s.snapshot_sha256,s.unresolved_blockers, EXISTS(SELECT 1 FROM editorial.review_decisions d WHERE d.review_snapshot_id=s.id AND d.decision='APPROVE' AND d.reviewer_id<>s.created_by) approved, EXISTS(SELECT 1 FROM ops.kill_switches WHERE state='ACTIVE' AND (expires_at IS NULL OR expires_at>clock_timestamp())) kill_switch FROM editorial.cases c JOIN editorial.review_snapshots s ON s.id=$2 AND s.case_id=c.id WHERE c.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "current_review_snapshot_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "current_review_snapshot_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "snapshot_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "snapshot_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "unresolved_blockers",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "unresolved_blockers"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "approved",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "kill_switch",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      null,
+      null
+    ]
+  },
+  "hash": "9bf0d426acbdcb414f9af2373daa5d49a65df084a261a1f9f1ef66c4feed8a5b"
+}

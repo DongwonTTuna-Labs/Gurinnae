@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.schema_drifts SET status=$2 WHERE id=$1 AND status='OPEN'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "91b81fe5be59defeac80e497c0b8df6f4b4fe7650868097a8edbe369811323ea"
+}

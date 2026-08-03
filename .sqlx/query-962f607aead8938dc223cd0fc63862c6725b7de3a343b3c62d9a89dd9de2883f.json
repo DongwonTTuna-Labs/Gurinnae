@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.review_snapshots(id,case_id,case_version,snapshot_sha256, snapshot_payload,automated_gate_results,unresolved_blockers,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Jsonb",
+        "Jsonb",
+        "Jsonb",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "962f607aead8938dc223cd0fc63862c6725b7de3a343b3c62d9a89dd9de2883f"
+}

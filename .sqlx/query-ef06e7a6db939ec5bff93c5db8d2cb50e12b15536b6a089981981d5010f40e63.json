@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.users(id,oidc_subject,email,display_name,status) VALUES($1,$2,$3,$4,'INVITED')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        {
+          "Custom": {
+            "name": "extensions.citext",
+            "kind": "Simple"
+          }
+        },
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ef06e7a6db939ec5bff93c5db8d2cb50e12b15536b6a089981981d5010f40e63"
+}

@@ -1,6 +1,12 @@
 use super::*;
 use crate::service::registry::{CommandHandler, Handler, QueryHandler};
 
+fn unexpected_null() -> ServiceError {
+    db(sqlx::Error::Decode(Box::new(
+        sqlx::error::UnexpectedNullError,
+    )))
+}
+
 mod corrections;
 mod publication;
 mod queries;

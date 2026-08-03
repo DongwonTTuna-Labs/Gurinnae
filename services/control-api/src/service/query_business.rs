@@ -1,5 +1,13 @@
 use super::*;
 
+fn business_query_required<T>(value: Option<T>) -> Result<T, ServiceError> {
+    value.ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })
+}
+
 pub(super) async fn estimate_backfill_query(
     parameters: &BTreeMap<String, String>,
     pool: &PgPool,
@@ -13,23 +21,25 @@ pub(super) async fn estimate_backfill_query(
     if from > to {
         return Err(ServiceError::InvalidRequest);
     }
-    let enabled: bool = sqlx::query_scalar(
+    let enabled = sqlx::query_scalar!(
         "SELECT enabled AND legal_status='APPROVED' FROM ops.source_registry WHERE source_id=$1",
+        source,
     )
-    .bind(source)
     .fetch_optional(pool)
     .await
     .map_err(db)?
     .ok_or(ServiceError::NotFound)?;
-    let history: Value = sqlx::query_scalar(
+    let enabled = business_query_required(enabled)?;
+    let history = sqlx::query_scalar!(
         "SELECT jsonb_build_object('historicalRuns',count(*),'historicalRecords', \
          COALESCE(sum(records_seen),0),'historicalChanges',COALESCE(sum(records_changed),0)) \
          FROM ops.source_runs WHERE source_id=$1",
+        source,
     )
-    .bind(source)
     .fetch_one(pool)
     .await
     .map_err(db)?;
+    let history = business_query_required(history)?;
     Ok(envelope(
         stable_uuid("backfill-estimate", &format!("{source}:{from}:{to}")),
         if enabled { "READY" } else { "BLOCKED" },
@@ -42,14 +52,15 @@ pub(super) async fn source_run_download(
     pool: &PgPool,
 ) -> Result<Value, ServiceError> {
     let id = query_uuid(parameters, "sourceRunId")?;
-    let available: bool = sqlx::query_scalar(
+    let available = sqlx::query_scalar!(
         "SELECT status='SUCCEEDED' AND report_object_key IS NOT NULL FROM ops.source_runs WHERE id=$1",
+        id,
     )
-    .bind(id)
     .fetch_optional(pool)
     .await
     .map_err(db)?
     .ok_or(ServiceError::NotFound)?;
+    let available = business_query_required(available)?;
     if !available {
         return Err(ServiceError::NotFound);
     }
@@ -84,11 +95,12 @@ pub(super) async fn audit_query(
     let object_id = parameters
         .get("caseId")
         .or_else(|| parameters.get("objectId"));
-    let rows=sqlx::query("SELECT id,occurred_at,actor_type,actor_id,action,object_type,object_id,capability,outcome::text outcome,reason,request_id,details,event_hash,previous_event_hash FROM ops.audit_events WHERE ($1::text IS NULL OR object_id=$1) ORDER BY occurred_at DESC LIMIT 200")
-        .bind(object_id).fetch_all(pool).await.map_err(db)?;
+    let rows=sqlx::query!("SELECT id,occurred_at,actor_type,actor_id,action,object_type,object_id,capability,outcome::text outcome,reason,request_id,details,event_hash,previous_event_hash FROM ops.audit_events WHERE ($1::text IS NULL OR object_id=$1) ORDER BY occurred_at DESC LIMIT 200", object_id)
+        .fetch_all(pool).await.map_err(db)?;
     let mut items = Vec::new();
     for r in rows {
-        items.push(json!({"id":r.try_get::<Uuid,_>("id").map_err(db)?,"occurredAt":format_time(r.try_get("occurred_at").map_err(db)?)?,"actorType":r.try_get::<String,_>("actor_type").map_err(db)?,"actorId":r.try_get::<Option<String>,_>("actor_id").map_err(db)?,"action":r.try_get::<String,_>("action").map_err(db)?,"objectType":r.try_get::<Option<String>,_>("object_type").map_err(db)?,"objectId":r.try_get::<Option<String>,_>("object_id").map_err(db)?,"capability":r.try_get::<Option<String>,_>("capability").map_err(db)?,"outcome":r.try_get::<String,_>("outcome").map_err(db)?,"reason":r.try_get::<Option<String>,_>("reason").map_err(db)?,"requestId":r.try_get::<Uuid,_>("request_id").map_err(db)?,"details":r.try_get::<Value,_>("details").map_err(db)?,"eventHash":r.try_get::<String,_>("event_hash").map_err(db)?.trim(),"previousEventHash":r.try_get::<Option<String>,_>("previous_event_hash").map_err(db)?.map(|v|v.trim().to_owned())}));
+        let outcome = business_query_required(r.outcome)?;
+        items.push(json!({"id":r.id,"occurredAt":format_time(r.occurred_at)?,"actorType":r.actor_type,"actorId":r.actor_id,"action":r.action,"objectType":r.object_type,"objectId":r.object_id,"capability":r.capability,"outcome":outcome,"reason":r.reason,"requestId":r.request_id,"details":r.details,"eventHash":r.event_hash.trim(),"previousEventHash":r.previous_event_hash.map(|v|v.trim().to_owned())}));
     }
     Ok(
         json!({"items":items,"appliedFilters":parameters,"asOf":format_time(OffsetDateTime::now_utc())?}),

@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE editorial.claims SET validation_status=$2::core.claim_validation_status WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "core.claim_validation_status",
+            "kind": {
+              "Enum": [
+                "DRAFT",
+                "VALID",
+                "BLOCKED",
+                "SUPERSEDED"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e7d40359a12e2643b83410765c4f22120d7d21c2aca05c5ddd24856781768c5c"
+}

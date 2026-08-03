@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(jsonb_build_object('id',id,'caseId',case_id,'claimType',claim_type::text,'text',text,'limitations',limitations,'validationStatus',validation_status,'version',version) ORDER BY created_at),'[]'::jsonb) FROM editorial.claims WHERE case_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "12fd525a115509ff01e835952ba08f3273207f3564ab98b65f9716d7482efa8c"
+}

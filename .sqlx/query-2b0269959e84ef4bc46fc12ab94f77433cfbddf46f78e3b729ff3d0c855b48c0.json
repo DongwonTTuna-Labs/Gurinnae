@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.sessions SET revoked_at=clock_timestamp() WHERE id=$1 AND session_token_hash=$2 AND revoked_at IS NULL",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2b0269959e84ef4bc46fc12ab94f77433cfbddf46f78e3b729ff3d0c855b48c0"
+}

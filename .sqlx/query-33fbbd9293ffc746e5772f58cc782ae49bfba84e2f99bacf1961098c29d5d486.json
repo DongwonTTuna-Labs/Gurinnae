@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_appeal_workspace_v1($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_appeal_workspace_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "33fbbd9293ffc746e5772f58cc782ae49bfba84e2f99bacf1961098c29d5d486"
+}

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.publication_previews(id,case_id,review_snapshot_id,locale, preview_payload,preview_sha256,expires_at,created_by) VALUES($1,$2,$3,$4,$5,$6,clock_timestamp()+interval '15 minutes',$7)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9375644e1718da8cfdb77816f0f2328d11a3117e98f75fdb7139a1d57b0c6218"
+}

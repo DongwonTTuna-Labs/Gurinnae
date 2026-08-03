@@ -1,3 +1,11 @@
+fn required_sqlx_value<T>(value: Option<T>) -> Result<T, ServiceError> {
+    value.ok_or_else(|| {
+        db(sqlx::Error::Decode(Box::new(
+            sqlx::error::UnexpectedNullError,
+        )))
+    })
+}
+
 async fn append_audit_event(
     operation: &OperationSpec,
     actor_id: Uuid,
@@ -7,12 +15,22 @@ async fn append_audit_event(
     prepared: &PreparedCommand,
     transaction: &mut Transaction<'_, Postgres>,
 ) -> Result<Uuid, ServiceError> {
-    sqlx::query_scalar::<_, Uuid>("SELECT ops.append_audit_event($1,'USER',$2,$3,$4,$5,$6,$7,'SUCCESS',NULL,$8,$9)")
-        .bind(format!("control:{}:{}", prepared.resource_type, prepared.persisted_id))
-        .bind(actor_id.to_string()).bind(session_id).bind(format!("command.{}", operation.id)).bind(prepared.resource_type)
-        .bind(prepared.persisted_id.to_string()).bind(operation.capability).bind(request_id)
-        .bind(json!({"resourceVersion":prepared.version,"operationId":operation.id,"requestSha256":key.request_hash}))
-        .fetch_one(&mut **transaction).await.map_err(db)
+    let audit_event_id = sqlx::query_scalar!(
+        "SELECT ops.append_audit_event($1,'USER',$2,$3,$4,$5,$6,$7,'SUCCESS',NULL,$8,$9)",
+        format!("control:{}:{}", prepared.resource_type, prepared.persisted_id),
+        actor_id.to_string(),
+        session_id,
+        format!("command.{}", operation.id),
+        prepared.resource_type,
+        prepared.persisted_id.to_string(),
+        operation.capability,
+        request_id,
+        json!({"resourceVersion":prepared.version,"operationId":operation.id,"requestSha256":key.request_hash}),
+    )
+        .fetch_one(&mut **transaction)
+        .await
+        .map_err(db)?;
+    required_sqlx_value(audit_event_id)
 }
 
 async fn enqueue_command_events(
@@ -26,16 +44,18 @@ async fn enqueue_command_events(
         let event_payload =
             project_payload(event_type, candidates).map_err(|_| ServiceError::InvalidRequest)?;
         if requires_outbox(event_type) {
-            sqlx::query("SELECT ops.enqueue_outbox($1,$2,$3,$4,$5,$6)")
-                .bind(prepared.resource_type)
-                .bind(prepared.persisted_id.to_string())
-                .bind(prepared.version)
-                .bind(event_type)
-                .bind(event_payload)
-                .bind(prepared.occurred_at)
-                .fetch_one(&mut **transaction)
-                .await
-                .map_err(db)?;
+            sqlx::query!(
+                "SELECT ops.enqueue_outbox($1,$2,$3,$4,$5,$6)",
+                prepared.resource_type,
+                prepared.persisted_id.to_string(),
+                prepared.version,
+                event_type,
+                event_payload,
+                prepared.occurred_at,
+            )
+            .fetch_one(&mut **transaction)
+            .await
+            .map_err(db)?;
         } else {
             pending.push(PendingDomainEvent {
                 event_type,
@@ -60,7 +80,7 @@ async fn validate_transition_case(
     let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
     let target = string_value(payload, "targetState").ok_or(ServiceError::InvalidRequest)?;
     let reason = string_value(payload, "reason").ok_or(ServiceError::InvalidRequest)?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT c.investigation_state::text current_state,c.publication_state::text publication_state, \
          c.resolution_code::text resolution_code,c.lead_investigator_id IS NOT NULL assigned_investigator, \
          EXISTS(SELECT 1 FROM editorial.case_signals cs WHERE cs.case_id=c.id) at_least_one_signal, \
@@ -101,15 +121,15 @@ async fn validate_transition_case(
            COALESCE((SELECT max(p.published_at) FROM editorial.publication_revisions p WHERE p.case_id=c.id),'-infinity'::timestamptz) \
            reauth_if_previously_published \
          FROM editorial.cases c WHERE c.id=$1",
+        case_id,
+        claims.auth_time as f64,
     )
-    .bind(case_id)
-    .bind(claims.auth_time as f64)
     .fetch_optional(&mut **transaction)
     .await
     .map_err(db)?
     .ok_or(ServiceError::NotFound)?;
-    let current_text: String = row.try_get("current_state").map_err(db)?;
-    let current = investigation_state(&current_text).ok_or(ServiceError::Persistence)?;
+    let current = investigation_state(required_sqlx_value(row.current_state.as_deref())?)
+        .ok_or(ServiceError::Persistence)?;
     let target = investigation_state(target).ok_or(ServiceError::InvalidRequest)?;
     let transition = CASE_TRANSITIONS
         .iter()
@@ -128,30 +148,30 @@ async fn validate_transition_case(
     };
     let satisfied = |guard: &str| -> Result<bool, ServiceError> {
         match guard {
-            "at_least_one_signal"
-            | "triage_decision_investigate"
-            | "assigned_investigator"
-            | "validated_response_request"
-            | "due_at_in_future"
-            | "response_received_or_deadline_handled"
-            | "claims_valid"
-            | "evidence_verified"
-            | "response_policy_satisfied"
-            | "editorial_approved"
-            | "legal_review_required"
-            | "snapshot_current"
-            | "legal_approved"
-            | "new_material_evidence"
-            | "reauth_if_previously_published" => row.try_get(guard).map_err(db),
-            "legal_review_not_required" => row
-                .try_get::<bool, _>("legal_review_required")
-                .map(|required| !required)
-                .map_err(db),
+            "at_least_one_signal" => required_sqlx_value(row.at_least_one_signal),
+            "triage_decision_investigate" => required_sqlx_value(row.triage_decision_investigate),
+            "assigned_investigator" => required_sqlx_value(row.assigned_investigator),
+            "validated_response_request" => required_sqlx_value(row.validated_response_request),
+            "due_at_in_future" => required_sqlx_value(row.due_at_in_future),
+            "response_received_or_deadline_handled" => {
+                required_sqlx_value(row.response_received_or_deadline_handled)
+            }
+            "claims_valid" => required_sqlx_value(row.claims_valid),
+            "evidence_verified" => required_sqlx_value(row.evidence_verified),
+            "response_policy_satisfied" => required_sqlx_value(row.response_policy_satisfied),
+            "editorial_approved" => required_sqlx_value(row.editorial_approved),
+            "legal_review_required" => Ok(row.legal_review_required),
+            "snapshot_current" => required_sqlx_value(row.snapshot_current),
+            "legal_approved" => required_sqlx_value(row.legal_approved),
+            "new_material_evidence" => required_sqlx_value(row.new_material_evidence),
+            "reauth_if_previously_published" => {
+                required_sqlx_value(row.reauth_if_previously_published)
+            }
+            "legal_review_not_required" => Ok(!row.legal_review_required),
             "changes_required_reason" | "structured_reason" => Ok(structured_reason),
-            "resolution_code_not_none" => row
-                .try_get::<String, _>("resolution_code")
-                .map(|code| code != "NONE")
-                .map_err(db),
+            "resolution_code_not_none" => {
+                required_sqlx_value(row.resolution_code.as_deref()).map(|code| code != "NONE")
+            }
             _ => Err(ServiceError::Persistence),
         }
     };
@@ -264,15 +284,9 @@ async fn canonical_guard_miss(
         if owner_guard {
             query = query.bind(actor);
         }
-        return match query
-            .fetch_optional(&mut **transaction)
-            .await
-            .map_err(db)?
-        {
+        return match query.fetch_optional(&mut **transaction).await.map_err(db)? {
             None => Err(ServiceError::NotFound),
-            Some(actual) if actual != required_status => {
-                Err(ServiceError::InvalidStateTransition)
-            }
+            Some(actual) if actual != required_status => Err(ServiceError::InvalidStateTransition),
             Some(_) => Err(ServiceError::VersionConflict),
         };
     }
@@ -303,10 +317,10 @@ pub(super) async fn canonical_identity(
     ) {
         let publication =
             uuid_value(payload, &["publicationId"]).ok_or(ServiceError::InvalidRequest)?;
-        let case_id = sqlx::query_scalar::<_, Uuid>(
+        let case_id = sqlx::query_scalar!(
             "SELECT case_id FROM editorial.publication_revisions WHERE id=$1",
+            publication,
         )
-        .bind(publication)
         .fetch_optional(&mut **transaction)
         .await
         .map_err(db)?
@@ -473,29 +487,29 @@ async fn persist_triage_signal(
     receipt_digest: &str,
     transaction: &mut Transaction<'_, Postgres>,
 ) -> Result<(), ServiceError> {
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.signal_triages(signal_id,prior_version,resulting_version,result,decision,reason_digest,duplicate_signal_id,duplicate_relationship,expected_duplicate_signal_version,actor_id,request_id,audit_event_id,receipt_digest)          VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)",
+        prepared.persisted_id,
+        details.expected_version,
+        prepared.version,
+        details.result,
+        match details.decision {
+            "DISMISS" => "dismiss",
+            "NEEDS_DATA" => "needs_data",
+            "MARK_DUPLICATE" => "duplicate",
+            "PROMOTE_TO_CASE" => "investigate",
+            "LINK_TO_CASE" => "link",
+            value => value,
+        },
+        reason_digest,
+        details.duplicate_target,
+        details.duplicate_relationship,
+        details.expected_duplicate_version,
+        actor_id,
+        request_id,
+        audit_event_id,
+        receipt_digest,
     )
-    .bind(prepared.persisted_id)
-    .bind(details.expected_version)
-    .bind(prepared.version)
-    .bind(details.result)
-    .bind(match details.decision {
-        "DISMISS" => "dismiss",
-        "NEEDS_DATA" => "needs_data",
-        "MARK_DUPLICATE" => "duplicate",
-        "PROMOTE_TO_CASE" => "investigate",
-        "LINK_TO_CASE" => "link",
-        value => value,
-    })
-    .bind(reason_digest)
-    .bind(details.duplicate_target)
-    .bind(details.duplicate_relationship)
-    .bind(details.expected_duplicate_version)
-    .bind(actor_id)
-    .bind(request_id)
-    .bind(audit_event_id)
-    .bind(receipt_digest)
     .execute(&mut **transaction)
     .await
     .map_err(db)?;

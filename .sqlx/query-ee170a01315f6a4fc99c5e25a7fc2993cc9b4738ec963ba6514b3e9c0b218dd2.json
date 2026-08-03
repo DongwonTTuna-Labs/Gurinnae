@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.read_action_proposal_v1($1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "read_action_proposal_v1",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ee170a01315f6a4fc99c5e25a7fc2993cc9b4738ec963ba6514b3e9c0b218dd2"
+}

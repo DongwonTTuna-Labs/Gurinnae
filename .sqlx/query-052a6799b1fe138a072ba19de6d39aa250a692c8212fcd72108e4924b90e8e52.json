@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.saved_views SET name=COALESCE($3,name),query=COALESCE($4,query), is_default=COALESCE($5,is_default) WHERE id=$1 AND user_id=$2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "052a6799b1fe138a072ba19de6d39aa250a692c8212fcd72108e4924b90e8e52"
+}

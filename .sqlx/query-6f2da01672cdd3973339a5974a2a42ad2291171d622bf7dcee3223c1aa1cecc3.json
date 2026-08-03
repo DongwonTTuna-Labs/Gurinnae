@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.idempotency_keys SET expires_at=clock_timestamp()-interval '1 microsecond' WHERE scope=$1 AND key_hash=$2 AND request_hash=$3 AND response_status IS NULL AND response_body IS NULL AND expires_at>clock_timestamp()",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "6f2da01672cdd3973339a5974a2a42ad2291171d622bf7dcee3223c1aa1cecc3"
+}

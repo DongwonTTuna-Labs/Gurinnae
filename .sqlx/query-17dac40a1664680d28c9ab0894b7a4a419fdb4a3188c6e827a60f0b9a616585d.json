@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COALESCE(jsonb_agg(blocker),'[]'::jsonb) FROM ( SELECT jsonb_build_object('code','CLAIM_NOT_VALIDATED','objectId',id) blocker FROM editorial.claims WHERE case_id=$1 AND validation_status<>'VALID' UNION ALL SELECT jsonb_build_object('code','EVIDENCE_NOT_VERIFIED','objectId',id) FROM editorial.evidence WHERE case_id=$1 AND verification_status<>'VERIFIED') b",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "coalesce",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "17dac40a1664680d28c9ab0894b7a4a419fdb4a3188c6e827a60f0b9a616585d"
+}
