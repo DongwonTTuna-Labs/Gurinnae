@@ -42,18 +42,20 @@ pub async fn create_contact(context: &RequestContext<'_>) -> Result<Value, Servi
         "contact-message",
         message.as_bytes(),
     )?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.create_contact_request($1,$2,$3,$4,$5,$6,$7)")
-            .bind(category)
-            .bind(name_encrypted)
-            .bind(common::token_hmac(&context.state.token_hmac_key, &email)?)
-            .bind(email_encrypted)
-            .bind(subject)
-            .bind(message_encrypted)
-            .bind(receipt_hash)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.create_contact_request($1,$2,$3,$4,$5,$6,$7) AS \"value?\"",
+        category,
+        name_encrypted,
+        common::token_hmac(&context.state.token_hmac_key, &email)?,
+        email_encrypted,
+        subject,
+        message_encrypted,
+        receipt_hash
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, None)?;
     receipt["receiptToken"] = Value::String(receipt_token);
@@ -85,17 +87,19 @@ pub async fn create_dataset_export(context: &RequestContext<'_>) -> Result<Value
     };
     let request_token = common::random_token()?;
     let request_token_hash = common::token_hmac(&context.state.token_hmac_key, &request_token)?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.create_dataset_export($1,$2,$3,$4,$5,$6)")
-            .bind(request_token_hash)
-            .bind(email_hash)
-            .bind(dataset_id)
-            .bind(format)
-            .bind(filters)
-            .bind(OffsetDateTime::now_utc() + Duration::seconds(expires_seconds))
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.create_dataset_export($1,$2,$3,$4,$5,$6) AS \"value?\"",
+        request_token_hash,
+        email_hash,
+        dataset_id,
+        format,
+        filters,
+        OffsetDateTime::now_utc() + Duration::seconds(expires_seconds)
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, None)?;
     receipt["receiptToken"] = Value::String(request_token);

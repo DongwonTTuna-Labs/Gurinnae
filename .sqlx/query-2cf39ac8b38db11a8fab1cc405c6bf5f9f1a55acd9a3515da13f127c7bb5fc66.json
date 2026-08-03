@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT pc.version, btrim(pc.configuration_digest::text) AS configuration_digest FROM ops.provider_connection_tests t JOIN ops.communication_provider_bindings b ON b.generic_provider_id=t.provider_id JOIN ops.communication_provider_configs pc ON pc.id=b.communication_provider_config_id WHERE t.id=$1 AND t.status IN ('QUEUED','RUNNING') AND pc.id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "version"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "configuration_digest",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "2cf39ac8b38db11a8fab1cc405c6bf5f9f1a55acd9a3515da13f127c7bb5fc66"
+}

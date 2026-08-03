@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.jobs SET status='SUCCEEDED',completed_at=clock_timestamp(), lease_owner=NULL,lease_token=NULL,lease_expires_at=NULL,version=version+1, last_error_code=NULL,last_error_detail=NULL WHERE id=$1 AND status='RUNNING' AND lease_token=$2 AND fencing_token=$3",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "0bb1870d7acea0159ee76bf13e90e0394e48fd1685ee3be54013ac3fcd99fac9"
+}

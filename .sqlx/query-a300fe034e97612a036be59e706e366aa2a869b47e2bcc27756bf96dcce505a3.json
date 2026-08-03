@@ -1,0 +1,93 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT s.id,s.name,s.business_status,s.coverage,s.case_counts,s.identity_warnings FROM public.suppliers s WHERE ($1='' OR s.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR s.business_status=ANY($2)) AND (cardinality($3::text[])=0 OR CASE WHEN jsonb_array_length(s.identity_warnings)=0 THEN 'VERIFIED' ELSE 'AMBIGUOUS' END=ANY($3)) ORDER BY CASE WHEN $4='name_asc' THEN s.name END ASC,CASE WHEN $4='updated_desc' THEN s.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.supplier_id=s.id) END DESC,s.id LIMIT $5 OFFSET $6",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "business_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "business_status"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "coverage",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "coverage"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "case_counts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "case_counts"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "identity_warnings",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "identity_warnings"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a300fe034e97612a036be59e706e366aa2a869b47e2bcc27756bf96dcce505a3"
+}

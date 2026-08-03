@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT EXISTS (\n          SELECT 1\n            FROM jsonb_array_elements($3::jsonb) AS requested(value)\n           WHERE NOT EXISTS (\n             SELECT 1\n               FROM ops.agent_source_uses model_input\n              WHERE model_input.agent_run_id=$1\n                AND model_input.provider_turn_id=$2\n                AND model_input.use_kind='MODEL_INPUT'\n                AND model_input.source_kind IN ('EVIDENCE_SEGMENT','RESEARCH_ARTIFACT')\n                AND (\n                  model_input.source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))\n                  OR model_input.parent_source_use_sha256=CAST(requested.value->>'sourceUseSha256' AS char(64))\n                )\n                AND model_input.locator_value=requested.value->'locator'->>'value'\n                AND model_input.selected_content_sha256=CAST(requested.value->>'selectedContentSha256' AS char(64))\n           )\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "733e372bc5eb930cd2208b8ee5591595e51461877a89408c8473b4f69d536874"
+}

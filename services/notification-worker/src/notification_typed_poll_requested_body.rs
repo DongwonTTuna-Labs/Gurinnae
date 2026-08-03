@@ -71,13 +71,14 @@
         "providerEvidenceDigest": receipt.provider_evidence_digest,
         "providerOccurredAt": job.payload.get("providerOccurredAt"),
     });
-    let source: serde_json::Value = sqlx::query_scalar(
+    let source: serde_json::Value = sqlx::query_scalar!(
         "SELECT ops.record_provider_poll_source_receipt_v1($1::jsonb)",
+        source_payload,
     )
-    .bind(source_payload)
     .fetch_one(&state.pool)
     .await
-    .map_err(|_| WorkerError::Database)?;
+    .map_err(|_| WorkerError::Database)?
+    .ok_or(WorkerError::Database)?;
     state
         .worker
         .complete(

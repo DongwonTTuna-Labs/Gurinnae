@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,name,business_status,coverage,descriptive_metrics,case_counts,identity_warnings,updated_at FROM public.suppliers WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "business_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "business_status"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "coverage",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "coverage"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "descriptive_metrics",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "descriptive_metrics"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "case_counts",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "case_counts"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "identity_warnings",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "identity_warnings"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "suppliers",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "016c2ff52e69250707e2ae40d695850c93815dbd8cb900ac8d4380b1bee59ae1"
+}

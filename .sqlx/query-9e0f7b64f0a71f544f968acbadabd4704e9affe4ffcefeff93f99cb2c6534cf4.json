@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT tool_call_id FROM ops.agent_tool_calls WHERE agent_run_id=$1 AND call_id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "tool_call_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_tool_calls",
+            "name": "tool_call_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9e0f7b64f0a71f544f968acbadabd4704e9affe4ffcefeff93f99cb2c6534cf4"
+}

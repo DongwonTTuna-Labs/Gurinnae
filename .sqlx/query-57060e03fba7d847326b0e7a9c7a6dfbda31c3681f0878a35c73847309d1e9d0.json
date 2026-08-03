@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.agencies(id,canonical_name,agency_type,jurisdiction,identity_confidence,identity_status) VALUES($1,$2,'PUBLIC_AGENCY','KR',1,'VERIFIED')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "57060e03fba7d847326b0e7a9c7a6dfbda31c3681f0878a35c73847309d1e9d0"
+}

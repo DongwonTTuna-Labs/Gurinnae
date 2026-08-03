@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id FROM core.dataset_snapshots\n          WHERE snapshot_sha256=CAST($1 AS char(64)) AND snapshot_kind='AGENT_CASE' AND state='READY'\n          ORDER BY ready_at DESC NULLS LAST, id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.dataset_snapshots",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "d4fd763ab7a765f0aafb16cd7578b7542fe486b68c61f1872273f5c4fb51fe4e"
+}

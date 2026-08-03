@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT count(*) AS \"count!\" FROM public.contracts c WHERE ($1::uuid IS NULL OR c.agency_id=$1) AND ($2::uuid IS NULL OR c.supplier_id=$2) AND ($3::date IS NULL OR c.signed_at >= $3) AND ($4::date IS NULL OR c.signed_at <= $4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Date",
+        "Date"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "06db9dade91b6b075c4b3744b74cea9c6056f4f06d910c5bbb1ef7a426dd2959"
+}

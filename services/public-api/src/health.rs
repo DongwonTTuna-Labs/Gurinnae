@@ -11,7 +11,7 @@ pub async fn live() -> impl Responder {
 pub async fn ready(state: web::Data<AppState>) -> impl Responder {
     match actix_web::rt::time::timeout(
         Duration::from_secs(2),
-        sqlx::query("SELECT 1").execute(&state.pool),
+        sqlx::Executor::execute(&state.pool, sqlx::query_scalar!("SELECT 1")),
     )
     .await
     {

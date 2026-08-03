@@ -1,0 +1,31 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.email_deliveries(message_type,recipient_hash,template_version,object_type,object_id,status,attempt_count) VALUES($1,$2,'v1',$3,$4,'SENDING',1) ON CONFLICT(message_type,object_id,recipient_hash) WHERE object_id IS NOT NULL DO UPDATE SET status='SENDING',attempt_count=ops.email_deliveries.attempt_count+1,last_error_code=NULL RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.email_deliveries",
+            "name": "id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Bpchar",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6914b1be689c8d78d4ec309a6a1cf2ca2328aed68ecf2d749d268312b87bc7e2"
+}

@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.schema_drifts(id,source_id,detected_at,fingerprint_before, fingerprint_after,sample_document_ids,status,impact) VALUES($1,$2,clock_timestamp(),$3,$4,$5,'OPEN','UNKNOWN')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "63bab4775305c6a9a23cffe913d0d5dfe293890d2346b9276f63d28f0a42ebbf"
+}

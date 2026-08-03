@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rule_id,name,active_version,public_description,requirements,exclusions,limitations,updated_at FROM public.rules WHERE rule_id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rule_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "active_version",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "active_version"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "public_description",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "public_description"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "requirements",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "requirements"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "exclusions",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "exclusions"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "limitations",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "limitations"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "rules",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "704e153f76a0e0b1e18b6a3b42f7e50e95fc555fa656e182746e43c4c6c8ac55"
+}

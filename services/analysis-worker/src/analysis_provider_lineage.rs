@@ -16,7 +16,7 @@ async fn insert_model_input_source_uses(
 ) -> Result<(), Failure>
 where
 {
-    sqlx::query(
+    sqlx::query!(
         r#"
         WITH candidates AS (
           SELECT DISTINCT ON (root.source_use_id)
@@ -185,10 +185,10 @@ where
           FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
+        turn.turn_id,
+        receipt_id,
+        receipt_sha256,
     )
-    .bind(turn.turn_id)
-    .bind(receipt_id)
-    .bind(receipt_sha256)
     .execute(&mut *executor)
     .await
     .map_err(database)?;
@@ -208,19 +208,21 @@ async fn insert_model_output_derivation_source_uses(
     // turn itself.  The completion owner is the source of truth; reusing a
     // separately parsed value here could trip the database receipt guard on
     // an otherwise successful completion.
-    let (bound_receipt_id, bound_receipt_sha256): (Uuid, String) = sqlx::query_as(
+    let receipt = sqlx::query!(
         r#"SELECT provider_receipt_id, btrim(provider_receipt_sha256::text)
              FROM ops.agent_provider_turns
             WHERE agent_run_id=$1 AND provider_turn_id=$2
               AND provider_receipt_id IS NOT NULL
               AND provider_receipt_sha256 IS NOT NULL"#,
+        turn.run_id,
+        turn.turn_id,
     )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
     .fetch_optional(&mut *executor)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("PROVIDER_RECEIPT_INVALID", "completed turn receipt missing".into()))?;
+    let bound_receipt_id = required(receipt.provider_receipt_id).map_err(database)?;
+    let bound_receipt_sha256 = required(receipt.btrim).map_err(database)?;
     let output_sha256 = sha256(&canonical_bytes(output)?);
     sqlx::query(
         r#"
@@ -303,7 +305,7 @@ async fn insert_citation_source_uses(
     if citation_count == 0 {
         return Ok(());
     }
-    let unmatched: bool = sqlx::query_scalar(
+    let unmatched: bool = sqlx::query_scalar!(
         r#"
         SELECT EXISTS (
           SELECT 1
@@ -324,20 +326,21 @@ async fn insert_citation_source_uses(
            )
         )
         "#,
+        turn.run_id,
+        turn.turn_id,
+        &citations,
     )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(&citations)
     .fetch_one(&mut *executor)
     .await
-    .map_err(database)?;
+    .map_err(database)?
+    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     if unmatched {
         return Err(Failure::Terminal(
             "AGENT_OUTPUT_INVALID",
             "citation source-use binding".into(),
         ));
     }
-    sqlx::query(
+    sqlx::query!(
         r#"
         WITH requested AS (
           SELECT value, ordinality::int - 1 AS citation_ordinal
@@ -400,10 +403,10 @@ async fn insert_citation_source_uses(
         FROM payloads p
         ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
         "#,
+        turn.run_id,
+        turn.turn_id,
+        citations,
     )
-    .bind(turn.run_id)
-    .bind(turn.turn_id)
-    .bind(citations)
     .execute(&mut *executor)
     .await
     .map_err(database)?;

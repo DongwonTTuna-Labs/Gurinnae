@@ -4,32 +4,41 @@ use gurine_auth::assertion::canonical::sha256_hex;
 use serde_json::Value;
 
 pub(super) async fn private_request(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    sqlx::query_scalar("SELECT intake.get_response_request_session_v2($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT intake.get_response_request_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }
 
 pub(super) async fn private_draft(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    sqlx::query_scalar("SELECT intake.get_response_draft_session_v2($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT intake.get_response_draft_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }
 
 pub(super) async fn private_attachments(
     context: &RequestContext<'_>,
 ) -> Result<Value, ServiceError> {
-    let preview: Value = sqlx::query_scalar("SELECT intake.get_response_preview_session_v2($1,$2)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let preview: Value = sqlx::query_scalar!(
+        "SELECT intake.get_response_preview_session_v2($1,$2) AS \"value?\"",
+        session_hash(context)?,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     preview
         .get("attachments")
         .cloned()
@@ -85,16 +94,17 @@ pub(super) async fn scope_id(
     context: &RequestContext<'_>,
     kinds: &[&str],
 ) -> Result<uuid::Uuid, ServiceError> {
-    sqlx::query_scalar("SELECT scope_id FROM intake.resolve_submission_session($1,$2,$3)")
-        .bind(session_hash(context)?)
-        .bind(context.issuer)
-        .bind(
-            kinds
-                .iter()
-                .map(|value| (*value).to_owned())
-                .collect::<Vec<_>>(),
-        )
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT scope_id AS \"scope_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
+        session_hash(context)?,
+        context.issuer,
+        &kinds
+            .iter()
+            .map(|value| (*value).to_owned())
+            .collect::<Vec<_>>()
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }

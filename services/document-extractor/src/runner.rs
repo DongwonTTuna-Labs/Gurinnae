@@ -8,7 +8,7 @@ use gurine_object_store::{
 };
 use gurine_persistence_postgres::pool::{PoolConfig, connect};
 use serde_json::{Value, json};
-use sqlx::{PgPool, Row};
+use sqlx::PgPool;
 use thiserror::Error;
 use uuid::Uuid;
 

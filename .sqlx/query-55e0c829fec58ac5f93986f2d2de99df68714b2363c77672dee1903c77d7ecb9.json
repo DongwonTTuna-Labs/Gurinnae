@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT intake.create_response_attachment_session_v2($1,$2,$3,$4,$5,$6,$7) AS \"value?\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "value?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "Bytea",
+        "Text",
+        "Int8",
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "55e0c829fec58ac5f93986f2d2de99df68714b2363c77672dee1903c77d7ecb9"
+}

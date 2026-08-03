@@ -407,13 +407,21 @@ async fn provider_revision_is_current(
     else {
         return false;
     };
-    let row = sqlx::query_scalar::<_, bool>(
+    let row = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.communication_provider_configs pc JOIN ops.communication_provider_preflight_receipts pf ON pf.provider_config_id=pc.id AND pf.provider_config_version=pc.version AND pf.configuration_digest=pc.configuration_digest WHERE pc.id=$1 AND pc.version=$2 AND pc.configuration_digest=$3 AND pc.channel = CASE $6 WHEN 'TELEGRAM' THEN 'TELEGRAM_BOT_API' WHEN 'WHATSAPP' THEN 'META_WHATSAPP_BUSINESS_CLOUD' WHEN 'LINE' THEN 'LINE_MESSAGING_API' WHEN 'SMS' THEN 'SOLAPI_SMS' WHEN 'KAKAO' THEN 'SOLAPI_KAKAO_BIZMESSAGE' ELSE '' END AND pc.credential_secret_reference=$7 AND pc.operational_state='ACTIVE' AND pc.activation_effective_at<=clock_timestamp() AND (pc.activation_expires_at IS NULL OR pc.activation_expires_at>clock_timestamp()) AND pf.id=$4 AND pf.receipt_digest=$5 AND pf.result='PASS' AND pf.expires_at>clock_timestamp() AND pf.live_sandbox AND pf.callback_or_poll_verified AND pf.sender_identity_verified AND pf.template_catalog_verified)",
+        config_id,
+        config_version,
+        config_digest,
+        preflight_id,
+        preflight_digest,
+        channel,
+        secret_reference,
     )
-    .bind(config_id).bind(config_version).bind(config_digest).bind(preflight_id).bind(preflight_digest).bind(channel)
-    .bind(secret_reference)
     .fetch_one(pool).await;
-    row.unwrap_or(false)
+    match row {
+        Ok(Some(value)) => value,
+        Ok(None) | Err(_) => false,
+    }
 }
 
 async fn kill_switch_active(state: &GatewayState, tier: &str, channel: Option<&str>) -> bool {
@@ -422,7 +430,7 @@ async fn kill_switch_active(state: &GatewayState, tier: &str, channel: Option<&s
         // rejects that shape before the server starts.
         return false;
     };
-    let active: Result<bool, _> = sqlx::query_scalar(
+    let active = sqlx::query_scalar!(
         "SELECT EXISTS(
            SELECT 1 FROM ops.kill_switches k
            WHERE k.state='ACTIVE'
@@ -436,14 +444,17 @@ async fn kill_switch_active(state: &GatewayState, tier: &str, channel: Option<&s
                OR ($2::text IS NOT NULL AND k.scope @> jsonb_build_object('channel',$2))
              )
          )",
+        tier,
+        channel,
     )
-    .bind(tier)
-    .bind(channel)
     .fetch_one(pool)
     .await;
     // A failed read is a fail-closed egress decision.  This prevents an
     // unavailable control database from silently bypassing an incident stop.
-    active.unwrap_or(true)
+    match active {
+        Ok(Some(value)) => value,
+        Ok(None) | Err(_) => true,
+    }
 }
 
 async fn validate_target(

@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.transition_agent_run_worker_v1($1,$2,$3,$4,$5,$6,$7,$8,true)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "transition_agent_run_worker_v1",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Text",
+        "Numeric"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "0c843c9b6651c30b33f694e1b3c4f59f970505e893c84d566816c0e06e99c926"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT session_id AS \"session_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "ad213364fed0a5aa924aa3d2bf5d4cc1f04b0c8c0dcc9511c2c494d25ddf4b13"
+}

@@ -22,18 +22,18 @@
         .and_then(serde_json::Value::as_str)
         .unwrap_or("communication-v1")
         .to_owned();
-    let snapshot = sqlx::query(
+    let snapshot = sqlx::query!(
         "SELECT rendering_id,rendering_digest,rendered_sha256,channel,generation, \
                 provider_config_id,provider_config_version,provider_configuration_digest, \
                 provider_preflight_receipt_id,provider_preflight_receipt_digest \
            FROM ops.outbound_deliveries WHERE id=$1 AND version=$2",
+        delivery_id,
+        expected_version,
     )
-    .bind(delivery_id)
-    .bind(expected_version)
     .fetch_one(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let expected_generation: i64 = snapshot.try_get("generation").map_err(|_| WorkerError::Database)?;
+    let expected_generation = snapshot.generation;
     let attempt = sqlx::query(
         "SELECT (ops.claim_outbound_delivery_attempt(ROW($1::uuid,$2::text,$3::char(64),$4::bigint,$5::bigint,$6::integer,$7::text)::ops.outbound_delivery_claim_v1)).*",
     )
@@ -47,24 +47,26 @@
     .fetch_one(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let attempt_id: Uuid = attempt.try_get("attempt_id").map_err(|_| WorkerError::Database)?;
+    let attempt_id: Uuid = attempt
+        .try_get("attempt_id")
+        .map_err(|_| WorkerError::Database)?;
     let provider_idempotency_key: String = attempt
         .try_get("provider_idempotency_key_sha256")
         .map_err(|_| WorkerError::Database)?;
-    let rendering_id: Uuid = snapshot.try_get("rendering_id").map_err(|_| WorkerError::Database)?;
-    let rendering_digest: String = snapshot.try_get("rendering_digest").map_err(|_| WorkerError::Database)?;
-    let rendered_sha256: String = snapshot.try_get("rendered_sha256").map_err(|_| WorkerError::Database)?;
-    let snapshot_channel: String = snapshot.try_get("channel").map_err(|_| WorkerError::Database)?;
-    let envelope = sqlx::query(
+    let rendering_id = snapshot.rendering_id.ok_or(WorkerError::Database)?;
+    let rendering_digest = snapshot.rendering_digest.ok_or(WorkerError::Database)?;
+    let rendered_sha256 = snapshot.rendered_sha256.ok_or(WorkerError::Database)?;
+    let snapshot_channel = snapshot.channel;
+    let envelope = sqlx::query!(
         "SELECT rendered_envelope_ciphertext, encryption_key_id FROM ops.communication_renderings WHERE id=$1 AND rendering_digest=$2 AND rendered_sha256=$3 AND state='APPROVED'",
+        rendering_id,
+        &rendering_digest,
+        &rendered_sha256,
     )
-    .bind(rendering_id)
-    .bind(&rendering_digest)
-    .bind(&rendered_sha256)
     .fetch_one(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let token: Vec<u8> = envelope.try_get("rendered_envelope_ciphertext").map_err(|_| WorkerError::Database)?;
+    let token = envelope.rendered_envelope_ciphertext;
     let plaintext = decrypt_rendered_envelope(state, rendering_id, &token)?;
     let rendered: serde_json::Value = serde_json::from_slice(&plaintext).map_err(|_| WorkerError::Cryptography)?;
     let message = EmailMessage {
@@ -84,11 +86,19 @@
     }
     let channel = provider_adapter_channel(canonical_channel)?;
     let binding = ProviderBinding {
-        config_id: snapshot.try_get("provider_config_id").map_err(|_| WorkerError::Database)?,
-        config_version: snapshot.try_get("provider_config_version").map_err(|_| WorkerError::Database)?,
-        configuration_digest: snapshot.try_get("provider_configuration_digest").map_err(|_| WorkerError::Database)?,
-        preflight_id: snapshot.try_get("provider_preflight_receipt_id").map_err(|_| WorkerError::Database)?,
-        preflight_digest: snapshot.try_get("provider_preflight_receipt_digest").map_err(|_| WorkerError::Database)?,
+        config_id: snapshot.provider_config_id.ok_or(WorkerError::Database)?,
+        config_version: snapshot
+            .provider_config_version
+            .ok_or(WorkerError::Database)?,
+        configuration_digest: snapshot
+            .provider_configuration_digest
+            .ok_or(WorkerError::Database)?,
+        preflight_id: snapshot
+            .provider_preflight_receipt_id
+            .ok_or(WorkerError::Database)?,
+        preflight_digest: snapshot
+            .provider_preflight_receipt_digest
+            .ok_or(WorkerError::Database)?,
     };
     let provider_id = state
         .delivery
@@ -121,25 +131,23 @@
     let observation_key_digest = sha256_hex(
         format!("provider-response:{}:{}", attempt_id, provider_id).as_bytes(),
     );
-    let observation = sqlx::query(
+    let observation = sqlx::query!(
         "SELECT (ops.record_outbound_delivery_observation(ROW($1::uuid,$2::bigint,'PROVIDER_RESPONSE',$3::uuid,NULL::uuid,NULL::char(64),$4::char(64),'PROVIDER_RESPONSE','PROVIDER_ACCEPTED',$5::char(64),NULL::timestamptz)::ops.outbound_delivery_observation_v1)).*",
+        delivery_id,
+        expected_version + 1,
+        attempt_id,
+        observation_key_digest,
+        provider_evidence_digest,
     )
-    .bind(delivery_id)
-    .bind(expected_version + 1)
-    .bind(attempt_id)
-    .bind(observation_key_digest)
-    .bind(provider_evidence_digest)
     .fetch_one(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let receipt_id: Uuid = observation
-        .try_get("receipt_id")
-        .map_err(|_| WorkerError::Database)?;
-    let changed = sqlx::query(
+    let receipt_id = observation.receipt_id.ok_or(WorkerError::Database)?;
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?

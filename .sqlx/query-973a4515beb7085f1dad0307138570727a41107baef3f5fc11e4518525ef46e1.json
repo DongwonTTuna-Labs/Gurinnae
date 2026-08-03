@@ -1,0 +1,131 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.case_id,r.revision,r.state::text AS \"state!\",r.public_payload,r.public_payload_sha256, r.published_at,r.supersedes_revision,d.scope AS \"scope?\",d.affected_ids AS \"affected_ids?\",d.expires_at AS \"expires_at?\" FROM editorial.publication_revisions r LEFT JOIN LATERAL (SELECT scope,affected_ids,expires_at FROM editorial.publication_access_decisions d WHERE d.publication_revision_id=r.id AND d.state='ACTIVE' AND d.expires_at>clock_timestamp() ORDER BY d.placed_at DESC LIMIT 1) d ON true WHERE r.id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "case_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "case_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "revision"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "state!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "public_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "public_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "public_payload_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "public_payload_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "supersedes_revision",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_revisions",
+            "name": "supersedes_revision"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "scope?",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_access_decisions",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "affected_ids?",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_access_decisions",
+            "name": "affected_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "expires_at?",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.publication_access_decisions",
+            "name": "expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "973a4515beb7085f1dad0307138570727a41107baef3f5fc11e4518525ef46e1"
+}

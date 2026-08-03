@@ -1,0 +1,125 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id AS research_artifact_id,\n                su.source_use_id,r.content_sha256,r.artifact_sha256,r.content_media_type,\n                r.request_kind,r.source_url_redacted,r.final_url_redacted,r.object_key\n           FROM raw.research_artifacts r\n           JOIN LATERAL (\n             SELECT source_use_id FROM ops.agent_source_uses\n              WHERE agent_run_id=r.agent_run_id AND research_artifact_id=r.id\n                AND use_kind='TOOL_RESULT'\n              ORDER BY source_use_id LIMIT 1\n           ) su ON true\n          WHERE r.agent_run_id=$1 AND r.input_snapshot_sha256=CAST($2 AS char(64)) AND r.fetch_outcome='STORED'\n          ORDER BY r.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "research_artifact_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "source_use_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_source_uses",
+            "name": "source_use_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "artifact_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "artifact_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "content_media_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "content_media_type"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "request_kind",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "request_kind"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "source_url_redacted",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "source_url_redacted"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "final_url_redacted",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "final_url_redacted"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "object_key",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "raw.research_artifacts",
+            "name": "object_key"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "4dd61ec37872244df1462dc49f421dc4f31b280f2ffa3299afb9bca12a464e6f"
+}

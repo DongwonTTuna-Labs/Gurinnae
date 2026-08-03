@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.source_incidents(source_id,severity,incident_type,summary,impact,status) VALUES($1,'MINOR',$2,'Structured record missing required canonical field',$3,'OPEN')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4b5b62d55512785d6d27d41e4ff581d5faf2bad98b5892d8f1aa5545ffde4961"
+}

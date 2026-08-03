@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.provider_configs SET last_connection_test_at=clock_timestamp(),            last_connection_test_status=$2 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5f112384ead317bd10ce41280a11eab60b065ad3f6b6923506078319322555c4"
+}

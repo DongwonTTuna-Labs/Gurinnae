@@ -22,23 +22,24 @@ async fn terminal_document(
 }
 
 async fn inbox_processed(pool: &PgPool, event_id: Uuid) -> Result<bool, Failure> {
-    sqlx::query_scalar(
+    let processed = sqlx::query_scalar!(
         "SELECT processed_at IS NOT NULL FROM ops.inbox WHERE consumer='document-extractor' AND event_id=$1",
+        event_id,
     )
-    .bind(event_id)
     .fetch_optional(pool)
     .await
     .map_err(database)?
-    .ok_or_else(|| Failure::Terminal("INBOX_RECORD_MISSING", event_id.to_string()))
+    .ok_or_else(|| Failure::Terminal("INBOX_RECORD_MISSING", event_id.to_string()))?;
+    required_column(processed, "0")
 }
 
 async fn mark_inbox(pool: &PgPool, event_id: Uuid, result: &str) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=COALESCE(processed_at,clock_timestamp()),result=$2 \
          WHERE consumer='document-extractor' AND event_id=$1",
+        event_id,
+        result,
     )
-    .bind(event_id)
-    .bind(result)
     .execute(pool)
     .await
     .map_err(database)?
@@ -58,12 +59,12 @@ async fn update_inbox(
     event_id: Uuid,
     result: &str,
 ) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result=$2 \
          WHERE consumer='document-extractor' AND event_id=$1 AND processed_at IS NULL",
+        event_id,
+        result,
     )
-    .bind(event_id)
-    .bind(result)
     .execute(&mut **tx)
     .await
     .map_err(database)?
@@ -181,6 +182,15 @@ fn uuid(value: &Value, key: &str) -> Option<Uuid> {
 
 fn database(error: sqlx::Error) -> Failure {
     Failure::Retryable("DATABASE_UNAVAILABLE", error.to_string())
+}
+
+fn required_column<T>(value: Option<T>, index: &str) -> Result<T, Failure> {
+    value.ok_or_else(|| {
+        database(sqlx::Error::ColumnDecode {
+            index: index.to_owned(),
+            source: Box::new(sqlx::error::UnexpectedNullError),
+        })
+    })
 }
 
 fn map_job_error(error: JobError) -> WorkerError {

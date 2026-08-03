@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,rendering_digest FROM ops.communication_renderings WHERE intent_id=$1 AND state='APPROVED' AND expires_at>clock_timestamp() ORDER BY rendering_revision,id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_renderings",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "rendering_digest",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_renderings",
+            "name": "rendering_digest"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "c65071254bc60637ae58887747a870a979c2ae906b5c9f732194b97816c333d3"
+}

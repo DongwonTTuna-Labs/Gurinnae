@@ -123,12 +123,12 @@ fn real_business_health_projection() -> bool {
             .connect(&database_url)
             .await
             .ok()?;
-        let projection: Value = sqlx::query_scalar(
+        let projection: Value = sqlx::query_scalar!(
             "SELECT ops.read_business_health_projection_v1(NULL::uuid, NULL::uuid, clock_timestamp())",
         )
         .fetch_one(&pool)
         .await
-        .ok()?;
+        .ok()??;
         pool.close().await;
         Some(projection_is_closed_and_truthful(&projection))
     })

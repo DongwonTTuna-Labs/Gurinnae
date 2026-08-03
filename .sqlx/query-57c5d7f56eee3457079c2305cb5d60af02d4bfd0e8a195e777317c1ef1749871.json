@@ -1,0 +1,46 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.complete_agent_provider_turn(\n           $1,$2,$3,$4,CAST($5 AS char(64)),CAST($6 AS char(64)),$7,$8,$9,$10,$11,$12,$13,$14,\n           CAST($15 AS char(64)),$16,CAST($17 AS char(64)),CAST($18 AS char(64)),$19,$20,\n           CAST($21 AS char(64)),$22,$23,CAST($24 AS char(64)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "complete_agent_provider_turn",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Text",
+        "Text",
+        "Bpchar",
+        "Bpchar",
+        "Bytea",
+        "Jsonb",
+        "Bytea",
+        "Text",
+        "Text",
+        "Uuid",
+        "Jsonb",
+        "Bytea",
+        "Bpchar",
+        "Bytea",
+        "Bpchar",
+        "Bpchar",
+        "Int8",
+        "Int8",
+        "Bpchar",
+        "Int8",
+        "Text",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "57c5d7f56eee3457079c2305cb5d60af02d4bfd0e8a195e777317c1ef1749871"
+}

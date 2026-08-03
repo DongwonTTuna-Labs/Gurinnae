@@ -1,0 +1,64 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_evaluations e SET status='RUNNING',            started_at=COALESCE(started_at,clock_timestamp())          FROM core.rule_versions v WHERE e.id=$1 AND e.rule_version_id=v.id            AND e.status IN ('QUEUED','RUNNING')          RETURNING e.rule_version_id,e.dataset_snapshot_id,v.rule_id,v.configuration",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rule_version_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.rule_evaluations",
+            "name": "rule_version_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "dataset_snapshot_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "core.rule_evaluations",
+            "name": "dataset_snapshot_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "rule_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "core.rule_versions",
+            "name": "rule_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "configuration",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "core.rule_versions",
+            "name": "configuration"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "88162ab6b2f64db06038de0038e8bffb59540a270384c3a7499b0cc102700d4d"
+}

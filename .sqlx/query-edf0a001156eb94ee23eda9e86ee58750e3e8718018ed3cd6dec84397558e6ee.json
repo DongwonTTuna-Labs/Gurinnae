@@ -1,0 +1,42 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rendered_envelope_ciphertext, encryption_key_id FROM ops.communication_renderings WHERE id=$1 AND rendering_digest=$2 AND rendered_sha256=$3 AND state='APPROVED'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "rendered_envelope_ciphertext",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_renderings",
+            "name": "rendered_envelope_ciphertext"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "encryption_key_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_renderings",
+            "name": "encryption_key_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "edf0a001156eb94ee23eda9e86ee58750e3e8718018ed3cd6dec84397558e6ee"
+}

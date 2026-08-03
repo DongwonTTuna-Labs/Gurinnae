@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.communication_provider_configs pc JOIN ops.communication_provider_preflight_receipts pf ON pf.provider_config_id=pc.id AND pf.provider_config_version=pc.version AND pf.configuration_digest=pc.configuration_digest WHERE pc.id=$1 AND pc.version=$2 AND pc.configuration_digest=$3 AND pc.channel = CASE $6 WHEN 'TELEGRAM' THEN 'TELEGRAM_BOT_API' WHEN 'WHATSAPP' THEN 'META_WHATSAPP_BUSINESS_CLOUD' WHEN 'LINE' THEN 'LINE_MESSAGING_API' WHEN 'SMS' THEN 'SOLAPI_SMS' WHEN 'KAKAO' THEN 'SOLAPI_KAKAO_BIZMESSAGE' ELSE '' END AND pc.credential_secret_reference=$7 AND pc.operational_state='ACTIVE' AND pc.activation_effective_at<=clock_timestamp() AND (pc.activation_expires_at IS NULL OR pc.activation_expires_at>clock_timestamp()) AND pf.id=$4 AND pf.receipt_digest=$5 AND pf.result='PASS' AND pf.expires_at>clock_timestamp() AND pf.live_sandbox AND pf.callback_or_poll_verified AND pf.sender_identity_verified AND pf.template_catalog_verified)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Uuid",
+        "Bpchar",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "1e800839097a7300699ba6cfd1007f260a09bc59df814177516ab52900a61c45"
+}

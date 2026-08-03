@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_evaluations SET status='FAILED',completed_at=clock_timestamp(), result_payload=$2 WHERE id=$1 AND status IN ('QUEUED','RUNNING')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4ea74cb364aba50cbf844bba41348814e260c0686ea6c66fbde47f73e24f4178"
+}

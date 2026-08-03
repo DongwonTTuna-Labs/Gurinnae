@@ -52,14 +52,17 @@ async fn workflow_inbox_processed(
     consumer_id: &str,
     event_id: Uuid,
 ) -> Result<bool, Failure> {
-    sqlx::query_scalar(
+    sqlx::query_scalar!(
         "SELECT processed_at IS NOT NULL FROM ops.inbox \
          WHERE consumer=$1 AND event_id=$2",
+        consumer_id,
+        event_id,
     )
-    .bind(consumer_id)
-    .bind(event_id)
     .fetch_optional(pool)
     .await
+    .map_err(database)?
+    .map(required)
+    .transpose()
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("INBOX_MISSING", event_id.to_string()))
 }
@@ -119,12 +122,12 @@ async fn mark_workflow_inbox_processed(
     consumer_id: &str,
     event_id: Uuid,
 ) -> Result<(), Failure> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        consumer_id,
+        event_id,
     )
-    .bind(consumer_id)
-    .bind(event_id)
     .execute(pool)
     .await
     .map_err(database)?
@@ -162,20 +165,21 @@ async fn reconcile_communication_delivery_receipt(
         .get("receiptApplied")
         .and_then(Value::as_bool)
         .ok_or_else(|| Failure::Terminal("INVALID_DELIVERY_RECEIPT", "applied".to_owned()))?;
-    let exact: bool = sqlx::query_scalar(
+    let exact = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.outbound_delivery_receipts \
          WHERE id=$1 AND delivery_id=$2 AND receipt_sequence=$3 \
            AND receipt_digest=$4 AND resulting_state=$5 AND applied=$6)",
+        receipt_id,
+        delivery_id,
+        sequence,
+        digest,
+        state,
+        applied,
     )
-    .bind(receipt_id)
-    .bind(delivery_id)
-    .bind(sequence)
-    .bind(digest)
-    .bind(state)
-    .bind(applied)
     .fetch_one(pool)
     .await
     .map_err(database)?;
+    let exact = required(exact).map_err(database)?;
     if !exact {
         return Err(Failure::Terminal(
             "DELIVERY_RECEIPT_MISMATCH",
@@ -191,6 +195,12 @@ async fn reconcile_communication_delivery_receipt(
     }))
 }
 
+struct AttachmentScanRow {
+    object_key: String,
+    size_bytes: i64,
+    sha256: Option<String>,
+}
+
 async fn scan_attachment(
     pool: &PgPool,
     store: &Store,
@@ -198,31 +208,38 @@ async fn scan_attachment(
     kind: &str,
     id: Uuid,
 ) -> Result<Value, Failure> {
-    let sql = match kind {
-        "RESPONSE" => {
-            "SELECT object_key,size_bytes,sha256::text FROM intake.response_attachments \
-             WHERE id=$1 AND upload_status='FINALIZED' AND scan_status='PENDING'"
-        }
-        "CORRECTION" => {
-            "SELECT object_key,size_bytes,sha256::text FROM intake.correction_draft_attachments \
-             WHERE id=$1 AND upload_status='FINALIZED' AND scan_status='PENDING'"
-        }
+    let row = match kind {
+        "RESPONSE" => sqlx::query_as!(
+            AttachmentScanRow,
+            "SELECT object_key,size_bytes,sha256::text AS \"sha256?\" \
+             FROM intake.response_attachments \
+             WHERE id=$1 AND upload_status='FINALIZED' AND scan_status='PENDING'",
+            id,
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?,
+        "CORRECTION" => sqlx::query_as!(
+            AttachmentScanRow,
+            "SELECT object_key,size_bytes,sha256::text AS \"sha256?\" \
+             FROM intake.correction_draft_attachments \
+             WHERE id=$1 AND upload_status='FINALIZED' AND scan_status='PENDING'",
+            id,
+        )
+        .fetch_optional(pool)
+        .await
+        .map_err(database)?,
         _ => {
             return Err(Failure::Terminal(
                 "ATTACHMENT_KIND_INVALID",
                 kind.to_owned(),
             ));
         }
-    };
-    let row = sqlx::query(sql)
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-        .map_err(database)?
-        .ok_or_else(|| Failure::Terminal("ATTACHMENT_NOT_PENDING", id.to_string()))?;
-    let key: String = row.try_get("object_key").map_err(database)?;
-    let expected_size: i64 = row.try_get("size_bytes").map_err(database)?;
-    let expected_sha256: String = row.try_get::<String, _>("sha256").map_err(database)?;
+    }
+    .ok_or_else(|| Failure::Terminal("ATTACHMENT_NOT_PENDING", id.to_string()))?;
+    let key = row.object_key;
+    let expected_size = row.size_bytes;
+    let expected_sha256 = required(row.sha256).map_err(database)?;
     let bytes = get(store, &key, expected_sha256.trim())
         .await
         .map_err(|error| match error {
@@ -244,15 +261,16 @@ async fn scan_attachment(
         Ok(ScanResult::Infected) => "INFECTED",
         Err(error) => return Err(Failure::Retryable("SCANNER_UNAVAILABLE", error.to_string())),
     };
-    let event_id: Uuid = sqlx::query_scalar(
+    let event_id = sqlx::query_scalar!(
         "SELECT ops.enqueue_outbox('attachment',$1,1,'attachment.scan_completed.v1',$2,clock_timestamp())",
+        id.to_string(),
+        json!({"attachment_id":id,"attachment_kind":kind,"scan_status":status,
+            "sha256":expected_sha256.trim()}),
     )
-    .bind(id.to_string())
-    .bind(json!({"attachment_id":id,"attachment_kind":kind,"scan_status":status,
-        "sha256":expected_sha256.trim()}))
     .fetch_one(pool)
     .await
     .map_err(database)?;
+    let event_id = required(event_id).map_err(database)?;
     tracing::info!(attachment_id=%id, attachment_kind=%kind, scan_status=status, %event_id, "attachment scan completed");
     Ok(json!({"attachmentId":id,"attachmentKind":kind,"scanStatus":status,"eventId":event_id}))
 }
@@ -268,16 +286,17 @@ async fn reconcile_agent_run(
         .and_then(Value::as_str)
         .filter(|value| is_sha256(value))
         .ok_or_else(|| Failure::Terminal("INVALID_AGENT_EVENT", "output digest".to_owned()))?;
-    let row =
-        sqlx::query("SELECT status,output_payload FROM ops.agent_runs WHERE id=$1 AND case_id=$2")
-            .bind(run_id)
-            .bind(case_id)
-            .fetch_optional(pool)
-            .await
-            .map_err(database)?
-            .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_FOUND", run_id.to_string()))?;
-    let status: String = row.try_get("status").map_err(database)?;
-    let output: Option<Value> = row.try_get("output_payload").map_err(database)?;
+    let row = sqlx::query!(
+        "SELECT status,output_payload FROM ops.agent_runs WHERE id=$1 AND case_id=$2",
+        run_id,
+        case_id,
+    )
+    .fetch_optional(pool)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_FOUND", run_id.to_string()))?;
+    let status = row.status;
+    let output = row.output_payload;
     if status != "SUCCEEDED" {
         return Err(Failure::Terminal("AGENT_RUN_NOT_SUCCEEDED", status));
     }
@@ -294,20 +313,21 @@ async fn reconcile_agent_run(
             run_id.to_string(),
         ));
     }
-    let suggestions: i64 = sqlx::query_scalar(
+    let suggestions = sqlx::query_scalar!(
         "SELECT count(*) FROM ops.agent_suggestions WHERE agent_run_id=$1 AND status='PENDING'",
+        run_id,
     )
-    .bind(run_id)
     .fetch_one(pool)
     .await
     .map_err(database)?;
+    let suggestions = required(suggestions).map_err(database)?;
     if suggestions > 0 {
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority) \
              VALUES('AGENT_REVIEW','AGENT_RUN',$1,'Review agent suggestions','OPEN','NORMAL') \
              ON CONFLICT DO NOTHING",
+            run_id,
         )
-        .bind(run_id)
         .execute(pool)
         .await
         .map_err(database)?;

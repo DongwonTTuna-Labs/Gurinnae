@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT email_encrypted,locale FROM intake.subscriptions WHERE id=$1 AND status='PENDING'",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "email_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "intake.subscriptions",
+            "name": "email_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "locale",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "intake.subscriptions",
+            "name": "locale"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "92107391bc1325fa67cc9260f1af3412d452b9bc3f3fee831867e36fea2ab487"
+}

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO raw.parsed_records(source_document_id,record_type,record_index, parser_version,payload,payload_sha256) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(source_document_id,record_type,record_index,parser_version) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Text",
+        "Jsonb",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "67a5b2733ccc15e633351165793a43ed9b089e8e2a32400e816b05c0cd29b59f"
+}

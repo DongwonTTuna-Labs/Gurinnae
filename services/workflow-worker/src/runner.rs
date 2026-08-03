@@ -45,6 +45,10 @@ enum Failure {
     Retryable(&'static str, String),
 }
 
+fn required<T>(value: Option<T>) -> Result<T, sqlx::Error> {
+    value.ok_or_else(|| sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError)))
+}
+
 pub async fn run(config: Config) -> Result<(), WorkerError> {
     let pool = connect(&PoolConfig {
         database_url: config.database_url.clone(),

@@ -1,20 +1,20 @@
 async fn load_agent_context(state: &State, job: &ClaimedJob) -> Result<AgentContext, Failure> {
     let run_id = payload_uuid(&job.payload, "agentRunId")?;
-    let row = sqlx::query(
-        "SELECT * FROM ops.claim_agent_run_worker_v1($1)",
-    )
-    .bind(run_id)
+    let row = sqlx::query!("SELECT * FROM ops.claim_agent_run_worker_v1($1)", run_id)
     .fetch_optional(&state.pool)
     .await
     .map_err(database)?
     .ok_or_else(|| Failure::Terminal("AGENT_RUN_NOT_QUEUED", run_id.to_string()))?;
-    let case_id: Uuid = row.try_get("case_id").map_err(database)?;
-    let agent_type: String = row.try_get("agent_type").map_err(database)?;
-    let objective: String = row.try_get("objective").map_err(database)?;
-    let evidence_ids = json_uuids(row.try_get("evidence_scope_ids").map_err(database)?)?;
-    let expected_snapshot: String = row.try_get::<String, _>("input_snapshot_hash").map_err(database)?.trim().to_owned();
-    let maximum_cost = row.try_get::<Decimal, _>("max_cost").map_err(database)?;
-    let run_version: i64 = row.try_get("version").map_err(database)?;
+    let case_id = required(row.case_id).map_err(database)?;
+    let agent_type = required(row.agent_type).map_err(database)?;
+    let objective = required(row.objective).map_err(database)?;
+    let evidence_ids = json_uuids(required(row.evidence_scope_ids).map_err(database)?)?;
+    let expected_snapshot = required(row.input_snapshot_hash)
+        .map_err(database)?
+        .trim()
+        .to_owned();
+    let maximum_cost = required(row.max_cost).map_err(database)?;
+    let run_version = required(row.version).map_err(database)?;
     let maximum_cost_krw = maximum_cost.trunc().to_string().parse::<i64>().map_err(|_| Failure::Terminal("AGENT_BUDGET_INVALID", run_id.to_string()))?;
     // Budget exhaustion is fenced before any evidence/source-use lookup. A
     // zero envelope must settle as BUDGET_BLOCKED even when no source graph

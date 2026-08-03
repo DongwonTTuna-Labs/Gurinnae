@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT jsonb_build_object( 'intentId',id,'logicalIntentDigest',logical_intent_digest, 'sourceEventId',source_event_id, 'communicationClass',CASE WHEN communication_class='SYSTEM_TRANSACTIONAL' THEN 'PUBLIC_SERVICE_OR_TRANSACTIONAL' ELSE 'DISCRETIONARY_OR_RESTRICTED' END, 'purpose',CASE WHEN communication_class='SYSTEM_TRANSACTIONAL' THEN 'SYSTEM_TRANSACTIONAL' ELSE communication_class END, 'topicDigest',topic_scope_digest,'recipientSubjectId',recipient_subject_id, 'policyVersion',audience_policy_version) FROM ops.communication_intents WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "jsonb_build_object",
+        "type_info": "Jsonb",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "611c76d504c4ee29705cf1c9feb57bdd076dc431106c6ba2edef267e1818afe2"
+}

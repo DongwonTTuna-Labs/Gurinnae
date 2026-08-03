@@ -13,7 +13,7 @@ async fn production_provider(
     input_snapshot_sha256: &str,
     maximum_cost_krw: i64,
 ) -> Result<(String, String, Value, i64, bool), Failure> {
-    let rows = sqlx::query(
+    let rows = sqlx::query!(
         "SELECT id,provider_type,name,routing_policy,version FROM ops.provider_configs WHERE enabled",
     )
     .fetch_all(&state.pool)
@@ -32,17 +32,14 @@ async fn production_provider(
     let semantic_request_sha256 = sha256(&canonical_bytes(&semantic_request)?);
     for requested in &state.config.provider_order {
         let Some(row) = rows.iter().find(|row| {
-            row.try_get::<String, _>("provider_type")
-                .is_ok_and(|value| value.eq_ignore_ascii_case(requested))
-                || row
-                    .try_get::<String, _>("name")
-                    .is_ok_and(|value| value.eq_ignore_ascii_case(requested))
+            row.provider_type.eq_ignore_ascii_case(requested)
+                || row.name.eq_ignore_ascii_case(requested)
         }) else {
             continue;
         };
-        let provider: String = row.try_get("provider_type").map_err(database)?;
-        let provider_config_id: Uuid = row.try_get("id").map_err(database)?;
-        let routing: Value = row.try_get("routing_policy").map_err(database)?;
+        let provider = row.provider_type.clone();
+        let provider_config_id = row.id;
+        let routing = row.routing_policy.clone();
         let Some(target) = routing.get("targetUrl").and_then(Value::as_str) else {
             continue;
         };
@@ -54,7 +51,7 @@ async fn production_provider(
         else {
             continue;
         };
-        let routing_version: i64 = row.try_get("version").map_err(database)?;
+        let routing_version = row.version;
         let Some((output, actual_cost)) = request_provider(
             state,
             gateway,

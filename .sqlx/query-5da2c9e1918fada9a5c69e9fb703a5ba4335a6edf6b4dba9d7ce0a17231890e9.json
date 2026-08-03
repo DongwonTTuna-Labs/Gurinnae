@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO public.cases(id,slug,title,public_state,latest_revision,summary,          published_at,updated_at,source_freshness)          VALUES($1,$2,$3,$4::editorial.publication_state,$5,$6,$7,clock_timestamp(),$8)          ON CONFLICT(id) DO UPDATE SET slug=EXCLUDED.slug,title=EXCLUDED.title,          public_state=EXCLUDED.public_state,latest_revision=EXCLUDED.latest_revision,          summary=EXCLUDED.summary,published_at=LEAST(public.cases.published_at,EXCLUDED.published_at),          updated_at=clock_timestamp(),source_freshness=EXCLUDED.source_freshness",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        {
+          "Custom": {
+            "name": "editorial.publication_state",
+            "kind": {
+              "Enum": [
+                "NEVER_PUBLISHED",
+                "PUBLISHED_ANOMALY",
+                "PUBLISHED_EXPLAINED",
+                "OFFICIALLY_CONFIRMED",
+                "CORRECTED",
+                "RETRACTED",
+                "TEMPORARILY_RESTRICTED"
+              ]
+            }
+          }
+        },
+        "Int4",
+        "Text",
+        "Timestamptz",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5da2c9e1918fada9a5c69e9fb703a5ba4335a6edf6b4dba9d7ce0a17231890e9"
+}

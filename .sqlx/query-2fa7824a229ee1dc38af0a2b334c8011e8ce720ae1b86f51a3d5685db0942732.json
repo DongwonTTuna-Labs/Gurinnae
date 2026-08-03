@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT session_id AS \"session_id?\" FROM intake.exchange_response_magic_token_v2($1,$2,$3,$4)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "session_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Bpchar",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "2fa7824a229ee1dc38af0a2b334c8011e8ce720ae1b86f51a3d5685db0942732"
+}

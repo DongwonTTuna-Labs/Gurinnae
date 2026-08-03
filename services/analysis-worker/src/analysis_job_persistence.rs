@@ -11,15 +11,15 @@ async fn persist_agent_suggestion(
     {
         return Ok(());
     }
-    sqlx::query(
+    sqlx::query!(
         "INSERT INTO ops.agent_suggestions(agent_run_id,case_id,suggestion_type,payload,evidence_ids,citation_checks,status)          VALUES($1,$2,$3,$4,$5,$6,'PENDING')",
+        context.run_id,
+        context.case_id,
+        context.agent_type.to_uppercase().replace('-', "_"),
+        output,
+        json!(context.allowed_ids),
+        output.get("citations").cloned().unwrap_or_else(|| json!([])),
     )
-    .bind(context.run_id)
-    .bind(context.case_id)
-    .bind(context.agent_type.to_uppercase().replace('-', "_"))
-    .bind(output)
-    .bind(json!(context.allowed_ids))
-    .bind(output.get("citations").cloned().unwrap_or_else(|| json!([])))
     .execute(&mut **tx)
     .await
     .map_err(database)?;

@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO editorial.responses(id,case_id,response_request_id,party_name,submitted_at, full_text_encrypted,publication_consent,editorial_status) VALUES($1,$2,$3,$4,$5,$6,$7,'PENDING')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Bytea",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "237ce5ae5e36e4f6036a9f576e9bcbb2ea9b6db7dac86a81a72404db558f977f"
+}

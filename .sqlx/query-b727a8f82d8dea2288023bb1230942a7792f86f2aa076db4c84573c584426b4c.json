@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT provider_receipt_id, btrim(provider_receipt_sha256::text)\n             FROM ops.agent_provider_turns\n            WHERE agent_run_id=$1 AND provider_turn_id=$2\n              AND provider_receipt_id IS NOT NULL\n              AND provider_receipt_sha256 IS NOT NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "provider_receipt_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.agent_provider_turns",
+            "name": "provider_receipt_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "btrim",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      null
+    ]
+  },
+  "hash": "b727a8f82d8dea2288023bb1230942a7792f86f2aa076db4c84573c584426b4c"
+}

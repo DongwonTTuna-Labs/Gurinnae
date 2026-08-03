@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(\n           SELECT 1 FROM ops.kill_switches k\n           WHERE k.state='ACTIVE'\n             AND (k.expires_at IS NULL OR k.expires_at > clock_timestamp())\n             AND (\n               k.scope='{}'::jsonb\n               OR k.code ILIKE ('%' || $1 || '%')\n               OR k.scope ? lower($1)\n               OR k.scope ? 'all'\n               OR ($2::text IS NOT NULL AND k.scope ? lower($2))\n               OR ($2::text IS NOT NULL AND k.scope @> jsonb_build_object('channel',$2))\n             )\n         )",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "4e6940b3e9e07359908ace8e4f2fc8a02b667cba2283a7e798f7c9134932f2f1"
+}

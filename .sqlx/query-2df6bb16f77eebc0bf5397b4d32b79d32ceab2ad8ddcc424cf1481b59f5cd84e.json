@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT contact_email_encrypted FROM intake.correction_requests WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "contact_email_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "intake.correction_requests",
+            "name": "contact_email_encrypted"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "2df6bb16f77eebc0bf5397b4d32b79d32ceab2ad8ddcc424cf1481b59f5cd84e"
+}

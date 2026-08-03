@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.source_runs SET status='FAILED',error_detail=$2,completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d81fe20d3a42f0e84869839d837ddb9128283a15edc482bfe7c744d8a46108a7"
+}

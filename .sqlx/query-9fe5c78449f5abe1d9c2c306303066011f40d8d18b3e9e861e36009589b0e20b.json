@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.email_deliveries SET status='FAILED',last_error_code=$2 WHERE id=$1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9fe5c78449f5abe1d9c2c306303066011f40d8d18b3e9e861e36009589b0e20b"
+}

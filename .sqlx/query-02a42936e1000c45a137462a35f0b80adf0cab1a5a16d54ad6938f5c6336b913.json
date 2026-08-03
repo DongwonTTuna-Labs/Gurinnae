@@ -1,0 +1,44 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.jobs SET status='RUNNING',lease_owner=$2,lease_token=$3, lease_expires_at=clock_timestamp()+make_interval(secs=>$4), fencing_token=fencing_token+1,attempt_count=$5,version=version+1 WHERE id=$1 AND status='QUEUED' RETURNING fencing_token,lease_expires_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "fencing_token",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "fencing_token"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "lease_expires_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.jobs",
+            "name": "lease_expires_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Float8",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "02a42936e1000c45a137462a35f0b80adf0cab1a5a16d54ad6938f5c6336b913"
+}

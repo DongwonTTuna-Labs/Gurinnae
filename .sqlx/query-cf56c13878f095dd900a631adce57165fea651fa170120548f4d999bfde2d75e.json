@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.communication_provider_configs pc\n         JOIN ops.communication_provider_preflight_receipts pf\n           ON pf.provider_config_id=pc.id AND pf.provider_config_version=pc.version\n          AND pf.configuration_digest=pc.configuration_digest\n         WHERE pc.id=$1 AND pc.version=$2 AND pc.configuration_digest=$3\n           AND pc.integration_id=$4 AND pc.channel=$5\n           AND pc.webhook_secret_reference=$8 AND pc.operational_state='ACTIVE'\n           AND pc.activation_effective_at<=clock_timestamp()\n           AND (pc.activation_expires_at IS NULL OR pc.activation_expires_at>clock_timestamp())\n           AND pf.id=$6 AND pf.receipt_digest=$7 AND pf.result='PASS'\n           AND pf.expires_at>clock_timestamp() AND pf.callback_or_poll_verified AND pf.live_sandbox)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exists",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Bpchar",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Bpchar",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "cf56c13878f095dd900a631adce57165fea651fa170120548f4d999bfde2d75e"
+}

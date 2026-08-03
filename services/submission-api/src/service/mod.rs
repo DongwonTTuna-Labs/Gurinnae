@@ -1,6 +1,5 @@
 use gurine_auth::assertion::canonical::sha256_hex;
 use serde_json::Value;
-use sqlx::Row;
 use thiserror::Error;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
@@ -115,24 +114,20 @@ async fn create_correction_session(
     let token = common::random_token()?;
     let token_hash = sha256_hex(token.as_bytes());
     let expires_at = OffsetDateTime::now_utc() + Duration::hours(24);
-    let row = sqlx::query(
-        "SELECT draft_id,session_id,version FROM intake.create_correction_session($1,$2,$3,$4,$5,$6)",
+    let row = sqlx::query!(
+        "SELECT draft_id AS \"draft_id?\", session_id AS \"session_id?\", version AS \"version?\" FROM intake.create_correction_session($1,$2,$3,$4,$5,$6)",
+        token_hash,
+        issuer,
+        locale,
+        case_slug,
+        revision.map(|value| value as i32),
+        expires_at
     )
-    .bind(token_hash)
-    .bind(issuer)
-    .bind(locale)
-    .bind(case_slug)
-    .bind(revision.map(|value| value as i32))
-    .bind(expires_at)
     .fetch_one(&state.pool)
     .await
     .map_err(common::database_error)?;
-    let draft_id: Uuid = row
-        .try_get("draft_id")
-        .map_err(|_| ServiceError::Persistence)?;
-    let version: i64 = row
-        .try_get("version")
-        .map_err(|_| ServiceError::Persistence)?;
+    let draft_id = row.draft_id.ok_or(ServiceError::Persistence)?;
+    let version = row.version.ok_or(ServiceError::Persistence)?;
     Ok(serde_json::json!({
         "operationId":"createCorrectionRequestDraft",
         "requestId":request_id,
@@ -165,40 +160,101 @@ async fn exchange(
         } else {
             Duration::minutes(30)
         };
-    let sql = match function {
-        "intake.exchange_response_magic_token_v2" => {
-            "SELECT session_id FROM intake.exchange_response_magic_token_v2($1,$2,$3,$4)"
-        }
-        "intake.exchange_response_receipt_token" => {
-            "SELECT intake.exchange_response_receipt_token($1,$2,$3,$4) AS session_id"
-        }
-        "intake.exchange_correction_receipt_token" => {
-            "SELECT intake.exchange_correction_receipt_token($1,$2,$3,$4) AS session_id"
-        }
-        "intake.exchange_subscription_management_token" => {
-            "SELECT intake.exchange_subscription_management_token($1,$2,$3,$4) AS session_id"
-        }
+    let query = match function {
+        "intake.exchange_response_magic_token_v2" => ExchangeQuery::ResponseMagic,
+        "intake.exchange_response_receipt_token" => ExchangeQuery::ResponseReceipt,
+        "intake.exchange_correction_receipt_token" => ExchangeQuery::CorrectionReceipt,
+        "intake.exchange_subscription_management_token" => ExchangeQuery::SubscriptionManagement,
         _ => return Err(ServiceError::InvalidRequest),
     };
-    sqlx::query(sql)
-        .bind(common::token_hmac(&state.token_hmac_key, one_time_token)?)
-        .bind(sha256_hex(session_token.as_bytes()))
-        .bind(issuer)
-        .bind(expires_at)
-        .fetch_one(&state.pool)
-        .await
-        .map_err(|error| {
-            if matches!(error, sqlx::Error::Database(_)) {
-                ServiceError::TokenInvalid
-            } else {
-                ServiceError::Persistence
-            }
-        })?;
+    let one_time_token_hash = common::token_hmac(&state.token_hmac_key, one_time_token)?;
+    let session_token_hash = sha256_hex(session_token.as_bytes());
+    let result = execute_exchange_query(
+        &state.pool,
+        query,
+        ExchangeSqlParameters {
+            one_time_token_hash: &one_time_token_hash,
+            session_token_hash: &session_token_hash,
+            issuer,
+            expires_at: &expires_at,
+        },
+    )
+    .await;
+    result.map_err(|error| {
+        if matches!(error, sqlx::Error::Database(_)) {
+            ServiceError::TokenInvalid
+        } else {
+            ServiceError::Persistence
+        }
+    })?;
     let scope_id = resolve_scope(&state.pool, &session_token, issuer, kind).await?;
     Ok(serde_json::json!({
         "status":"exchanged",
         "session":common::descriptor(session_token,kind,scope_id,expires_at,1)?,
     }))
+}
+
+enum ExchangeQuery {
+    ResponseMagic,
+    ResponseReceipt,
+    CorrectionReceipt,
+    SubscriptionManagement,
+}
+
+struct ExchangeSqlParameters<'a> {
+    one_time_token_hash: &'a str,
+    session_token_hash: &'a str,
+    issuer: &'a str,
+    expires_at: &'a OffsetDateTime,
+}
+
+async fn execute_exchange_query(
+    pool: &sqlx::PgPool,
+    query: ExchangeQuery,
+    parameters: ExchangeSqlParameters<'_>,
+) -> Result<(), sqlx::Error> {
+    match query {
+        ExchangeQuery::ResponseMagic => sqlx::query!(
+            "SELECT session_id AS \"session_id?\" FROM intake.exchange_response_magic_token_v2($1,$2,$3,$4)",
+            parameters.one_time_token_hash,
+            parameters.session_token_hash,
+            parameters.issuer,
+            parameters.expires_at
+        )
+        .fetch_one(pool)
+        .await
+        .map(|_| ()),
+        ExchangeQuery::ResponseReceipt => sqlx::query!(
+            "SELECT intake.exchange_response_receipt_token($1,$2,$3,$4) AS \"session_id?\"",
+            parameters.one_time_token_hash,
+            parameters.session_token_hash,
+            parameters.issuer,
+            parameters.expires_at
+        )
+        .fetch_one(pool)
+        .await
+        .map(|_| ()),
+        ExchangeQuery::CorrectionReceipt => sqlx::query!(
+            "SELECT intake.exchange_correction_receipt_token($1,$2,$3,$4) AS \"session_id?\"",
+            parameters.one_time_token_hash,
+            parameters.session_token_hash,
+            parameters.issuer,
+            parameters.expires_at
+        )
+        .fetch_one(pool)
+        .await
+        .map(|_| ()),
+        ExchangeQuery::SubscriptionManagement => sqlx::query!(
+            "SELECT intake.exchange_subscription_management_token($1,$2,$3,$4) AS \"session_id?\"",
+            parameters.one_time_token_hash,
+            parameters.session_token_hash,
+            parameters.issuer,
+            parameters.expires_at
+        )
+        .fetch_one(pool)
+        .await
+        .map(|_| ()),
+    }
 }
 
 async fn resolve_scope(
@@ -207,11 +263,14 @@ async fn resolve_scope(
     issuer: &str,
     kind: &str,
 ) -> Result<Uuid, ServiceError> {
-    sqlx::query_scalar("SELECT scope_id FROM intake.resolve_submission_session($1,$2,$3)")
-        .bind(sha256_hex(token.as_bytes()))
-        .bind(issuer)
-        .bind(vec![kind.to_owned()])
-        .fetch_one(pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT scope_id AS \"scope_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
+        sha256_hex(token.as_bytes()),
+        issuer,
+        &vec![kind.to_owned()]
+    )
+    .fetch_one(pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }

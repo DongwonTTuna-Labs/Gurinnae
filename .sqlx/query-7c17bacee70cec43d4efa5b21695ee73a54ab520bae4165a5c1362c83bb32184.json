@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.source_runs SET status='SUCCEEDED',records_seen=$2,records_changed=$3, checkpoint_after=$4,report_object_key=$5,completed_at=clock_timestamp(),error_detail=NULL WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Int8",
+        "Jsonb",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c17bacee70cec43d4efa5b21695ee73a54ab520bae4165a5c1362c83bb32184"
+}

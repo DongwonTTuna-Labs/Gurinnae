@@ -1,0 +1,90 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT channel,adapter_id,credential_secret_reference,webhook_secret_reference, callback_path,kill_switch_code FROM ops.communication_provider_configs WHERE id=$1 AND version=$2 AND configuration_digest=$3 AND operational_state IN ('DISABLED','UNCONFIGURED','PENDING_PROVIDER_APPROVAL')",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "channel",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "channel"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "adapter_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "adapter_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "credential_secret_reference",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "credential_secret_reference"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "webhook_secret_reference",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "webhook_secret_reference"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "callback_path",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "callback_path"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "kill_switch_code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.communication_provider_configs",
+            "name": "kill_switch_code"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int8",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "516cd648e34f147334f9d3c646626e74fe262d32693f7a09c00df48afe4870e8"
+}

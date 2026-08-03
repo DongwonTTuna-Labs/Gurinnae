@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE raw.source_documents SET status='PARSED',parser_name=$2,parser_version=$3, schema_version='extraction-result-v1',prompt_injection_flags=$4,quarantine_reason=NULL WHERE id=$1 AND status='FETCHED'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "dfc8e0403b8ea3498cebc0455483583dfcdfa7aeed6163522e782d01617a81db"
+}

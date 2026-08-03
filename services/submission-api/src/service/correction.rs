@@ -1,7 +1,6 @@
 use gurine_auth::assertion::canonical::sha256_hex;
 use gurine_persistence_postgres::outbox::{OutboxEvent, append};
 use serde_json::Value;
-use sqlx::Row;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
@@ -33,40 +32,39 @@ pub async fn save_draft(context: &RequestContext<'_>) -> Result<Value, ServiceEr
         "email-address",
         email.as_bytes(),
     )?;
-    let row = sqlx::query(
-        "SELECT draft_id,version FROM intake.save_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+    let row = sqlx::query!(
+        "SELECT draft_id AS \"draft_id?\", version AS \"version?\" FROM intake.save_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8,$9)",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        expected_version,
+        requester_type,
+        common::token_hmac(&context.state.token_hmac_key, &email)?,
+        email_encrypted,
+        summary,
+        requested_changes,
+        evidence
     )
-    .bind(sha256_hex(common::session(context)?.as_bytes()))
-    .bind(context.issuer)
-    .bind(expected_version)
-    .bind(requester_type)
-    .bind(common::token_hmac(&context.state.token_hmac_key, &email)?)
-    .bind(email_encrypted)
-    .bind(summary)
-    .bind(requested_changes)
-    .bind(evidence)
     .fetch_one(&context.state.pool)
     .await
     .map_err(common::database_error)?;
-    let resource_id: Uuid = row
-        .try_get("draft_id")
-        .map_err(|_| ServiceError::Persistence)?;
-    let version: i64 = row
-        .try_get("version")
-        .map_err(|_| ServiceError::Persistence)?;
+    let resource_id = row.draft_id.ok_or(ServiceError::Persistence)?;
+    let version = row.version.ok_or(ServiceError::Persistence)?;
     common::mutation_receipt(context.request_id, resource_id, version)
 }
 
 pub async fn delete_draft(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
     let value = common::parse(context.body)?;
     let expected_version = common::i64_field(&value, "expectedVersion")?;
-    let id: Uuid = sqlx::query_scalar("SELECT intake.delete_correction_draft_session($1,$2,$3)")
-        .bind(sha256_hex(common::session(context)?.as_bytes()))
-        .bind(context.issuer)
-        .bind(expected_version)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let id: Uuid = sqlx::query_scalar!(
+        "SELECT intake.delete_correction_draft_session($1,$2,$3) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        expected_version
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::mutation_receipt(context.request_id, id, expected_version + 1)
 }
 
@@ -89,19 +87,20 @@ pub async fn create_attachment(context: &RequestContext<'_>) -> Result<Value, Se
         filename.as_bytes(),
     )?;
     let object_key = format!("quarantine/corrections/{id}/{sha256}");
-    let persisted: Uuid = sqlx::query_scalar(
-        "SELECT intake.create_correction_draft_attachment($1,$2,$3,$4,$5,$6,$7)",
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.create_correction_draft_attachment($1,$2,$3,$4,$5,$6,$7) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        filename_encrypted,
+        media_type,
+        size,
+        sha256,
+        &object_key
     )
-    .bind(sha256_hex(common::session(context)?.as_bytes()))
-    .bind(context.issuer)
-    .bind(filename_encrypted)
-    .bind(media_type)
-    .bind(size)
-    .bind(sha256)
-    .bind(&object_key)
     .fetch_one(&context.state.pool)
     .await
-    .map_err(common::database_error)?;
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let mut receipt =
         common::command_receipt(context.operation, context.request_id, persisted, None)?;
     receipt["links"] = serde_json::json!([{
@@ -118,30 +117,34 @@ pub async fn finalize_attachment(context: &RequestContext<'_>) -> Result<Value, 
     let etag = common::string(&value, "objectEtag")?;
     let size = common::i64_field(&value, "uploadedSizeBytes")?;
     let digest = hash(common::string(&value, "uploadedSha256")?)?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.finalize_correction_draft_attachment($1,$2,$3,$4,$5,$6)")
-            .bind(sha256_hex(common::session(context)?.as_bytes()))
-            .bind(context.issuer)
-            .bind(id)
-            .bind(etag)
-            .bind(size)
-            .bind(digest)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.finalize_correction_draft_attachment($1,$2,$3,$4,$5,$6) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        id,
+        etag,
+        size,
+        digest
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, persisted, None)
 }
 
 pub async fn delete_attachment(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
     let id = common::attachment_id(context)?;
-    let persisted: Uuid =
-        sqlx::query_scalar("SELECT intake.delete_correction_draft_attachment($1,$2,$3)")
-            .bind(sha256_hex(common::session(context)?.as_bytes()))
-            .bind(context.issuer)
-            .bind(id)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let persisted: Uuid = sqlx::query_scalar!(
+        "SELECT intake.delete_correction_draft_attachment($1,$2,$3) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        id
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     common::command_receipt(context.operation, context.request_id, persisted, None)
 }
 
@@ -218,26 +221,21 @@ async fn persist_submission(
         .begin()
         .await
         .map_err(|_| ServiceError::Persistence)?;
-    let row = sqlx::query(
-        "SELECT request_id FROM intake.submit_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8)",
+    let row = sqlx::query!(
+        "SELECT request_id AS \"request_id?\" FROM intake.submit_correction_draft_session($1,$2,$3,$4,$5,$6,$7,$8)",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer,
+        expected_version,
+        attestation,
+        privacy,
+        common::token_hmac(&context.state.token_hmac_key, receipt_token)?,
+        sha256_hex(session_token.as_bytes()),
+        expires_at
     )
-    .bind(sha256_hex(common::session(context)?.as_bytes()))
-    .bind(context.issuer)
-    .bind(expected_version)
-    .bind(attestation)
-    .bind(privacy)
-    .bind(common::token_hmac(
-        &context.state.token_hmac_key,
-        receipt_token,
-    )?)
-    .bind(sha256_hex(session_token.as_bytes()))
-    .bind(expires_at)
     .fetch_one(&mut *transaction)
     .await
     .map_err(common::database_error)?;
-    let id: Uuid = row
-        .try_get("request_id")
-        .map_err(|_| ServiceError::Persistence)?;
+    let id = row.request_id.ok_or(ServiceError::Persistence)?;
     append_submission_events(context, &mut transaction, id).await?;
     transaction
         .commit()
@@ -278,12 +276,15 @@ async fn append_submission_events(
 
 pub async fn get_receipt(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
     let token_hash = sha256_hex(common::session(context)?.as_bytes());
-    let value: Value = sqlx::query_scalar("SELECT intake.get_correction_receipt_session($1,$2)")
-        .bind(&token_hash)
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)?;
+    let value: Value = sqlx::query_scalar!(
+        "SELECT intake.get_correction_receipt_session($1,$2) AS \"value?\"",
+        &token_hash,
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     let id = uuid(&value, "id")?;
     let submitted_at = value
         .get("submitted_at")
@@ -308,22 +309,27 @@ pub async fn get_receipt(context: &RequestContext<'_>) -> Result<Value, ServiceE
 }
 
 async fn private_draft(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    sqlx::query_scalar("SELECT intake.get_correction_draft_session($1,$2)")
-        .bind(sha256_hex(common::session(context)?.as_bytes()))
-        .bind(context.issuer)
-        .fetch_one(&context.state.pool)
-        .await
-        .map_err(common::database_error)
+    sqlx::query_scalar!(
+        "SELECT intake.get_correction_draft_session($1,$2) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)
 }
 
 async fn private_attachments(context: &RequestContext<'_>) -> Result<Value, ServiceError> {
-    let preview: Value =
-        sqlx::query_scalar("SELECT intake.get_correction_draft_preview_session($1,$2)")
-            .bind(sha256_hex(common::session(context)?.as_bytes()))
-            .bind(context.issuer)
-            .fetch_one(&context.state.pool)
-            .await
-            .map_err(common::database_error)?;
+    let preview: Value = sqlx::query_scalar!(
+        "SELECT intake.get_correction_draft_preview_session($1,$2) AS \"value?\"",
+        sha256_hex(common::session(context)?.as_bytes()),
+        context.issuer
+    )
+    .fetch_one(&context.state.pool)
+    .await
+    .map_err(common::database_error)?
+    .ok_or(ServiceError::Persistence)?;
     preview
         .get("attachments")
         .cloned()

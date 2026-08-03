@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.audit_exports SET status='READY',object_key=$2,content_sha256=$3,          row_count=$4,completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bpchar",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "359d38bb38b3f7d627a5b4fa9e213fcba7edd3d3a87ff868bae4df7bcec5cd67"
+}

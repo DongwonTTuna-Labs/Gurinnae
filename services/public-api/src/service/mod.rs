@@ -5,7 +5,7 @@ use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use rust_decimal::Decimal;
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Row, postgres::PgRow};
+use sqlx::PgPool;
 use thiserror::Error;
 use time::{Date, OffsetDateTime, format_description::well_known::Rfc3339};
 use uuid::Uuid;
@@ -467,49 +467,101 @@ fn content(id: &str, title: &str, summary: &str, sections: &[&str]) -> Value {
     })
 }
 
-fn case_card(row: &PgRow) -> Result<Value, ServiceError> {
-    let slug: String = row.try_get("slug").map_err(db)?;
+struct CaseCardRow {
+    slug: String,
+    title: String,
+    public_state: String,
+    summary: String,
+    latest_revision: i32,
+    updated_at: OffsetDateTime,
+}
+
+fn case_card(row: CaseCardRow) -> Result<Value, ServiceError> {
+    let CaseCardRow {
+        slug,
+        title,
+        public_state,
+        summary,
+        latest_revision,
+        updated_at,
+    } = row;
     Ok(json!({
         "slug": slug,
-        "title": row.try_get::<String,_>("title").map_err(db)?,
-        "publicState": row.try_get::<String,_>("public_state").map_err(db)?,
-        "summary": row.try_get::<String,_>("summary").map_err(db)?,
-        "revision": row.try_get::<i32,_>("latest_revision").map_err(db)?,
-        "updatedAt": timestamp(row.try_get("updated_at").map_err(db)?)?,
+        "title": title,
+        "publicState": public_state,
+        "summary": summary,
+        "revision": latest_revision,
+        "updatedAt": timestamp(updated_at)?,
         "href": format!("/cases/{slug}"),
     }))
 }
 
-fn contract_summary(row: &PgRow) -> Result<Value, ServiceError> {
-    let id: Uuid = row.try_get("id").map_err(db)?;
-    let agency_id: Option<Uuid> = row.try_get("agency_id").map_err(db)?;
-    let supplier_id: Option<Uuid> = row.try_get("supplier_id").map_err(db)?;
+struct ContractSummaryRow {
+    id: Uuid,
+    contract_number: Option<String>,
+    title: String,
+    agency_id: Option<Uuid>,
+    supplier_id: Option<Uuid>,
+    status: String,
+    signed_at: Option<Date>,
+    amount: Option<Value>,
+    agency_name: Option<String>,
+    supplier_name: Option<String>,
+}
+
+fn contract_summary(row: ContractSummaryRow) -> Result<Value, ServiceError> {
+    let ContractSummaryRow {
+        id,
+        contract_number,
+        title,
+        agency_id,
+        supplier_id,
+        status,
+        signed_at,
+        amount,
+        agency_name,
+        supplier_name,
+    } = row;
     let mut value = json!({
         "id": id,
-        "contractNumber": row.try_get::<Option<String>,_>("contract_number").map_err(db)?.unwrap_or_default(),
-        "title": row.try_get::<String,_>("title").map_err(db)?,
-        "agency": entity_ref(agency_id, row.try_get::<Option<String>,_>("agency_name").map_err(db)?, "AGENCY"),
-        "status": row.try_get::<String,_>("status").map_err(db)?,
+        "contractNumber": contract_number.unwrap_or_default(),
+        "title": title,
+        "agency": entity_ref(agency_id, agency_name, "AGENCY"),
+        "status": status,
         "href": format!("/contracts/{id}"),
     });
     if let Some(supplier) = supplier_id {
-        value["supplier"] = entity_ref(
-            Some(supplier),
-            row.try_get::<Option<String>, _>("supplier_name")
-                .map_err(db)?,
-            "SUPPLIER",
-        );
+        value["supplier"] = entity_ref(Some(supplier), supplier_name, "SUPPLIER");
     }
-    if let Some(date) = row
-        .try_get::<Option<time::Date>, _>("signed_at")
-        .map_err(db)?
-    {
+    if let Some(date) = signed_at {
         value["signedAt"] = Value::String(date.to_string());
     }
-    if let Some(amount) = row.try_get::<Option<Value>, _>("amount").map_err(db)? {
+    if let Some(amount) = amount {
         value["amount"] = amount;
     }
     Ok(value)
+}
+
+struct RuleRow {
+    rule_id: String,
+    name: String,
+    active_version: String,
+    public_description: String,
+    requirements: Value,
+    exclusions: Value,
+    limitations: Value,
+    updated_at: OffsetDateTime,
+}
+
+struct SourceRow {
+    source_id: String,
+    display_name: String,
+    status: String,
+    last_success_at: Option<OffsetDateTime>,
+    lag_seconds: Option<i64>,
+    affected_scope: Value,
+    public_message: Option<String>,
+    updated_at: OffsetDateTime,
 }
 
 fn entity_ref(id: Option<Uuid>, name: Option<String>, kind: &str) -> Value {

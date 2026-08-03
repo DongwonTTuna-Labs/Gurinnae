@@ -4,7 +4,7 @@ async fn evidence_snapshot(
     run_id: Uuid,
     ids: &[Uuid],
 ) -> Result<Value, Failure> {
-    let value: Value = sqlx::query_scalar(
+    let value: Value = sqlx::query_scalar!(
         "SELECT COALESCE(jsonb_agg(jsonb_build_object( \
            'id',e.id,'contentSha256',btrim(e.content_sha256::text), \
            'locator',e.source_locator,'updatedAt',e.updated_at, \
@@ -87,13 +87,14 @@ async fn evidence_snapshot(
          FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id \
          WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) \
            AND e.verification_status='VERIFIED'",
+        case_id,
+        ids,
+        run_id,
     )
-    .bind(case_id)
-    .bind(ids)
-    .bind(run_id)
     .fetch_one(pool)
     .await
-    .map_err(database)?;
+    .map_err(database)?
+    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     if value.as_array().is_none_or(|rows| rows.len() != ids.len()) {
         return Err(Failure::Terminal(
             "AGENT_EVIDENCE_SCOPE_INVALID",

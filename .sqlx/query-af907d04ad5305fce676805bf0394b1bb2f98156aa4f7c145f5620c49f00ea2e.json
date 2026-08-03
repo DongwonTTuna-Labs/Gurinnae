@@ -1,0 +1,52 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT recipient_email_encrypted,party_name,due_at FROM editorial.response_requests WHERE id=$1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "recipient_email_encrypted",
+        "type_info": "Bytea",
+        "origin": {
+          "Table": {
+            "table": "editorial.response_requests",
+            "name": "recipient_email_encrypted"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "party_name",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.response_requests",
+            "name": "party_name"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "due_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.response_requests",
+            "name": "due_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "af907d04ad5305fce676805bf0394b1bb2f98156aa4f7c145f5620c49f00ea2e"
+}

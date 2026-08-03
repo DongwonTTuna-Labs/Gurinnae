@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE core.rule_evaluations SET status='SUCCEEDED',result_payload=$2,result_digest=$3,            completed_at=clock_timestamp() WHERE id=$1 AND status='RUNNING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4a4474dd50ffb84240ba88b10c4ee33268e0e20831c452843a50964bd68e9689"
+}

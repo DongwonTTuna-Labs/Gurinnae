@@ -59,12 +59,12 @@ pub async fn run(config: Config) -> Result<(), SchedulerError> {
             tracing::error!(stage="schedule_delivery_poll_requests", error=%error, "scheduler stage failed");
             error
         })?;
-        let expired: Option<Uuid> = sqlx::query_scalar(
+        let expired: Option<Uuid> = sqlx::query_scalar!(
             "SELECT ops.enqueue_outbox('internal.publication_access_expiry',$1,0, \
              'internal.expire_due_publication_access.v1',$2,clock_timestamp())",
+            config.batch_size.to_string(),
+            json!({"limit":config.batch_size}),
         )
-        .bind(config.batch_size.to_string())
-        .bind(json!({"limit":config.batch_size}))
         .fetch_one(&pool)
         .await
         .map_err(|error| {
@@ -152,12 +152,12 @@ async fn consume_rule_activation(
             .map_err(|error| SchedulerError::Database(job_sqlx(error)))?;
         return Ok(true);
     };
-    let applied = sqlx::query_scalar::<_, Option<Uuid>>(
+    let applied = sqlx::query_scalar!(
         "SELECT ops.enqueue_outbox('internal.rule_activation',$1,0, \
          'internal.apply_due_rule_activation.v1',$2,clock_timestamp())",
+        rule_version_id.to_string(),
+        json!({"ruleVersionId":rule_version_id,"actorId":actor_id,"requestId":request_id}),
     )
-    .bind(rule_version_id.to_string())
-    .bind(json!({"ruleVersionId":rule_version_id,"actorId":actor_id,"requestId":request_id}))
     .fetch_one(pool)
     .await;
     match applied {
@@ -205,11 +205,11 @@ async fn consume_scheduler_event(
     let outcome = validate_scheduler_event(pool, job).await;
     match outcome {
         Ok((event_id, rule_version_id)) => {
-            let changed = sqlx::query(
+            let changed = sqlx::query!(
                 "UPDATE ops.inbox SET processed_at=COALESCE(processed_at,clock_timestamp()),result='SUCCEEDED' \
                  WHERE consumer='scheduler' AND event_id=$1",
+                event_id,
             )
-            .bind(event_id)
             .execute(pool)
             .await
             .map_err(SchedulerError::Database)?
@@ -241,7 +241,7 @@ async fn consume_scheduler_event(
 }
 
 pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, SchedulerError> {
-    let sources = sqlx::query(
+    let sources = sqlx::query!(
         "SELECT s.source_id,s.schedule_cron,MAX(r.scheduled_for) AS last_scheduled_for \
          FROM ops.source_registry s LEFT JOIN ops.source_runs r ON r.source_id=s.source_id \
          WHERE s.enabled AND s.legal_status='APPROVED' \
@@ -256,13 +256,9 @@ pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, Sche
         if scheduled >= u64::try_from(limit).map_err(|_| SchedulerError::Initialization)? {
             break;
         }
-        let source_id: String = row.try_get("source_id").map_err(SchedulerError::Database)?;
-        let expression: String = row
-            .try_get("schedule_cron")
-            .map_err(SchedulerError::Database)?;
-        let last: Option<OffsetDateTime> = row
-            .try_get("last_scheduled_for")
-            .map_err(SchedulerError::Database)?;
+        let source_id = row.source_id;
+        let expression = row.schedule_cron;
+        let last = row.last_scheduled_for;
         let cron = match Cron::from_str(&expression) {
             Ok(cron) => cron,
             Err(error) => {
@@ -286,16 +282,16 @@ pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, Sche
         };
         let run_id = Uuid::new_v4();
         let mut tx = pool.begin().await.map_err(SchedulerError::Database)?;
-        let inserted = sqlx::query_scalar::<_, Uuid>(
+        let inserted = sqlx::query_scalar!(
             "INSERT INTO ops.source_runs(id,source_id,mode,status,scheduled_for,schedule_expression) \
              VALUES($1,$2,'INCREMENTAL','QUEUED',$3,$4) \
              ON CONFLICT(source_id,scheduled_for) WHERE scheduled_for IS NOT NULL DO NOTHING \
              RETURNING id",
+            run_id,
+            &source_id,
+            due,
+            &expression,
         )
-        .bind(run_id)
-        .bind(&source_id)
-        .bind(due)
-        .bind(&expression)
         .fetch_optional(&mut *tx)
         .await
         .map_err(SchedulerError::Database)?;
@@ -303,15 +299,12 @@ pub async fn schedule_source_runs(pool: &PgPool, limit: i64) -> Result<u64, Sche
             tx.commit().await.map_err(SchedulerError::Database)?;
             continue;
         }
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) \
              VALUES('SOURCE_RUN','ingest-worker',$1,$2,8)",
+            json!({"sourceRunId":run_id,"scheduledFor":due}),
+            format!("source-run:{source_id}:{}", due.unix_timestamp_nanos()),
         )
-        .bind(json!({"sourceRunId":run_id,"scheduledFor":due}))
-        .bind(format!(
-            "source-run:{source_id}:{}",
-            due.unix_timestamp_nanos()
-        ))
         .execute(&mut *tx)
         .await
         .map_err(SchedulerError::Database)?;
@@ -368,23 +361,23 @@ pub async fn schedule_delivery_poll_requests(
             .try_get("provider_preflight_receipt_digest")
             .map_err(SchedulerError::Database)?;
         let poll_key = format!("communication-provider-poll:{id}:{version}:{provider_message_id}");
-        let inserted = sqlx::query(
+        let inserted = sqlx::query!(
             "INSERT INTO ops.jobs(job_type,queue,payload,dedupe_key,max_attempts) \
              VALUES('COMMUNICATION_PROVIDER_POLL','notification-worker',$1,$2,8) \
              ON CONFLICT DO NOTHING",
+            json!({
+                "deliveryId": id,
+                "expectedDeliveryVersion": version,
+                "channel": channel,
+                "providerMessageId": provider_message_id,
+                "providerConfigId": config_id,
+                "providerConfigVersion": config_version,
+                "providerConfigurationDigest": configuration_digest,
+                "providerPreflightReceiptId": preflight_id,
+                "providerPreflightReceiptDigest": preflight_digest,
+            }),
+            poll_key,
         )
-        .bind(json!({
-            "deliveryId": id,
-            "expectedDeliveryVersion": version,
-            "channel": channel,
-            "providerMessageId": provider_message_id,
-            "providerConfigId": config_id,
-            "providerConfigVersion": config_version,
-            "providerConfigurationDigest": configuration_digest,
-            "providerPreflightReceiptId": preflight_id,
-            "providerPreflightReceiptDigest": preflight_digest,
-        }))
-        .bind(poll_key)
         .execute(pool)
         .await
         .map_err(SchedulerError::Database)?
@@ -426,13 +419,11 @@ async fn validate_scheduler_event(pool: &PgPool, job: &ClaimedJob) -> Result<(Uu
         .and_then(Value::as_str)
         .and_then(|value| Uuid::parse_str(value).ok())
         .ok_or_else(|| "targetVersionId is missing".to_owned())?;
-    let status =
-        sqlx::query_scalar::<_, String>("SELECT status FROM core.rule_versions WHERE id=$1")
-            .bind(target)
-            .fetch_optional(pool)
-            .await
-            .map_err(|error| error.to_string())?
-            .ok_or_else(|| "target rule version does not exist".to_owned())?;
+    let status = sqlx::query_scalar!("SELECT status FROM core.rule_versions WHERE id=$1", target)
+        .fetch_optional(pool)
+        .await
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "target rule version does not exist".to_owned())?;
     if status != "ACTIVE" {
         return Err(format!("target rule version is {status}, expected ACTIVE"));
     }
@@ -456,7 +447,8 @@ pub async fn dispatch_batch(pool: &PgPool, limit: i64) -> Result<u64, SchedulerE
 
 async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
     let mut tx = pool.begin().await.map_err(SchedulerError::Database)?;
-    let row = sqlx::query(
+    let row = sqlx::query_as!(
+        Event,
         "SELECT id,aggregate_type,aggregate_id,aggregate_version,event_type,payload,occurred_at \
          FROM ops.outbox WHERE published_at IS NULL AND available_at<=clock_timestamp() \
          ORDER BY available_at,id LIMIT 1",
@@ -464,20 +456,19 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
     .fetch_optional(&mut *tx)
     .await
     .map_err(SchedulerError::Database)?;
-    let Some(row) = row else {
+    let Some(event) = row else {
         tx.commit().await.map_err(SchedulerError::Database)?;
         return Ok(false);
     };
-    let event = event_from_row(&row)?;
     for (consumer, queue) in consumers_for(&event.event_type) {
         let job_id = Uuid::new_v4();
-        let inserted = sqlx::query(
+        let inserted = sqlx::query!(
             "INSERT INTO ops.inbox(consumer,event_id,result) VALUES($1,$2,$3) \
              ON CONFLICT DO NOTHING",
+            consumer,
+            event.id,
+            format!("DISPATCHED:{job_id}"),
         )
-        .bind(consumer)
-        .bind(event.id)
-        .bind(format!("DISPATCHED:{job_id}"))
         .execute(&mut *tx)
         .await
         .map_err(SchedulerError::Database)?
@@ -485,32 +476,32 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
         if inserted == 0 {
             continue;
         }
-        sqlx::query(
+        sqlx::query!(
             "INSERT INTO ops.jobs(id,job_type,queue,payload,dedupe_key,max_attempts) \
              VALUES($1,'EVENT_DELIVERY',$2,$3,$4,8)",
+            job_id,
+            queue,
+            json!({
+                "consumerId": consumer,
+                "eventId": event.id,
+                "eventType": event.event_type,
+                "aggregateType": event.aggregate_type,
+                "aggregateId": event.aggregate_id,
+                "aggregateVersion": event.aggregate_version,
+                "occurredAt": event.occurred_at,
+                "payload": event.payload,
+            }),
+            format!("event:{}:{consumer}", event.id),
         )
-        .bind(job_id)
-        .bind(queue)
-        .bind(json!({
-            "consumerId": consumer,
-            "eventId": event.id,
-            "eventType": event.event_type,
-            "aggregateType": event.aggregate_type,
-            "aggregateId": event.aggregate_id,
-            "aggregateVersion": event.aggregate_version,
-            "occurredAt": event.occurred_at,
-            "payload": event.payload,
-        }))
-        .bind(format!("event:{}:{consumer}", event.id))
         .execute(&mut *tx)
         .await
         .map_err(SchedulerError::Database)?;
     }
-    let marked: Option<Uuid> = sqlx::query_scalar(
+    let marked: Option<Uuid> = sqlx::query_scalar!(
         "SELECT ops.enqueue_outbox('internal.outbox_dispatch',$1,0, \
          'internal.mark_outbox_published.v1','{}'::jsonb,clock_timestamp())",
+        event.id.to_string(),
     )
-    .bind(event.id.to_string())
     .fetch_one(&mut *tx)
     .await
     .map_err(SchedulerError::Database)?;
@@ -520,26 +511,4 @@ async fn dispatch_one(pool: &PgPool) -> Result<bool, SchedulerError> {
     tx.commit().await.map_err(SchedulerError::Database)?;
     tracing::info!(event_id=%event.id,event_type=%event.event_type,"outbox event dispatched");
     Ok(true)
-}
-
-fn event_from_row(row: &sqlx::postgres::PgRow) -> Result<Event, SchedulerError> {
-    Ok(Event {
-        id: row.try_get("id").map_err(SchedulerError::Database)?,
-        aggregate_type: row
-            .try_get("aggregate_type")
-            .map_err(SchedulerError::Database)?,
-        aggregate_id: row
-            .try_get("aggregate_id")
-            .map_err(SchedulerError::Database)?,
-        aggregate_version: row
-            .try_get("aggregate_version")
-            .map_err(SchedulerError::Database)?,
-        event_type: row
-            .try_get("event_type")
-            .map_err(SchedulerError::Database)?,
-        payload: row.try_get("payload").map_err(SchedulerError::Database)?,
-        occurred_at: row
-            .try_get("occurred_at")
-            .map_err(SchedulerError::Database)?,
-    })
 }

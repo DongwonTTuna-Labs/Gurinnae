@@ -174,7 +174,7 @@ async fn process_provider_preflight_job(
         .map_err(|_| WorkerError::Contract)?;
     let config_id = pointer_uuid(&job.payload, "/providerConfigId")
         .map_err(|_| WorkerError::Contract)?;
-    let row = sqlx::query(
+    let row = sqlx::query!(
         "SELECT pc.version, btrim(pc.configuration_digest::text) AS configuration_digest \
            FROM ops.provider_connection_tests t \
            JOIN ops.communication_provider_bindings b ON b.generic_provider_id=t.provider_id \
@@ -182,19 +182,19 @@ async fn process_provider_preflight_job(
              ON pc.id=b.communication_provider_config_id \
           WHERE t.id=$1 AND t.status IN ('QUEUED','RUNNING') \
             AND pc.id=$2",
+        test_id,
+        config_id,
     )
-    .bind(test_id)
-    .bind(config_id)
     .fetch_optional(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
     .ok_or(WorkerError::Contract)?;
     let revision = ProviderRevision {
         config_id,
-        config_version: row.try_get("version").map_err(|_| WorkerError::Database)?,
+        config_version: row.version,
         configuration_digest: row
-            .try_get("configuration_digest")
-            .map_err(|_| WorkerError::Database)?,
+            .configuration_digest
+            .ok_or(WorkerError::Database)?,
     };
     let receipt = state
         .delivery
@@ -278,20 +278,20 @@ async fn deliver_prepared(
         .begin()
         .await
         .map_err(|_| WorkerError::Database)?;
-    sqlx::query(
+    sqlx::query!(
         "UPDATE ops.email_deliveries SET status='DELIVERED',provider_message_id=$2,delivered_at=clock_timestamp() WHERE id=$1 AND status='SENDING'",
+        delivery_id,
+        &provider_id,
     )
-    .bind(delivery_id)
-    .bind(&provider_id)
     .execute(&mut *transaction)
     .await
     .map_err(|_| WorkerError::Database)?;
-    let completed = sqlx::query(
+    let completed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&mut *transaction)
     .await
     .map_err(|_| WorkerError::Database)?
@@ -370,15 +370,16 @@ async fn inbox_processed(
     consumer_id: &str,
     event_id: Uuid,
 ) -> Result<bool, WorkerError> {
-    sqlx::query_scalar(
+    sqlx::query_scalar!(
         "SELECT processed_at IS NOT NULL FROM ops.inbox \
          WHERE consumer=$1 AND event_id=$2",
+        consumer_id,
+        event_id,
     )
-    .bind(consumer_id)
-    .bind(event_id)
     .fetch_optional(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
+    .flatten()
     .ok_or(WorkerError::Database)
 }
 
@@ -392,10 +393,10 @@ async fn process_projection_applied(
         .pointer("/payload/public_payload_sha256")
         .and_then(serde_json::Value::as_str)
         .ok_or(WorkerError::Database)?;
-    let actual: String = sqlx::query_scalar(
+    let actual: String = sqlx::query_scalar!(
         "SELECT public_payload_sha256 FROM editorial.publication_revisions WHERE id=$1",
+        event.aggregate_id,
     )
-    .bind(event.aggregate_id)
     .fetch_optional(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
@@ -415,12 +416,12 @@ async fn process_projection_applied(
             .map_err(WorkerError::Job)?;
         return Ok(());
     }
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
@@ -446,17 +447,17 @@ async fn process_publication_created(
     job: &ClaimedJob,
     event: &ClaimedEvent,
 ) -> Result<(), WorkerError> {
-    let case = sqlx::query("SELECT public_slug,title FROM editorial.cases WHERE id=$1")
-        .bind(event.aggregate_id)
+    let case = sqlx::query!(
+        "SELECT public_slug,title FROM editorial.cases WHERE id=$1",
+        event.aggregate_id,
+    )
         .fetch_optional(&state.pool)
         .await
         .map_err(|_| WorkerError::Database)?
         .ok_or(WorkerError::Database)?;
-    let slug: Option<String> = case
-        .try_get("public_slug")
-        .map_err(|_| WorkerError::Database)?;
-    let title: String = case.try_get("title").map_err(|_| WorkerError::Database)?;
-    let subscriptions = sqlx::query(
+    let slug = case.public_slug;
+    let title = case.title;
+    let subscriptions = sqlx::query!(
         "SELECT id,email_encrypted,locale FROM intake.subscriptions \
          WHERE status='ACTIVE' AND frequency='IMMEDIATE' ORDER BY id",
     )
@@ -470,18 +471,27 @@ async fn process_publication_created(
     );
     let mut delivered = 0_u64;
     for subscription in subscriptions {
-        match deliver_publication_subscriber(state, job, event, &title, &url, &subscription).await?
+        match deliver_publication_subscriber(
+            state,
+            job,
+            event,
+            &title,
+            &url,
+            subscription.id,
+            &subscription.email_encrypted,
+        )
+        .await?
         {
             Some(count) => delivered += count,
             None => return Ok(()),
         }
     }
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
@@ -508,23 +518,18 @@ async fn deliver_publication_subscriber(
     event: &ClaimedEvent,
     title: &str,
     url: &str,
-    subscription: &sqlx::postgres::PgRow,
+    subscription_id: Uuid,
+    encrypted: &[u8],
 ) -> Result<Option<u64>, WorkerError> {
-    let subscription_id: Uuid = subscription
-        .try_get("id")
-        .map_err(|_| WorkerError::Database)?;
-    let encrypted: Vec<u8> = subscription
-        .try_get("email_encrypted")
-        .map_err(|_| WorkerError::Database)?;
     let to = decrypt_email(
         state,
         "intake.subscriptions",
         "email_encrypted",
         subscription_id,
-        &encrypted,
+        encrypted,
     )?;
     let recipient_hash = sha256_hex(to.as_bytes());
-    let row = sqlx::query(
+    let row = sqlx::query!(
             "INSERT INTO ops.email_deliveries(message_type,recipient_hash,template_version, \
              object_type,object_id,status,attempt_count) \
              VALUES($1,$2,'v1','publication',$3,'SENDING',1) \
@@ -534,15 +539,15 @@ async fn deliver_publication_subscriber(
                attempt_count=CASE WHEN ops.email_deliveries.status='DELIVERED' \
                  THEN ops.email_deliveries.attempt_count ELSE ops.email_deliveries.attempt_count+1 END, \
                last_error_code=NULL RETURNING id,status",
+            &event.event_type,
+            recipient_hash,
+            event.aggregate_id,
         )
-        .bind(&event.event_type)
-        .bind(recipient_hash)
-        .bind(event.aggregate_id)
         .fetch_one(&state.pool)
         .await
         .map_err(|_| WorkerError::Database)?;
-    let delivery_id: Uuid = row.try_get("id").map_err(|_| WorkerError::Database)?;
-    let status: String = row.try_get("status").map_err(|_| WorkerError::Database)?;
+    let delivery_id = row.id;
+    let status = row.status;
     if status == "DELIVERED" {
         return Ok(Some(1));
     }
@@ -557,12 +562,12 @@ async fn deliver_publication_subscriber(
     };
     match state.delivery.send(&message).await {
         Ok(provider_id) => {
-            sqlx::query(
+            sqlx::query!(
                 "UPDATE ops.email_deliveries SET status='DELIVERED',provider_message_id=$2, \
                      delivered_at=clock_timestamp() WHERE id=$1 AND status='SENDING'",
+                delivery_id,
+                provider_id,
             )
-            .bind(delivery_id)
-            .bind(provider_id)
             .execute(&state.pool)
             .await
             .map_err(|_| WorkerError::Database)?;

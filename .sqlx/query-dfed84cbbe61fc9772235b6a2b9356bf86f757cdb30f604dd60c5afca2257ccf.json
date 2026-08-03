@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM core.dataset_snapshots ds\n            WHERE ds.id=$1 AND ds.snapshot_sha256=CAST($2 AS char(64)) AND ds.state='READY')\n         AND NOT EXISTS(SELECT 1 FROM ops.agent_source_uses su\n            WHERE su.agent_run_id=$3 AND su.dataset_snapshot_id IS NOT NULL\n              AND su.dataset_snapshot_id<>$1)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "?column?",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "dfed84cbbe61fc9772235b6a2b9356bf86f757cdb30f604dd60c5afca2257ccf"
+}

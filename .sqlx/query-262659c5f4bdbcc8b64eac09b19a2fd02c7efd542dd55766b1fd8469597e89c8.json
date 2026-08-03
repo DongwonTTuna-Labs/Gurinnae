@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO core.agency_identifiers(agency_id,scheme,value,source_document_id) VALUES($1,'KONEPS',$2,$3) ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "262659c5f4bdbcc8b64eac09b19a2fd02c7efd542dd55766b1fd8469597e89c8"
+}

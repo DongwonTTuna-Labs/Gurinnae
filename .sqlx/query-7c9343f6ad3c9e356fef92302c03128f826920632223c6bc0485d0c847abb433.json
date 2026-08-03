@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.transition_agent_run_worker_v1($1,NULL,'FAILED',NULL,NULL,$2,'failure-v1',NULL,true)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "transition_agent_run_worker_v1",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7c9343f6ad3c9e356fef92302c03128f826920632223c6bc0485d0c847abb433"
+}

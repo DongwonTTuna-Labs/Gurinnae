@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO ops.tasks(task_type,object_type,object_id,title,status,priority) SELECT 'SIGNAL_TRIAGE','SIGNAL',$1,'Triage detected signal','OPEN', CASE severity WHEN 'CRITICAL' THEN 'URGENT' WHEN 'HIGH' THEN 'HIGH' ELSE 'NORMAL' END FROM core.anomaly_signals WHERE id=$1 AND NOT EXISTS( SELECT 1 FROM ops.tasks WHERE task_type='SIGNAL_TRIAGE' AND object_id=$1 AND status<>'DONE')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "496cd1f21bd597f0a1376e51319beef7bb0c6b9832f961546e2bee7abd39f177"
+}

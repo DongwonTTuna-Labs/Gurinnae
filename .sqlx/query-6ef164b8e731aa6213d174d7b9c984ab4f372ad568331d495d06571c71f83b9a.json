@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,metadata->>'parsedSchemaFingerprint' fingerprint FROM raw.source_documents WHERE source_id=$1 AND id<>$2 AND metadata ? 'parsedSchemaFingerprint' ORDER BY retrieved_at DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "raw.source_documents",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "fingerprint",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "6ef164b8e731aa6213d174d7b9c984ab4f372ad568331d495d06571c71f83b9a"
+}

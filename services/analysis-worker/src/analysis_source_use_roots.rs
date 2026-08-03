@@ -217,13 +217,14 @@ async fn ensure_agent_source_use_roots(
     .await
     .map_err(database)?;
 
-    let exists: bool = sqlx::query_scalar(
+    let exists: bool = sqlx::query_scalar!(
         "SELECT EXISTS(SELECT 1 FROM ops.agent_source_uses WHERE agent_run_id=$1 AND use_kind='TOOL_QUERY' AND source_kind='DATASET_MEMBER')",
+        run_id,
     )
-    .bind(run_id)
     .fetch_one(pool)
     .await
-    .map_err(database)?;
+    .map_err(database)?
+    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     if !exists {
         return Err(Failure::Terminal("AGENT_SOURCE_USE_MISSING", run_id.to_string()));
     }

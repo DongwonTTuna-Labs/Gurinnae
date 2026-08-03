@@ -11,11 +11,15 @@ use gurine_source_connectors::{ConnectorOperation, operations};
 use reqwest::{Client, StatusCode, Url};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
-use sqlx::{PgPool, Postgres, Row, Transaction};
+use sqlx::{PgPool, Postgres, Transaction};
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::config::{Config, ObjectStoreConfig};
+
+mod source_fetch_persistence;
+
+use source_fetch_persistence::persist_source_fetch;
 
 enum Store {
     Filesystem(ObjectStoreClient),

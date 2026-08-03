@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT EXISTS(SELECT 1 FROM ops.outbox WHERE id=$1 AND event_type=$2 AND aggregate_id=$3 AND aggregate_version=$4 AND payload=$5) AS \"exact!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "exact!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Int8",
+        "Jsonb"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "11482e4b511382a94eb95c7b186bb5bd8a98bd4ea15fd82eeebbcb7e7cbf95b9"
+}

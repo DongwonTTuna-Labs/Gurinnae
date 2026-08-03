@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT scope_id AS \"scope_id?\" FROM intake.resolve_submission_session($1,$2,$3)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "scope_id?",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bpchar",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "c3a2aa0f944204212f141049f3044a443ed66ec4a6570376db2cc2e994791308"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT ops.finalize_agent_tool_call_source_uses($1,$2,CAST($3 AS char(64)))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "finalize_agent_tool_call_source_uses",
+        "type_info": "Void",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bpchar"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "b42c3dffe926d4da4e5bca93233c13a8a0a775481dbcfd5eaafb23327ed22d58"
+}

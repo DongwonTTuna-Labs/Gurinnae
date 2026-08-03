@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT code FROM ops.kill_switches k\n         WHERE k.state='ACTIVE'\n           AND (k.expires_at IS NULL OR k.expires_at > clock_timestamp())\n           AND (\n             k.scope='{}'::jsonb\n             OR k.code ILIKE 'AI_%'\n             OR k.code ILIKE '%_AI_%'\n             OR k.code ILIKE '%MODEL%'\n             OR k.code ILIKE '%AGENT%'\n             OR k.scope ? 'ai'\n             OR k.scope ? 'model'\n             OR k.scope ? 'agent'\n             OR (k.scope->'agentTypes') ? $1\n             OR k.scope @> jsonb_build_object('agentType',$1)\n           )\n         ORDER BY k.activated_at DESC NULLS LAST, k.code\n         LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "code",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.kill_switches",
+            "name": "code"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7b31263ffde2f6fb8d48109cafe7aa3a30422ffc17f99ba8b4e6c4b980bc9626"
+}

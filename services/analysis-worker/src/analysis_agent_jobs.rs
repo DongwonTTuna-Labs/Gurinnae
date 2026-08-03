@@ -194,7 +194,7 @@ async fn active_ai_kill_switch(
     state: &State,
     agent_type: &str,
 ) -> Result<Option<String>, Failure> {
-    sqlx::query_scalar::<_, String>(
+    sqlx::query_scalar!(
         "SELECT code FROM ops.kill_switches k
          WHERE k.state='ACTIVE'
            AND (k.expires_at IS NULL OR k.expires_at > clock_timestamp())
@@ -212,8 +212,8 @@ async fn active_ai_kill_switch(
            )
          ORDER BY k.activated_at DESC NULLS LAST, k.code
          LIMIT 1",
+        agent_type,
     )
-    .bind(agent_type)
     .fetch_optional(&state.pool)
     .await
     .map_err(database)
@@ -358,20 +358,21 @@ async fn persist_agent_run(
     digest: &str,
 ) -> Result<(), Failure> {
     let mut tx = state.pool.begin().await.map_err(database)?;
-    let changed: bool = sqlx::query_scalar(
+    let changed: bool = sqlx::query_scalar!(
         "SELECT ops.transition_agent_run_worker_v1($1,$2,$3,$4,$5,$6,$7,$8,true)",
+        context.run_id,
+        context.run_version,
+        status,
+        provider,
+        model,
+        output,
+        "v1",
+        Decimal::from(actual_cost),
     )
-    .bind(context.run_id)
-    .bind(context.run_version)
-    .bind(status)
-    .bind(provider)
-    .bind(model)
-    .bind(output)
-    .bind("v1")
-    .bind(Decimal::from(actual_cost))
     .fetch_one(&mut *tx)
     .await
-    .map_err(database)?;
+    .map_err(database)?
+    .ok_or_else(|| database(sqlx::Error::Decode(Box::new(sqlx::error::UnexpectedNullError))))?;
     if !changed {
         return Err(Failure::Terminal(
             "AGENT_RUN_FENCE_FAILED",
@@ -379,16 +380,16 @@ async fn persist_agent_run(
         ));
     }
     persist_agent_suggestion(&mut tx, context, output).await?;
-    sqlx::query(
+    sqlx::query!(
         "SELECT ops.enqueue_outbox('agent_run',$1,1,'agent.run_completed.v1',$2,clock_timestamp())",
+        context.run_id.to_string(),
+        json!({
+            "agent_run_id":context.run_id,
+            "case_id":context.case_id,
+            "output_digest":digest,
+            "status":status
+        }),
     )
-    .bind(context.run_id.to_string())
-    .bind(json!({
-        "agent_run_id":context.run_id,
-        "case_id":context.case_id,
-        "output_digest":digest,
-        "status":status
-    }))
     .fetch_one(&mut *tx)
     .await
     .map_err(database)?;

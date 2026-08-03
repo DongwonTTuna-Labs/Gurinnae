@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO intake.response_access_tokens(response_request_id,token_hash,expires_at) VALUES($1,$2,clock_timestamp()+interval '14 days')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bpchar"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "fead965815d1d0884562792d078b56880e07e588c4f65a3e2087c1238458a3ef"
+}

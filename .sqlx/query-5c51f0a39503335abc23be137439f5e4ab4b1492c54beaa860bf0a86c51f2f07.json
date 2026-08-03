@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.email_deliveries SET status='DELIVERED',provider_message_id=$2,delivered_at=clock_timestamp() WHERE id=$1 AND status='SENDING'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5c51f0a39503335abc23be137439f5e4ab4b1492c54beaa860bf0a86c51f2f07"
+}

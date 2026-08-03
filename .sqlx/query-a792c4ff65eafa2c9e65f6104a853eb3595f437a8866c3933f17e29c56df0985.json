@@ -1,0 +1,183 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id,occurred_at,actor_type,actor_id,action,object_type,object_id,capability,          outcome::text AS \"outcome?\",reason,request_id,details,event_hash,previous_event_hash          FROM ops.audit_events WHERE occurred_at >= $1 AND occurred_at <= $2            AND ($3='GLOBAL' OR ($3='CASE' AND object_type='case' AND object_id=$5)              OR ($3='OBJECT' AND upper(object_type)=upper($4) AND object_id=$5))          ORDER BY occurred_at,id LIMIT 1000001",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "occurred_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "occurred_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "actor_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "actor_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "actor_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "actor_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "action",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "action"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "capability",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "capability"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "outcome?",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "reason",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "reason"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "request_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "request_id"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "details",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "details"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "event_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "event_hash"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "previous_event_hash",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_events",
+            "name": "previous_event_hash"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      true,
+      null,
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "a792c4ff65eafa2c9e65f6104a853eb3595f437a8866c3933f17e29c56df0985"
+}

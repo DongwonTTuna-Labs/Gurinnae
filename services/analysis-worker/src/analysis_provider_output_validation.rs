@@ -100,7 +100,7 @@ async fn persist_validation(
 ) -> Result<Uuid, Failure> {
     let output_status = output.get("status").or_else(|| output.get("outcome"))
         .and_then(Value::as_str).unwrap_or("COMPLETED");
-    let inserted: Option<Uuid> = sqlx::query_scalar(
+    let inserted: Option<Uuid> = sqlx::query_scalar!(
         r#"INSERT INTO ops.agent_output_validations(
           agent_run_id,provider_turn_id,input_snapshot_sha256,provider_output_sha256,validator_version,validator_sha256,
           output_schema_id,output_schema_version,output_schema_sha256,validation_policy_version,validation_policy_sha256,
@@ -108,19 +108,36 @@ async fn persist_validation(
           validated_outcome,validated_outcome_sha256,citation_count,proposal_count,citation_set_sha256,proposal_set_sha256,validation_sha256)
          VALUES($1,$2,$3,CAST($4 AS char(64)),'agent-output-validator-v2',CAST($5 AS char(64)),
           $6,$7,CAST($8 AS char(64)),'agent-output-policy-v2',CAST($9 AS char(64)),
-          'VALID','PASS','PASS','PASS','SUCCEEDED',$10,'{}'::jsonb,$11,CAST($12 AS char(64)),$13,$14,CAST($15 AS char(64)),CAST($16 AS char(64)),CAST($17 AS char(64)))
+         'VALID','PASS','PASS','PASS','SUCCEEDED',$10,'{}'::jsonb,$11,CAST($12 AS char(64)),$13,$14,CAST($15 AS char(64)),CAST($16 AS char(64)),CAST($17 AS char(64)))
          ON CONFLICT(agent_run_id,provider_turn_id) DO NOTHING RETURNING validation_id"#,
+        turn.run_id,
+        turn.turn_id,
+        &turn.input_snapshot_sha256,
+        output_sha256,
+        sha256(b"agent-output-validator-v2"),
+        &turn.output_schema_id,
+        &turn.output_schema_version,
+        &turn.output_schema_sha256,
+        sha256(b"agent-output-policy-v2"),
+        output_status,
+        validated,
+        output_sha256,
+        citations as i32,
+        proposal_count,
+        citation_set_sha256,
+        proposal_set_sha256,
+        validation_sha256,
     )
-    .bind(turn.run_id).bind(turn.turn_id).bind(&turn.input_snapshot_sha256)
-    .bind(output_sha256).bind(sha256(b"agent-output-validator-v2"))
-    .bind(&turn.output_schema_id).bind(&turn.output_schema_version).bind(&turn.output_schema_sha256)
-    .bind(sha256(b"agent-output-policy-v2")).bind(output_status).bind(validated)
-    .bind(output_sha256).bind(citations as i32).bind(proposal_count)
-    .bind(citation_set_sha256).bind(proposal_set_sha256).bind(validation_sha256)
     .fetch_optional(&mut *executor).await.map_err(database)?;
     if let Some(id) = inserted { return Ok(id); }
-    sqlx::query_scalar("SELECT validation_id FROM ops.agent_output_validations WHERE agent_run_id=$1 AND provider_turn_id=$2")
-        .bind(turn.run_id).bind(turn.turn_id).fetch_one(&mut *executor).await.map_err(database)
+    sqlx::query_scalar!(
+        "SELECT validation_id FROM ops.agent_output_validations WHERE agent_run_id=$1 AND provider_turn_id=$2",
+        turn.run_id,
+        turn.turn_id,
+    )
+    .fetch_one(&mut *executor)
+    .await
+    .map_err(database)
 }
 
 fn output_proposals(output: &Value) -> Result<Vec<(&'static str, Value)>, Failure> {

@@ -27,12 +27,12 @@ async fn complete_communication_notification(
     job: &ClaimedJob,
     event: &ClaimedEvent,
 ) -> Result<(), WorkerError> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?
@@ -56,12 +56,12 @@ async fn complete_communication_receipt_notification(
     job: &ClaimedJob,
     event: &ClaimedEvent,
 ) -> Result<(), WorkerError> {
-    let changed = sqlx::query(
+    let changed = sqlx::query!(
         "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
          WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
+        &event.consumer_id,
+        event.id,
     )
-    .bind(&event.consumer_id)
-    .bind(event.id)
     .execute(&state.pool)
     .await
     .map_err(|_| WorkerError::Database)?

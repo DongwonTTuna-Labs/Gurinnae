@@ -1,0 +1,100 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE ops.audit_exports SET status='RUNNING',started_at=COALESCE(started_at,clock_timestamp())          WHERE id=$1 AND status IN ('QUEUED','RUNNING')          RETURNING from_at,to_at,format,scope,object_type,object_id,watermark_policy",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "from_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "from_at"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "to_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "to_at"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "format",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "format"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "scope",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "scope"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "object_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "object_type"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "object_id",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "object_id"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "watermark_policy",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "ops.audit_exports",
+            "name": "watermark_policy"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "93d3d7b6fbcc1be811e672fae7f62169ae405ea1aa5ac3116f40d36798af485f"
+}

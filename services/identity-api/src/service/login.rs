@@ -252,29 +252,55 @@ pub async fn consume_step_up_callback(
     {
         return Err(ServiceError::SessionNotActive);
     }
-    let authorization_id: uuid::Uuid =
-        sqlx::query_scalar("SELECT ops.create_step_up_authorization($1,$2,$3,$4,$5)")
-            .bind(session.session_id)
-            .bind(&action_digest)
-            .bind(&idempotency_hash)
-            .bind(sha256_hex(authorization_token.as_bytes()))
-            .bind(expires_at)
-            .fetch_one(&mut *transaction)
-            .await
-            .map_err(|_| ServiceError::Persistence)?;
+    let authorization_id = sqlx::query_scalar!(
+        "SELECT ops.create_step_up_authorization($1,$2,$3,$4,$5)",
+        session.session_id,
+        &action_digest,
+        &idempotency_hash,
+        sha256_hex(authorization_token.as_bytes()),
+        expires_at,
+    )
+    .fetch_one(&mut *transaction)
+    .await
+    .map_err(|_| ServiceError::Persistence)?
+    .ok_or(ServiceError::Persistence)?;
     transaction
         .commit()
         .await
         .map_err(|_| ServiceError::Persistence)?;
-    Ok(dto::ConsumeStepUpCallbackResponse {
-        step_up_authorization_id: authorization_id,
-        step_up_authorization_token: authorization_token,
+    step_up_callback_response(IssuedStepUpAuthorization {
+        id: authorization_id,
+        token: authorization_token,
         action_digest,
-        idempotency_key_sha256: idempotency_hash,
+        idempotency_hash,
         return_to: claimed.safe_return_to,
-        expires_at: timestamp(expires_at)?,
-        max_assertion_issues: 3,
+        expires_at,
         csrf_token,
+    })
+}
+
+struct IssuedStepUpAuthorization {
+    id: uuid::Uuid,
+    token: String,
+    action_digest: String,
+    idempotency_hash: String,
+    return_to: String,
+    expires_at: OffsetDateTime,
+    csrf_token: String,
+}
+
+fn step_up_callback_response(
+    issued: IssuedStepUpAuthorization,
+) -> Result<dto::ConsumeStepUpCallbackResponse, ServiceError> {
+    Ok(dto::ConsumeStepUpCallbackResponse {
+        step_up_authorization_id: issued.id,
+        step_up_authorization_token: issued.token,
+        action_digest: issued.action_digest,
+        idempotency_key_sha256: issued.idempotency_hash,
+        return_to: issued.return_to,
+        expires_at: timestamp(issued.expires_at)?,
+        max_assertion_issues: 3,
+        csrf_token: issued.csrf_token,
         authorization_cookie_path: "/internal",
         authorization_cookie_domain_mode: "HOST_ONLY",
         authorization_cookie_same_site: "Strict",
