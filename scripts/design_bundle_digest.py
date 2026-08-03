@@ -14,28 +14,22 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import stat
-import zipfile
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 from typing import Iterable
 
+from git_authority import (
+    AUTHORITY_COMMIT_OID,
+    AUTHORITY_TAG,
+    AUTHORITY_TREE_OID,
+    AUTHORITY_ZIP_SHA256,
+    GitAuthorityError,
+    authority_paths,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
-AUTHORITY_ZIP_SHA256 = (
-    "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5"
-)
-DEFAULT_AUTHORITY_ZIP = Path(
-    os.environ.get(
-        "GURINNAE_AUTHORITY_ZIP",
-        "/home/dongwonttuna/.codex/attachments/"
-        "29aa0c62-686a-450b-84aa-944e5cb7d47a/"
-        "gurine-codex-authority-pack-v13.0.0-20260712.zip",
-    )
-)
-ARCHIVE_ROOT = "gurine"
-MEMBER_MANIFEST = f"{ARCHIVE_ROOT}/MANIFEST.sha256"
 BUNDLE_DOMAIN = b"GURINNAE-DESIGN-BUNDLE-V2\0"
 IGNORED_PARTS = frozenset(
     {".git", "__pycache__", "node_modules", "target", ".svelte-kit", "dist", "coverage"}
@@ -86,30 +80,13 @@ def _safe_relative(value: str) -> bool:
     )
 
 
-def authority_manifest_paths(authority_zip: Path) -> set[str]:
-    if not authority_zip.is_file():
-        raise BundleError(f"authority archive is missing: {authority_zip}")
-    actual = sha256_file(authority_zip)
-    if actual != AUTHORITY_ZIP_SHA256:
-        raise BundleError(
-            f"authority archive digest mismatch: expected {AUTHORITY_ZIP_SHA256}, got {actual}"
-        )
+def authority_tag_paths(root: Path = ROOT) -> set[str]:
+    """Return the baseline path set from the pinned Git tree."""
+
     try:
-        with zipfile.ZipFile(authority_zip) as archive:
-            raw = archive.read(MEMBER_MANIFEST).decode("utf-8")
-    except (OSError, KeyError, UnicodeDecodeError, zipfile.BadZipFile) as error:
-        raise BundleError(f"authority manifest is unreadable: {error}") from error
-    paths: set[str] = set()
-    for line_number, line in enumerate(raw.splitlines(), start=1):
-        fields = line.split("  ", 1)
-        if len(fields) != 2 or len(fields[0]) != 64 or not _safe_relative(fields[1]):
-            raise BundleError(f"invalid authority manifest line {line_number}")
-        if fields[1] in paths:
-            raise BundleError(f"duplicate authority member: {fields[1]}")
-        paths.add(fields[1])
-    if not paths:
-        raise BundleError("authority manifest is empty")
-    return paths
+        return set(authority_paths(root))
+    except GitAuthorityError as error:
+        raise BundleError(f"Git authority is unreadable: {error}") from error
 
 
 def _regular_files(root: Path, pattern: str) -> Iterable[Path]:
@@ -143,12 +120,9 @@ def _add(
         selected[relative] = category
 
 
-def discover_member_paths(
-    root: Path = ROOT,
-    authority_zip: Path = DEFAULT_AUTHORITY_ZIP,
-) -> dict[str, str]:
+def discover_member_paths(root: Path = ROOT) -> dict[str, str]:
     root = root.resolve()
-    base_paths = authority_manifest_paths(authority_zip.resolve())
+    base_paths = authority_tag_paths(root)
     selected: dict[str, str] = {}
 
     runtime_residue = sorted(
@@ -189,7 +163,7 @@ def discover_member_paths(
         "scripts/validation/effective_acceptance.py": "acceptance_execution_contract",
         "scripts/verify_source_archive.py": "acceptance_execution_contract",
         "tests/acceptance/base-v13.lock.yaml": "authority_base_proof",
-        "scripts/verify_authority_base_lock.py": "authority_base_proof",
+        "scripts/git_authority.py": "authority_base_proof",
         "scripts/verify_base_acceptance_lock.py": "authority_base_proof",
     }
     for relative, category in required_core.items():
@@ -265,12 +239,9 @@ def discover_member_paths(
     return dict(sorted(selected.items()))
 
 
-def build_manifest(
-    root: Path = ROOT,
-    authority_zip: Path = DEFAULT_AUTHORITY_ZIP,
-) -> dict[str, object]:
+def build_manifest(root: Path = ROOT) -> dict[str, object]:
     root = root.resolve()
-    selected = discover_member_paths(root, authority_zip)
+    selected = discover_member_paths(root)
     members: list[Member] = []
     digest = hashlib.sha256(BUNDLE_DOMAIN)
     for relative, category in selected.items():
@@ -295,7 +266,7 @@ def build_manifest(
     category_counts: dict[str, int] = {}
     for member in members:
         category_counts[member.category] = category_counts.get(member.category, 0) + 1
-    selected_after = discover_member_paths(root, authority_zip)
+    selected_after = discover_member_paths(root)
     if selected_after != selected:
         raise BundleError("bundle membership changed while the digest was being calculated")
     for member in members:
@@ -309,6 +280,9 @@ def build_manifest(
     return {
         "schema_version": 2,
         "algorithm": "sha256(domain || repeated(u32be(path_len), path_utf8, u64be(byte_len), exact_bytes))",
+        "authority_tag": AUTHORITY_TAG,
+        "authority_commit_oid": AUTHORITY_COMMIT_OID,
+        "authority_tree_oid": AUTHORITY_TREE_OID,
         "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
         "bundle_sha256": digest.hexdigest(),
         "member_manifest_sha256": hashlib.sha256(canonical_members).hexdigest(),
@@ -321,12 +295,11 @@ def build_manifest(
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--authority-zip", type=Path, default=DEFAULT_AUTHORITY_ZIP)
     parser.add_argument("--manifest", action="store_true", help="print the canonical member manifest")
     parser.add_argument("--json-output", type=Path)
     args = parser.parse_args()
     try:
-        manifest = build_manifest(args.root, args.authority_zip)
+        manifest = build_manifest(args.root)
     except BundleError as error:
         print(f"DESIGN_BUNDLE: FAIL: {error}")
         return 1

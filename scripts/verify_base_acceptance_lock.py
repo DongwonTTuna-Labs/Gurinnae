@@ -11,6 +11,7 @@ from typing import Any
 
 import yaml
 
+from git_authority import AUTHORITY_ZIP_SHA256, GitAuthorityError, authority_file
 from validation.effective_acceptance import validate_static
 
 
@@ -19,7 +20,6 @@ ACCEPTANCE = ROOT / "tests/acceptance"
 LOCK = ACCEPTANCE / "base-v13.lock.yaml"
 SUPPLEMENTAL_MAPPING = ACCEPTANCE / "supplemental-executable-mapping.yaml"
 
-AUTHORITY_ZIP_SHA256 = "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5"
 EXPECTED_CATALOG_SHA256 = "13b4be1c9f22850d0220bb2be5e3a9ba8bc26252805c1b7b7eae987bb7e622c6"
 EXPECTED_MAPPING_SHA256 = "f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83"
 EXPECTED_FEATURE_MANIFEST_SHA256 = "197b105ffcfe13ec0f7671410a2963de87af32d74ebc59ff1ddd2b42442d817f"
@@ -177,23 +177,31 @@ def validate_lock(lock: dict[str, Any]) -> list[dict[str, Any]]:
     return features
 
 
-def verify_base_feature_bytes(features: list[dict[str, Any]]) -> list[str]:
+def verify_tagged_base_feature_lock(features: list[dict[str, Any]]) -> list[str]:
     locked_paths = [entry["path"] for entry in features]
-    missing_paths = [name for name in locked_paths if not (ACCEPTANCE / name).is_file()]
+    missing_paths = [
+        name
+        for name in locked_paths
+        if (ACCEPTANCE / name).is_symlink() or not (ACCEPTANCE / name).is_file()
+    ]
     if missing_paths:
-        fail(f"missing locked base feature files: {missing_paths}")
+        fail(f"missing current base feature files: {missing_paths}")
 
     observed_entries: list[dict[str, Any]] = []
     for expected in features:
-        path = ACCEPTANCE / expected["path"]
+        relative = f"tests/acceptance/{expected['path']}"
+        try:
+            content = authority_file(relative, ROOT)
+        except GitAuthorityError as error:
+            fail(f"cannot read tagged base feature: {relative}: {error}")
         observed = {
             "path": expected["path"],
-            "sha256": sha256(path),
-            "size": path.stat().st_size,
+            "sha256": hashlib.sha256(content).hexdigest(),
+            "size": len(content),
         }
         if observed != expected:
             fail(
-                f"locked base feature bytes drifted: {expected['path']}: "
+                f"tagged base feature lock drifted: {expected['path']}: "
                 f"observed={observed}, expected={expected}"
             )
         observed_entries.append(observed)
@@ -201,7 +209,7 @@ def verify_base_feature_bytes(features: list[dict[str, Any]]) -> list[str]:
     observed_digest = canonical_sha256(observed_entries)
     if observed_digest != EXPECTED_FEATURE_MANIFEST_SHA256:
         fail(
-            "observed base feature manifest drifted: "
+            "tagged base feature manifest drifted: "
             f"{observed_digest} != {EXPECTED_FEATURE_MANIFEST_SHA256}"
         )
     return locked_paths
@@ -219,7 +227,13 @@ def verify_catalog(locked_paths: list[str]) -> None:
             "base acceptance catalog paths differ from the lock: "
             f"catalog={catalog_paths}, lock={locked_paths}"
         )
-    observed_digest = sha256(catalog_path)
+    try:
+        frozen_catalog = authority_file(
+            "tests/acceptance/acceptance-catalog.yaml", ROOT
+        )
+    except GitAuthorityError as error:
+        fail(f"cannot read tagged base acceptance catalog: {error}")
+    observed_digest = hashlib.sha256(frozen_catalog).hexdigest()
     if observed_digest != EXPECTED_CATALOG_SHA256:
         fail(
             "base acceptance catalog bytes drifted: "
@@ -286,7 +300,13 @@ def verify_mapping(locked_paths: list[str]) -> None:
             f"missing={missing_paths}, extra={extra_paths}"
         )
 
-    observed_digest = sha256(mapping_path)
+    try:
+        frozen_mapping = authority_file(
+            "tests/acceptance/executable-mapping.yaml", ROOT
+        )
+    except GitAuthorityError as error:
+        fail(f"cannot read tagged base executable mapping: {error}")
+    observed_digest = hashlib.sha256(frozen_mapping).hexdigest()
     if observed_digest != EXPECTED_MAPPING_SHA256:
         fail(
             "base executable mapping bytes drifted: "
@@ -413,7 +433,7 @@ def main() -> None:
 
     lock = load_mapping(LOCK, "base acceptance lock")
     features = validate_lock(lock)
-    locked_paths = verify_base_feature_bytes(features)
+    locked_paths = verify_tagged_base_feature_lock(features)
     verify_catalog(locked_paths)
     verify_mapping(locked_paths)
     counts = verify_supplemental_contract(locked_paths)

@@ -1,12 +1,12 @@
 # Gurinnae v13 제품·디자인 축
 
-이 문서는 v13 권위 팩의 화면·여정·운영 계약을 구현하고 리뷰할 때 사용하는
-단일 판단 축이다. 새로운 제품 규칙을 추가하지 않으며 충돌 시 권위 팩 원문이
-우선한다.
+이 문서는 루트 `specs/`의 화면·여정·운영 계약을 구현하고 리뷰할 때 사용하는
+단일 판단 축이다. 새로운 제품 규칙을 추가하지 않으며 충돌 시 활성 `specs/`
+원문이 우선한다. v13 원본 비교 기준은 Git tag `authority-v13-frozen`이다.
 
 ## 고정된 리뷰 대상
 
-- 권위 팩 SHA-256: `960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5`
+- v13 원본 식별자: Git tag `authority-v13-frozen`의 commit/tree digest
 - 구현 대상: Public 34 + Response 8 + Internal 52 = 94 screens. 권위 UI
   `screen-catalog.yaml`/`screen-build-manifest.yaml`에서 계산한 UI 집합은
   496 authored sections와 720 state occurrences이며, UI operation/action은
@@ -14,12 +14,12 @@
   action refs 250/unique 196). 전체 제품 계약의 212 external operations,
   105 commands, 5 read-only agents와 9 typed tools는 UI 집합과 별도로
   검증한다. 현재 branch addendum가 제시하는 129 journey edges와 11
-  delivery milestones는 authority ZIP의 canonical artifact가 확인되기
+  delivery milestones는 Git tag `authority-v13-frozen`의 canonical artifact가 확인되기
   전까지 비권위 제안으로 취급한다.
 - 구현 tree의 effective registry가 497 sections처럼 더 큰 수를 산출하면
   그것은 addendum delta로 별도 보고한다. authority set equality의 기대값을
   맞추기 위해 source-derived count를 숨기거나 덮어쓰지 않는다.
-- 동일성은 최종 `MANIFEST.sha256` 및 `scripts/authority_tree_digest.py` 결과로
+- 동일성은 Git tag `authority-v13-frozen`, `make verify-specs`, `make verify-codegen`으로
   고정한다. dirty tree, 이전 버전 문서, fixture-only 결과는 리뷰 대상에서
   제외한다.
 
@@ -216,7 +216,7 @@ dynamic text·forced-colors를 포함한다(`docs/46-screen-composition-standard
 `docs/38-responsive-and-device-strategy.md`).
 
 각 검증은 같은 commit의 source
-digest, 권위 ZIP SHA-256, 실행 시각, 도구 버전, PostgreSQL schema/catalog
+digest, `authority-v13-frozen` commit/tree digest, 실행 시각, 도구 버전, PostgreSQL schema/catalog
 digest를 함께 기록하고, 리뷰어는 digest가 바뀐 뒤의 이전 LGTM을 재사용하지
 않는다. 동일한 입력을 두 번 실행할 때 projection·export·receipt payload가
 byte-identical이어야 하며, 다른 idempotency payload·오래된 version/digest·

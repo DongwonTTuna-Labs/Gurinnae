@@ -43,11 +43,10 @@ Feature: Production deployment is operable and recoverable
     And liveness does not restart a healthy process solely for an external outage
 
   # scenario-id: AC-PRODUCTION_READINESS-006
-  Scenario: PostgreSQL runtime verification leaves the authority tree byte-identical
-    Given a valid MANIFEST.sha256 and a clean authority tree
+  Scenario: PostgreSQL runtime verification leaves the source tree byte-identical
+    Given specs/ is the active specification tree and authority-v13-frozen is the frozen base anchor
     When make verify-postgres-runtime is executed
     Then dynamic UUIDs and hashes are written only to an external temporary file
     And the stable baseline comparator passes
-    And the Manifest-bound tree digest is identical before and after verification
-    And sha256sum --check MANIFEST.sha256 still passes
-
+    And the Git-bound source tree digest is identical before and after verification
+    And make verify-specs and make verify-codegen still pass

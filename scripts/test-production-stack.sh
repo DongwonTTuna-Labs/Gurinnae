@@ -3,7 +3,7 @@ set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project="gurine-verify-$BASHPID"
-compose=(docker compose --project-name "$project" --profile test --env-file "$root/.env.example" --file "$root/compose.test.yaml")
+compose=(docker compose --project-name "$project" --profile test --env-file "$root/.env.example" --file "$root/compose.yaml")
 
 cleanup() {
   status=$?

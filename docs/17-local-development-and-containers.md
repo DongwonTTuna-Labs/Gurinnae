@@ -176,7 +176,7 @@ make docker-logs
 
 ## Development shell image
 
-`compose.dev.yaml` defines a `dev-shell` service built from
+`compose.yaml` defines a `dev-shell` service built from
 `infra/docker/dev/Dockerfile`. It bind-mounts the monorepo, persists only package/build
 caches, waits for PostgreSQL health, and exposes no public port. The image contains the
 exact Rust and Bun toolchains, PostgreSQL client, SQLx CLI, cargo-watch, and cargo-nextest.

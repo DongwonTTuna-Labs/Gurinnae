@@ -35,9 +35,9 @@ jobs:
           test "$(git grep -h -c 'BEGIN[[:space:]]RSA[[:space:]]PRIVATE[[:space:]]KEY' -- services/oidc-test-provider/src/runner.rs)" -eq 1
       - name: Validate Compose isolation and immutable image pins
         run: |
-          docker compose --profile test --file compose.production.yaml config --quiet
+          docker compose --profile test --file compose.yaml config --quiet
           test "$(grep -c '@sha256:' infra/images.lock)" -eq 8
-          test "$(docker compose --profile test --file compose.production.yaml config --services | wc -l)" -eq 20
+          test "$(docker compose --profile test --file compose.yaml config --services | wc -l)" -eq 20
       - name: Run assertion, IDOR, replay, and negative runtime gates
         run: |
           bash scripts/test-submission-flow.sh

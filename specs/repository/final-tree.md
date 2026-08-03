@@ -12,9 +12,6 @@ gurine/
 ├── biome.jsonc
 ├── Makefile
 ├── compose.yaml
-├── compose.dev.yaml
-├── compose.test.yaml
-├── compose.production.yaml
 ├── .env.example
 ├── .env.production.example
 ├── .dockerignore

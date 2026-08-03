@@ -1,4 +1,4 @@
-// Generated from authority-v13/specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.
+// Generated from specs/ui/screen-catalog.yaml and screen-build-manifest.yaml; do not hand-edit.
 export const ROUTE_SCREEN_CONTRACTS = {
   "PUB-001": {
     route: "/",

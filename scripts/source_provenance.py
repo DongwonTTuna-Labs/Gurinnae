@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build and verify the byte-level provenance receipt for a Gurinnae source tree.
 
-The immutable v13 archive, the normative post-authority design overlay, the
+The immutable v13 Git tag, the normative post-authority design overlay, the
 implementation tree, and execution evidence are deliberately separate roles.
 This prevents an old design review or a pristine authority digest from being
 misreported as proof for changed runtime source.
@@ -11,23 +11,27 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import stat
-import subprocess
 import sys
+import tarfile
 from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
-from design_bundle_digest import BundleError, build_manifest as build_design_manifest
-from verify_authority_base_lock import (
-    AUTHORITY_MANIFEST_SHA256,
-    AUTHORITY_TREE_SHA256,
+from design_bundle_digest import (
+    BundleError,
+    build_manifest as build_design_manifest,
+)
+from git_authority import (
     AUTHORITY_ZIP_SHA256,
-    DEFAULT_AUTHORITY_ZIP,
-    Problem,
-    verify_archive,
+    GitAuthorityError,
+    authority_archive,
+    authority_paths,
+    head_commit_oid,
+    resolve_authority,
 )
 
 
@@ -36,6 +40,7 @@ DOMAIN = b"GURINNAE-SOURCE-PROVENANCE-V1\0"
 EXCLUDED_DIRECTORIES = frozenset(
     {
         ".git",
+        ".fable-sol",
         ".svelte-kit",
         "artifacts",
         "build",
@@ -52,8 +57,6 @@ EXCLUDED_FILES = frozenset(
         ".env.local",
         ".env.production",
         ".env.test",
-        "MANIFEST.md",
-        "MANIFEST.sha256",
     }
 )
 
@@ -94,7 +97,7 @@ def safe_relative(value: str) -> bool:
 
 def excluded(relative: Path) -> bool:
     return (
-        relative.as_posix() in EXCLUDED_FILES
+        (relative.as_posix() in EXCLUDED_FILES or relative.name in EXCLUDED_FILES)
         or any(part in EXCLUDED_DIRECTORIES for part in relative.parts)
         or relative.suffix in {".pyc", ".pyo"}
     )
@@ -207,42 +210,61 @@ def source_tree_digest(source: dict[str, tuple[str, int]]) -> str:
 
 
 def git_head(root: Path) -> str | None:
-    result = subprocess.run(
-        ["git", "-C", str(root), "rev-parse", "HEAD"],
-        check=False,
-        text=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    value = result.stdout.strip()
-    return value if result.returncode == 0 and len(value) == 40 else None
+    try:
+        return head_commit_oid(root)
+    except GitAuthorityError:
+        return None
 
 
-def authority_manifest(authority_zip: Path) -> dict[str, str]:
-    problems: list[Problem] = []
-    stats: dict[str, object] = {}
-    manifest = verify_archive(authority_zip, problems, stats)
-    if problems:
-        detail = "; ".join(
-            f"{problem.kind}:{problem.path}:{problem.actual}" for problem in problems[:8]
+def authority_inventory(root: Path) -> tuple[dict[str, str], int]:
+    """Hash tag members for per-file classification, never tree authority."""
+
+    expected_paths = authority_paths(root)
+    try:
+        stream = io.BytesIO(authority_archive(root))
+        with tarfile.open(fileobj=stream, mode="r:") as archive:
+            inventory: dict[str, str] = {}
+            seen_paths: set[str] = set()
+            for member in archive.getmembers():
+                if member.isdir():
+                    continue
+                relative = member.name
+                if not member.isfile() or not safe_relative(relative):
+                    raise ProvenanceError(
+                        f"Git authority archive contains a non-regular member: {relative!r}"
+                    )
+                if relative in seen_paths:
+                    raise ProvenanceError(
+                        f"Git authority archive contains a duplicate member: {relative}"
+                    )
+                seen_paths.add(relative)
+                if excluded(Path(relative)):
+                    continue
+                extracted = archive.extractfile(member)
+                if extracted is None:
+                    raise ProvenanceError(
+                        f"Git authority archive member is unreadable: {relative}"
+                    )
+                inventory[relative] = hashlib.sha256(extracted.read()).hexdigest()
+    except (OSError, tarfile.TarError) as error:
+        raise ProvenanceError(f"Git authority archive is unreadable: {error}") from error
+    if seen_paths != set(expected_paths):
+        missing = sorted(set(expected_paths) - seen_paths)[:8]
+        extra = sorted(seen_paths - set(expected_paths))[:8]
+        raise ProvenanceError(
+            f"Git authority path set differs from git archive: missing={missing}, extra={extra}"
         )
-        raise ProvenanceError(f"authority archive verification failed: {detail}")
-    if stats.get("authority_tree_sha256") != AUTHORITY_TREE_SHA256:
-        raise ProvenanceError("authority tree digest differs from the v13 pin")
-    return manifest
+    return inventory, len(expected_paths)
 
 
-def build_receipt(root: Path, authority_zip: Path) -> dict[str, object]:
+def build_receipt(root: Path) -> dict[str, object]:
     root = root.resolve()
-    authority_zip = authority_zip.resolve()
-    authority = authority_manifest(authority_zip)
+    identity = resolve_authority(root)
+    authority, authority_path_count = authority_inventory(root)
     source_before = worktree_inventory(root)
     records = classify_records(authority, source_before)
-    deleted = [record.path for record in records if record.status == "DELETED"]
-    if deleted:
-        raise ProvenanceError(f"authority-origin paths were deleted: {deleted[:8]}")
     try:
-        design = build_design_manifest(root, authority_zip)
+        design = build_design_manifest(root)
     except BundleError as error:
         raise ProvenanceError(f"design bundle cannot be derived: {error}") from error
     source_after = worktree_inventory(root)
@@ -257,9 +279,11 @@ def build_receipt(root: Path, authority_zip: Path) -> dict[str, object]:
     return {
         "schema_version": 1,
         "result": "PASS",
+        "authority_tag": identity.tag,
+        "authority_commit_oid": identity.commit_oid,
+        "authority_tree_oid": identity.tree_oid,
         "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
-        "authority_manifest_sha256": AUTHORITY_MANIFEST_SHA256,
-        "authority_tree_sha256": AUTHORITY_TREE_SHA256,
+        "authority_path_count": authority_path_count,
         "authority_member_count": len(authority),
         "source_tree_sha256": source_tree_digest(source_before),
         "source_file_count": len(source_before),
@@ -312,7 +336,6 @@ def external_receipt_path(root: Path, receipt: Path | None) -> Path:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--authority-zip", type=Path, default=DEFAULT_AUTHORITY_ZIP)
     parser.add_argument("--receipt", type=Path)
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true")
@@ -320,7 +343,7 @@ def main() -> int:
     mode.add_argument("--print", dest="print_receipt", action="store_true")
     args = parser.parse_args()
     try:
-        current = build_receipt(args.root, args.authority_zip)
+        current = build_receipt(args.root)
         current_text = render(current)
         if args.write:
             receipt = external_receipt_path(args.root, args.receipt)
@@ -334,7 +357,7 @@ def main() -> int:
                 raise ProvenanceError("source provenance receipt is stale")
         else:
             print(current_text, end="")
-    except (OSError, ProvenanceError, ValueError) as error:
+    except (GitAuthorityError, OSError, ProvenanceError, ValueError) as error:
         print(f"SOURCE_PROVENANCE: FAIL: {error}", file=sys.stderr)
         return 1
     print("SOURCE_PROVENANCE: PASS", file=sys.stderr)

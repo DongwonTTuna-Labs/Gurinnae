@@ -28,6 +28,11 @@ monorepo여야 한다.
 모순을 임의로 해결하지 않는다. fail-closed 동작을 유지하며 `implementation-evidence/spec-conflicts.md`에
 정확한 충돌과 선택하지 않은 대안을 기록한다.
 
+활성 명세는 루트 `specs/` 단일 트리다. Git tag `authority-v13-frozen`은 불변
+v13 원본과 base provenance 비교용이며, 별도 명세 체크아웃이나 루트
+Manifest를 두 번째 활성 권위로 사용하지 않는다. 완성 범위와 수치는
+`FINAL_BUILD_CONTRACT.md`에서만 선언하고 다른 지침은 그 문서를 참조한다.
+
 ## 3. 기술 고정
 
 - Rust 1.97.0, edition 2024
@@ -171,10 +176,22 @@ Svelte page는 view composition, server load/action은 BFF orchestration, packag
 - 모든 domain transition과 계산에 unit/property test가 있다.
 - 모든 SQLx repository에 PostgreSQL integration test가 있다.
 - 모든 operation에 contract/integration test가 있다.
-- 모든 94개 route에 E2E와 wide/compact visual test가 있다.
+- `FINAL_BUILD_CONTRACT.md`가 선언한 모든 route에 E2E와 wide/compact visual test가 있다.
 - unsafe token scan, forbidden panic/unwrap scan, file-size/function-size gate를 CI에서 실행한다.
 - test를 통과시키려고 acceptance를 삭제·완화·skip하지 않는다.
 - nondeterministic sleep 기반 test를 금지하고 injectable clock, deterministic fixture, bounded polling을 사용한다.
+
+검증 entry point는 다음 책임을 갖는다.
+
+- `make verify-specs`: 현재 `specs/`, frozen tag 핀, migration, acceptance source/design 계약
+- `make verify-codegen`: OpenAPI/client, response, acceptance registry, UI registry 결정성
+- `make build-ui`: UI 빌드 공통 경계
+- `make verify-final`: spec/codegen, source, SQLx, runtime, container, recovery, UI hard gate
+- `make verify-acceptance`: sealed acceptance 실행과 독립 evidence 검증
+
+Acceptance override가 없으면 Git이 무시하는 `artifacts/acceptance/`에 run-scoped
+evidence와 source bundle/extraction receipt를 생성한다. 루트 Manifest는 검증 입력이
+아니며, `make source-archive`가 만든 archive의 내부 무결성 metadata로만 생성한다.
 
 ## 13. 보안·데이터 불변식
 
@@ -223,9 +240,11 @@ Svelte page는 view composition, server load/action은 BFF orchestration, packag
 
 ## 16. 완료 조건
 
-`make verify-final`이 format, lint, typecheck, unsafe/code-quality gate, unit/integration/property test,
-SQLx prepare, migration/role/RLS test, OpenAPI/client diff, Svelte SSR, 94-screen E2E/visual/accessibility,
-agent/source/rule contract test, publication/security gate, Docker network/runtime, backup/restore를 모두 통과해야 한다.
+`make verify-final`이 `verify-specs`, `verify-codegen`, format, lint, typecheck,
+unsafe/code-quality gate, unit/integration/property test, SQLx prepare, migration/role/RLS test,
+Svelte SSR, 전체 route E2E/visual/accessibility, agent/source/rule contract test,
+publication/security gate, Docker network/runtime, backup/restore를 모두 통과해야 한다.
+완료 판정은 sealed acceptance의 `make verify-acceptance`도 별도로 통과해야 한다.
 
 미검증 항목이 하나라도 있으면 `ARTIFACT_READY`라고 말하지 않는다.
 

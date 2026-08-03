@@ -5,11 +5,10 @@ scope:
   migration: 0028_governance_operations.sql
   additive_relation_count: 19
   repository_root: /home/dongwonttuna/Documents/Programming/Gurinnae
-  authority_zip: /home/dongwonttuna/.codex/attachments/29aa0c62-686a-450b-84aa-944e5cb7d47a/gurine-codex-authority-pack-v13.0.0-20260712.zip
+  authority_zip: git tag authority-v13-frozen
   authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
   immutable_base_migrations: 0001..0024
   repository_files_consulted:
-    - CODEX_HANDOFF.md
     - CODEX_START_HERE.md
     - AGENTS.md
     - FINAL_BUILD_CONTRACT.md
@@ -3754,7 +3753,7 @@ blockers_and_required_upstream_closures:
     severity: BLOCKING
     status: RESOLVED_IN_AUTHORITY_INVENTORY
     issue: the non-case legal-hold anchor remains an independent 0028 relation while the three journey-coordination relations are added as their own normalized authority.
-    required_resolution: preserve the exact source-derived 0028 relation set, creation order and global set equality through generated contracts and final MANIFEST regeneration; never hide the anchor or journey receipt chain in an unrelated table.
+    required_resolution: preserve the exact source-derived 0028 relation set, creation order and global set equality through generated contracts, the authority-v13-frozen Git tag pin, make verify-specs and make verify-codegen; never hide the anchor or journey receipt chain in an unrelated table.
   - id: B0028-019
     severity: BLOCKING
     status: CROSS_FILE_OPEN

@@ -9,20 +9,19 @@ from typing import Any, Callable
 
 import yaml
 
-from design_bundle_digest import AUTHORITY_ZIP_SHA256
 from generate_effective_registry import (
     Checks,
     validate_ai_semantic_payload,
     validate_generator_parity,
 )
-from verify_authority_base_lock import (
-    AUTHORITY_MANIFEST_COUNT,
-    AUTHORITY_MANIFEST_SHA256,
-    AUTHORITY_TREE_SHA256,
-    BASE_MIGRATION_COUNT,
+from git_authority import (
+    AUTHORITY_COMMIT_OID,
+    AUTHORITY_TAG,
+    AUTHORITY_TREE_OID,
+    AUTHORITY_ZIP_SHA256,
 )
 
-from .design_freeze_authority import validate_authority_payload
+from .design_freeze_authority import BASE_MIGRATION_COUNT, validate_authority_payload
 from .design_freeze_contract import (
     BOOTSTRAP_REVIEW_ROLES,
     CLOSED,
@@ -44,18 +43,28 @@ from .design_freeze_reviews import (
 
 
 def _valid_authority_payload() -> dict[str, object]:
+    base_migrations = [
+        f"{ordinal:04d}_base.sql"
+        for ordinal in range(1, BASE_MIGRATION_COUNT + 1)
+    ]
     return {
         "result": "PASS",
         "problem_count": 0,
         "stats": {
             "scope": "migrations",
+            "authority_tag": AUTHORITY_TAG,
+            "authority_commit_oid": AUTHORITY_COMMIT_OID,
+            "authority_tree_oid": AUTHORITY_TREE_OID,
+            "authority_path_count": 1,
             "authority_zip_sha256": AUTHORITY_ZIP_SHA256,
-            "authority_zip_sha256_before": AUTHORITY_ZIP_SHA256,
-            "authority_zip_sha256_after": AUTHORITY_ZIP_SHA256,
-            "authority_manifest_sha256": AUTHORITY_MANIFEST_SHA256,
-            "authority_tree_sha256": AUTHORITY_TREE_SHA256,
-            "authority_manifest_entries": AUTHORITY_MANIFEST_COUNT,
-            "authority_archive_members_matched": AUTHORITY_MANIFEST_COUNT,
+            "authority_spec_migrations": base_migrations,
+            "worktree_spec_base_migrations": base_migrations,
+            "runtime_base_migrations": base_migrations,
+            "authority_spec_migration_mismatches": [],
+            "runtime_base_migration_mismatches": [],
+            "invalid_spec_migration_names": [],
+            "invalid_runtime_migration_names": [],
+            "duplicate_runtime_migration_ordinals": [],
             "authority_spec_migrations_matched": BASE_MIGRATION_COUNT,
             "runtime_base_migrations_matched": BASE_MIGRATION_COUNT,
             "pending_additive_ordinals": [],
@@ -231,7 +240,23 @@ def _archive_digest_fixture() -> bool:
     return _mutated_authority_fixture(
         "bad-authority.json",
         lambda stats: stats.__setitem__("authority_zip_sha256", "0" * 64),
-        "authority_archive_digest",
+        "authority_historical_identifier",
+    )
+
+
+def _tag_commit_fixture() -> bool:
+    return _mutated_authority_fixture(
+        "bad-authority-tag.json",
+        lambda stats: stats.__setitem__("authority_commit_oid", "0" * 40),
+        "authority_commit_oid",
+    )
+
+
+def _tag_tree_fixture() -> bool:
+    return _mutated_authority_fixture(
+        "bad-authority-tree.json",
+        lambda stats: stats.__setitem__("authority_tree_oid", "0" * 40),
+        "authority_tree_oid",
     )
 
 
@@ -249,7 +274,7 @@ def _implementation_source_change_fixture() -> bool:
     def mutation(stats: dict[str, object]) -> None:
         stats.update(
             {
-                "authority_worktree_matched": AUTHORITY_MANIFEST_COUNT - 1,
+                "authority_worktree_matched": BASE_MIGRATION_COUNT - 1,
                 "authority_worktree_missing": 0,
                 "authority_worktree_mismatched": 1,
             }
@@ -281,7 +306,7 @@ def _migration_count_only_fixture() -> bool:
     return _mutated_authority_fixture(
         "count-only-migrations.json",
         mutation,
-        "authority_gate_contract",
+        "runtime_migration_set",
     )
 
 
@@ -328,6 +353,8 @@ def self_test() -> tuple[bool, list[dict[str, object]]]:
         ("unsafe-test-path.yaml", _unsafe_path_fixture),
         ("missing-human-approval-review-role.yaml", _missing_review_role_fixture),
         ("authority-archive-digest-drift.json", _archive_digest_fixture),
+        ("authority-tag-commit-drift.json", _tag_commit_fixture),
+        ("authority-tag-tree-drift.json", _tag_tree_fixture),
         ("authority-base-migration-drift.json", _base_migration_drift_fixture),
         ("ordinary-implementation-source-change.json", _implementation_source_change_fixture),
         ("runtime-migration-set-drift.json", _migration_set_fixture),

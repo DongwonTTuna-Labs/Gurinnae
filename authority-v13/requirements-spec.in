@@ -1,6 +1,0 @@
-PyYAML==6.0.3
-jsonschema==4.26.0
-referencing==0.36.2
-pglast==7.11
-openapi-spec-validator==0.7.2
-cryptography==46.0.4

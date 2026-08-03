@@ -3,10 +3,11 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 
+from git_authority import AUTHORITY_ZIP_SHA256, GitAuthorityError, authority_file
+
 from .supplemental_acceptance_core import (
     AUTHORITY_BASE_FEATURE_COUNT,
     AUTHORITY_BASE_SCENARIO_COUNT,
-    AUTHORITY_SHA256,
     BASE_CATALOG,
     BASE_LOCK,
     BASE_MAPPING,
@@ -14,6 +15,7 @@ from .supplemental_acceptance_core import (
     Checks,
     Scenario,
     canonical,
+    digest_bytes,
     digest_file,
     load,
     row_map,
@@ -30,10 +32,10 @@ def _regular_digest(root: Path, relative: str) -> str:
 def base_inventory(root: Path, checks: Checks) -> BaseInventory:
     lock = load(root, BASE_LOCK, checks)
     checks.need(
-        lock.get("authority_zip_sha256") == AUTHORITY_SHA256,
+        lock.get("authority_zip_sha256") == AUTHORITY_ZIP_SHA256,
         "base_lock_authority",
         BASE_LOCK,
-        AUTHORITY_SHA256,
+        AUTHORITY_ZIP_SHA256,
         lock.get("authority_zip_sha256"),
     )
     checks.need(
@@ -59,7 +61,8 @@ def base_inventory(root: Path, checks: Checks) -> BaseInventory:
         if isinstance(row, dict) and isinstance(row.get("path"), str)
     ]
     locked_name_set = checks.unique(feature_names, f"{BASE_LOCK}#features")
-    observed_descriptors: list[dict[str, object]] = []
+    tagged_descriptors: list[dict[str, object]] = []
+    current_feature_count = 0
     source_scenarios: list[Scenario] = []
     for row in features:
         if not isinstance(row, dict) or not isinstance(row.get("path"), str):
@@ -74,6 +77,30 @@ def base_inventory(root: Path, checks: Checks) -> BaseInventory:
             "direct feature filename",
             name,
         )
+        try:
+            tagged_content = authority_file(relative, root)
+        except GitAuthorityError as error:
+            checks.need(
+                False,
+                "base_feature_authority_read",
+                relative,
+                "regular file in authority-v13-frozen",
+                str(error),
+            )
+        else:
+            tagged = {
+                "path": name,
+                "sha256": digest_bytes(tagged_content),
+                "size": len(tagged_content),
+            }
+            tagged_descriptors.append(tagged)
+            checks.need(
+                row == tagged,
+                "base_feature_authority_drift",
+                name,
+                row,
+                tagged,
+            )
         if path.is_symlink() or not path.is_file():
             checks.need(
                 False,
@@ -83,38 +110,26 @@ def base_inventory(root: Path, checks: Checks) -> BaseInventory:
                 "missing",
             )
             continue
-        actual = {
-            "path": name,
-            "sha256": digest_file(path),
-            "size": path.stat().st_size,
-        }
-        observed_descriptors.append(actual)
-        checks.need(
-            row == actual,
-            "base_feature_drift",
-            name,
-            row,
-            actual,
-        )
+        current_feature_count += 1
         source_scenarios.extend(
             parse_feature(path, relative, checks, supplemental=False)
         )
 
     checks.need(
         len(locked_name_set)
-        == len(observed_descriptors)
+        == current_feature_count
         == AUTHORITY_BASE_FEATURE_COUNT,
         "base_feature_count",
         BASE_LOCK,
         AUTHORITY_BASE_FEATURE_COUNT,
-        len(observed_descriptors),
+        current_feature_count,
     )
     checks.need(
-        lock.get("feature_manifest_sha256") == canonical(observed_descriptors),
+        lock.get("feature_manifest_sha256") == canonical(tagged_descriptors),
         "base_feature_manifest_drift",
         BASE_LOCK,
         lock.get("feature_manifest_sha256"),
-        canonical(observed_descriptors),
+        canonical(tagged_descriptors),
     )
 
     for section, relative, filename in (
@@ -280,6 +295,4 @@ def discover_supplemental(
         0,
     )
     return paths, scenarios
-
-
 

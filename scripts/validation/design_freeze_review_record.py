@@ -6,8 +6,8 @@ import re
 from datetime import datetime
 from typing import Any
 
-from design_bundle_digest import AUTHORITY_ZIP_SHA256
 from generate_effective_registry import Checks
+from git_authority import AUTHORITY_ZIP_SHA256
 
 from .design_freeze_contract import CLOSED, ISO_TIME_RE
 

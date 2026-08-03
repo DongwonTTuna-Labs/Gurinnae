@@ -1,0 +1,32 @@
+version: 1
+
+# Section ids are presentation roles, not operation response keys. These
+# allowlists bind roles to the exact response fields declared by the operation
+# contracts so generated browser projections never invent synthetic keys.
+section_field_hints:
+  progress: [requestId, version, savedAt, expiresAt, status]
+  questions: [answers, questionId, questionLabel, text]
+  statement: [answers, attachments, status]
+  consent: [publicationConsent, bodyConsent, redactionAcknowledged]
+  receipt: [receiptId, receiptStatus, submittedAt, submissionDigest]
+  download: [receiptId, submissionDigest, status]
+  authority: [authority, authorityStatus, status]
+
+screen_section_field_overrides:
+  PUB-004:
+    status: [slug, title, publicState, revision, publishedAt, updatedAt, freshness]
+    known: [summary, confirmedFacts]
+    unknown: [criticalUnknowns, limitations]
+    response: [partyResponses]
+    comparison: [comparison, signals]
+    counter: [counterEvidence]
+    evidence: [claims, evidence]
+    timeline: [timeline]
+    revision: [revision, corrections]
+
+surface_personas:
+  public: 공개 독자·연구자
+  response: 소명 대상자
+  internal: 조사 담당자
+  auth: 내부 사용자
+default_persona: 조사 담당자

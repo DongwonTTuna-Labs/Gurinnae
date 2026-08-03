@@ -2527,7 +2527,17 @@ export type EstimateBackfillReceipt = {
     updatedAt?: string;
     title?: string;
     summary?: string;
-    data: BackfillEstimate;
+    data: {
+        sourceId: string;
+        from: string;
+        to: string;
+        estimatedRecords: number;
+        estimatedJobs: number;
+        estimatedCostKrw: string;
+        estimatedDurationSeconds: number;
+        dedupeStrategy: string;
+        downstreamEffects: Array<string>;
+    };
     links: Array<Link>;
 };
 
@@ -5825,18 +5835,6 @@ export type CommercialControlEvidenceV1 = {
     closureReceiptSetDigest: string;
     remedyVerificationDigest: string;
     resumeEvidenceSetDigest: string;
-};
-
-export type BackfillEstimate = {
-    sourceId: string;
-    from: string;
-    to: string;
-    estimatedRecords: number;
-    estimatedJobs: number;
-    estimatedCostKrw: string;
-    estimatedDurationSeconds: number;
-    dedupeStrategy: string;
-    downstreamEffects: Array<string>;
 };
 
 export type AcceptAgentSuggestionData = {

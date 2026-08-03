@@ -18,8 +18,8 @@
     },
     {
       "path": "tests/acceptance/executable-mapping.yaml",
-      "sha256": "f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83",
-      "size": 143845
+      "sha256": "ea1c5fe553d8564f7bea8fb10d434e64701258eec31774d983ec05fdacf2755b",
+      "size": 143842
     },
     {
       "path": "tests/acceptance/supplemental-executable-mapping.yaml",
@@ -28,8 +28,8 @@
     },
     {
       "path": "tests/acceptance/effective-execution-registry.yaml",
-      "sha256": "62dcd58c321a0c34ba362e872aa6212a4502f2ec5b80b266524e53ef34acb124",
-      "size": 11746931
+      "sha256": "15e6088e3bc22e7e52e3a92cb62a0ad796614ebaaaf75786ae6ec300419971f8",
+      "size": 11746928
     }
   ],
   "execution_contract": {
@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "2f7bbc19f42ee246bd68328f4cb045097200444a3f590ec3dd05d0cc3f724bd8",
-      "size": 10358
+      "sha256": "4d97e1fb9a569e0b7beb1f2f9fb2912bda139784ccb5b921bab3441decc994e0",
+      "size": 8250
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -87,8 +87,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "01c6b7c153a1db072edc9a898952ec8132dc97b34b52db8dc5ca7f02c4b896ca",
-      "size": 13999
+      "sha256": "17016bc24f9f9b22f51b9855e0e9bafccddca3260e0d633cbdce96ab2f142ce2",
+      "size": 14003
     },
     {
       "path": "infra/images.lock",
@@ -97,23 +97,23 @@
     },
     {
       "path": "scripts/create_source_archive.py",
-      "sha256": "e562aa4ea1579eee4dc3593a7b91e0e7ad1d249cc3f6400b0515b76120ab7cf8",
-      "size": 3888
+      "sha256": "998ccb99e100baa9471dc943b4b599203389ebd09b01ce37ea287790a4d19316",
+      "size": 5091
     },
     {
       "path": "scripts/design_bundle_digest.py",
-      "sha256": "30ceacb49f1012519faa0d08fe706dd5c9b1945d2ee1778dea9eab36010cece6",
-      "size": 13966
+      "sha256": "56c07d617ec2b5c88ba2c35bfce992b91d55acb4ef53076122b7d03ced23e992",
+      "size": 12634
     },
     {
       "path": "scripts/generate_acceptance_design_registry.py",
-      "sha256": "e58657e278ff37e9949b48d9c95a7916c80a013dbc38a140cb9239c2b2326aeb",
-      "size": 8075
+      "sha256": "143bbb89b4c63783fc6ac162c900fac300699c14b5abf5664acc629303eae9de",
+      "size": 8096
     },
     {
       "path": "scripts/generate_effective_execution_registry.py",
-      "sha256": "f8b480b0e83d1421893acf32e3fd7ea985a98e5e5a97aa95f444e5325e173e9d",
-      "size": 24593
+      "sha256": "7802cde83b2665607e2c39956b0c2b109be2641a15a10349bb5cd046b512f5b3",
+      "size": 25055
     },
     {
       "path": "scripts/generate_supplemental_execution_mapping.py",
@@ -127,8 +127,8 @@
     },
     {
       "path": "scripts/source_provenance.py",
-      "sha256": "564d5a5ef72d5555809ac5da81a456cdcb173feb6d5fd7cd3bf02ef862af0b21",
-      "size": 11818
+      "sha256": "2d83e8b9ec92b841355b409576078bef7ffa10d5a1f28b5134fc88ee6968e4ce",
+      "size": 12713
     },
     {
       "path": "scripts/validation/acceptance_gherkin.py",
@@ -142,8 +142,8 @@
     },
     {
       "path": "scripts/verify_source_archive.py",
-      "sha256": "19d91f03ec806a11a630e58c67a64d7af791852c94505e786cf333e2b00397bf",
-      "size": 4260
+      "sha256": "1cc886a667560ba0fc3c7c4827b4843ba60a5da31d73a9007bb06ff49bd5a555",
+      "size": 7322
     }
   ],
   "registry_kind": "SUPPLEMENTAL_ACCEPTANCE_DESIGN_REGISTRY",
@@ -170,7 +170,7 @@
     "gherkin_outline_count": 11,
     "gherkin_scenario_bound_clause_count": 2019,
     "gherkin_source_step_count": 1645,
-    "scenario_set_sha256": "695ec419c93e97c8095de2d897aecf271ba8f8bf2586b495d734c1c7c8e1cab3"
+    "scenario_set_sha256": "df3c2f0ce1c87d45c095234f6803ee7b0751e970cc08efd16cb15e225ebaedc0"
   },
   "schema_version": 2,
   "schemas": [

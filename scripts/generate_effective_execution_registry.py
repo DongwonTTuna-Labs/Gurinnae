@@ -15,6 +15,7 @@ from typing import Any
 
 import yaml
 
+from git_authority import AUTHORITY_ZIP_SHA256, GitAuthorityError, authority_file
 from validation.acceptance_gherkin import (
     canonical_sha256,
     compile_features,
@@ -27,9 +28,6 @@ OUTPUT = "tests/acceptance/effective-execution-registry.yaml"
 BASE_LOCK = "tests/acceptance/base-v13.lock.yaml"
 BASE_MAPPING = "tests/acceptance/executable-mapping.yaml"
 SUPPLEMENTAL_MAPPING = "tests/acceptance/supplemental-executable-mapping.yaml"
-AUTHORITY_ZIP_SHA256 = (
-    "960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5"
-)
 PROFILE_DOMAIN = b"GURINNAE-ACCEPTANCE-RUNTIME-PROFILE-V1\0"
 SELECTOR_DOMAIN = b"GURINNAE-ACCEPTANCE-SELECTOR-V1\0"
 OBSERVATION_LAYER_DOMAIN = b"GURINNAE-ACCEPTANCE-OBSERVATION-LAYER-EDGE-V1\0"
@@ -194,6 +192,20 @@ def _load(root: Path, relative: str) -> dict[str, Any]:
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _authority_feature_descriptor(root: Path, relative: str) -> dict[str, object]:
+    try:
+        content = authority_file(relative, root)
+    except GitAuthorityError as error:
+        raise RegistryError(
+            f"cannot read base feature from the authority tag: {relative}: {error}"
+        ) from error
+    return {
+        "path": PurePosixPath(relative).name,
+        "sha256": hashlib.sha256(content).hexdigest(),
+        "size": len(content),
+    }
 
 
 def _safe_path(value: object) -> bool:
@@ -392,13 +404,10 @@ def build_registry(root: Path = ROOT) -> dict[str, object]:
             raise RegistryError("invalid base feature lock row")
         relative = f"tests/acceptance/{row['path']}"
         path = root / relative
-        if (
-            path.is_symlink()
-            or not path.is_file()
-            or _sha256(path) != row.get("sha256")
-            or path.stat().st_size != row.get("size")
-        ):
-            raise RegistryError(f"base feature lock mismatch: {relative}")
+        if path.is_symlink() or not path.is_file():
+            raise RegistryError(f"current base feature is missing: {relative}")
+        if _authority_feature_descriptor(root, relative) != row:
+            raise RegistryError(f"tagged base feature lock mismatch: {relative}")
         base_paths.append(relative)
     all_paths = [
         path.relative_to(root).as_posix()

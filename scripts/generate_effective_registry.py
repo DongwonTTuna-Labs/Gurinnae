@@ -17,10 +17,15 @@ from typing import Any, Iterable, Sequence
 
 import yaml
 
-from design_bundle_digest import DEFAULT_AUTHORITY_ZIP, ROOT, authority_manifest_paths
+from design_bundle_digest import ROOT
 from generate_effective_execution_registry import (
     OUTPUT as EFFECTIVE_EXECUTION_REGISTRY,
     render_registry as render_effective_execution_registry,
+)
+from git_authority import (
+    GitAuthorityError,
+    authority_file,
+    authority_paths as git_authority_paths,
 )
 
 
@@ -41,6 +46,7 @@ GENERATOR_PATTERNS = (
     "scripts/finalize_*.py",
     "scripts/normalize_*.py",
 )
+BASE_ACCEPTANCE_LOCK = "tests/acceptance/base-v13.lock.yaml"
 
 
 class UniqueKeyLoader(yaml.SafeLoader):
@@ -476,6 +482,68 @@ def parse_feature_ids(path: Path, checks: Checks, source: str | None = None) -> 
     return {row["scenario_id"] for row in parse_feature_scenarios(path, checks, source)}
 
 
+def base_feature_paths(root: Path, checks: Checks) -> set[str]:
+    """Load the explicit base feature set; tag membership is not classification."""
+
+    try:
+        tag_paths = git_authority_paths(root)
+        raw = authority_file(BASE_ACCEPTANCE_LOCK, root).decode("utf-8")
+        document = yaml.load(raw, Loader=UniqueKeyLoader)
+    except (GitAuthorityError, OSError, UnicodeError, yaml.YAMLError, ValueError) as error:
+        checks.require(
+            False,
+            "authority_tag",
+            BASE_ACCEPTANCE_LOCK,
+            "readable pinned Git authority",
+            str(error),
+        )
+        return set()
+    if not isinstance(document, dict):
+        checks.require(
+            False,
+            "authority_base_lock",
+            BASE_ACCEPTANCE_LOCK,
+            "mapping from authority tag",
+            type(document).__name__,
+        )
+        return set()
+    rows = document.get("features", [])
+    names = row_ids(rows, "path", f"{BASE_ACCEPTANCE_LOCK}#features", checks)
+    checks.count(document.get("feature_count"), names, f"{BASE_ACCEPTANCE_LOCK}#feature_count")
+    relative_paths: set[str] = set()
+    for name in names:
+        path = PurePosixPath(name)
+        valid = (
+            _safe_relative(name)
+            and path.parent == PurePosixPath(".")
+            and path.suffix == ".feature"
+        )
+        checks.require(
+            valid,
+            "base_feature_path",
+            f"{BASE_ACCEPTANCE_LOCK}#{name}",
+            "feature filename without directories",
+            name,
+        )
+        if valid:
+            relative_paths.add(f"tests/acceptance/{name}")
+    checks.require(
+        BASE_ACCEPTANCE_LOCK in tag_paths,
+        "authority_base_lock",
+        BASE_ACCEPTANCE_LOCK,
+        "path present in authority tag",
+        "missing" if BASE_ACCEPTANCE_LOCK not in tag_paths else "present",
+    )
+    checks.require(
+        relative_paths <= set(tag_paths),
+        "authority_base_features",
+        BASE_ACCEPTANCE_LOCK,
+        [],
+        sorted(relative_paths - set(tag_paths)),
+    )
+    return relative_paths
+
+
 def _source_rows(ids: set[str]) -> list[str]:
     return sorted(ids)
 
@@ -484,7 +552,7 @@ def problem_payload(problem: Problem) -> dict[str, object]:
     return json.loads(json.dumps(asdict(problem), ensure_ascii=False, default=str))
 
 
-def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZIP) -> tuple[dict[str, object], list[Problem]]:
+def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]:
     root = root.resolve()
     checks = Checks()
 
@@ -1439,11 +1507,8 @@ def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZI
         "base executable scenario count",
     )
     base_feature_ids: set[str] = set()
-    try:
-        authority_paths = authority_manifest_paths(authority_zip.resolve())
-    except Exception as error:  # Digest verifier reports the exact archive problem.
-        checks.require(False, "authority_manifest", str(authority_zip), "readable pinned manifest", str(error))
-        authority_paths = set()
+    locked_base_feature_paths = base_feature_paths(root, checks)
+    discovered_base_feature_paths: set[str] = set()
     supplemental_feature_ids: set[str] = set()
     supplemental_feature_paths: list[str] = []
     supplemental_feature_rows: list[dict[str, str]] = []
@@ -1452,7 +1517,8 @@ def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZI
         relative = path.relative_to(root).as_posix()
         scenario_rows = parse_feature_scenarios(path, checks, relative)
         ids = {row["scenario_id"] for row in scenario_rows}
-        if relative in authority_paths:
+        if relative in locked_base_feature_paths:
+            discovered_base_feature_paths.add(relative)
             base_feature_ids.update(ids)
         else:
             supplemental_feature_paths.append(relative)
@@ -1461,6 +1527,13 @@ def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZI
             supplemental_feature_ids.update(ids)
             supplemental_feature_rows.extend(scenario_rows)
             supplemental_feature_ids_by_path[relative] = ids
+    checks.equal(
+        locked_base_feature_paths,
+        discovered_base_feature_paths,
+        "base feature inventory",
+        "lock",
+        "features",
+    )
     checks.equal(base_tests, base_feature_ids, "base feature mapping", "mapping", "features")
 
     mapping_candidates = sorted(
@@ -1473,7 +1546,7 @@ def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZI
     supplemental_mapping_documents: list[tuple[str, dict[str, Any]]] = []
     for path in mapping_candidates:
         relative = path.relative_to(root).as_posix()
-        if relative == base_mapping_relative or relative in authority_paths:
+        if relative == base_mapping_relative:
             continue
         supplemental_mapping_documents.append((relative, load_yaml(root, relative, checks)))
     checks.require(
@@ -1773,11 +1846,10 @@ def build_registry(root: Path = ROOT, authority_zip: Path = DEFAULT_AUTHORITY_ZI
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--authority-zip", type=Path, default=DEFAULT_AUTHORITY_ZIP)
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--max-problems", type=int, default=100)
     args = parser.parse_args()
-    registry, problems = build_registry(args.root, args.authority_zip)
+    registry, problems = build_registry(args.root)
     payload = {**registry, "problems": [problem_payload(problem) for problem in problems]}
     rendered = json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
     if args.json_output is not None:

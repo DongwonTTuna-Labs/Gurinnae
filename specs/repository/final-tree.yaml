@@ -11,9 +11,6 @@ root_files:
 - Makefile
 - biome.jsonc
 - bun.lock
-- compose.dev.yaml
-- compose.production.yaml
-- compose.test.yaml
 - compose.yaml
 - package.json
 - rust-toolchain.toml

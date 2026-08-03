@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -14,6 +15,7 @@ from validation.effective_acceptance import (
     Checks,
     EXECUTION_SCHEMA,
     RUN_INDEX_SCHEMA,
+    _evidence_path_allowed,
     _validate_make_graph,
     _plain_file_under,
     _typescript_test_titles,
@@ -94,6 +96,38 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
             (root / "linked").symlink_to(target, target_is_directory=True)
             self.assertIsNone(_plain_file_under(root, "linked/receipt.json"))
 
+    def test_validator_allows_only_git_ignored_internal_evidence(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(["git", "init", "--quiet", str(root)], check=True)
+            (root / ".gitignore").write_text("artifacts/\n", encoding="utf-8")
+            ignored = root / "artifacts" / "acceptance"
+            ignored.mkdir(parents=True)
+            allowed, resolved = _evidence_path_allowed(root, ignored)
+            self.assertTrue(allowed)
+            self.assertEqual(resolved, ignored)
+
+            not_ignored = root / "evidence"
+            not_ignored.mkdir()
+            allowed, resolved = _evidence_path_allowed(root, not_ignored)
+            self.assertFalse(allowed)
+            self.assertEqual(resolved, not_ignored)
+
+    def test_validator_rejects_internal_symlink_ancestor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            root = base / "source"
+            root.mkdir()
+            subprocess.run(["git", "init", "--quiet", str(root)], check=True)
+            (root / ".gitignore").write_text("artifacts/\n", encoding="utf-8")
+            target = base / "target"
+            (target / "acceptance").mkdir(parents=True)
+            (root / "artifacts").symlink_to(target, target_is_directory=True)
+            allowed, _ = _evidence_path_allowed(
+                root, root / "artifacts" / "acceptance"
+            )
+            self.assertFalse(allowed)
+
     def test_boolean_execution_count_is_not_an_integer(self) -> None:
         schema = json.loads((ROOT / EXECUTION_SCHEMA).read_text(encoding="utf-8"))
         counts_schema = schema["properties"]["counts"]
@@ -122,13 +156,32 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
             makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
             makefile = makefile.replace(
                 "verify-execution-evidence: run-acceptance-439",
-                "verify-execution-evidence: verify-acceptance-source",
+                "verify-execution-evidence: verify-specs",
             )
             (root / "Makefile").write_text(makefile, encoding="utf-8")
             checks = Checks("mutation")
             _validate_make_graph(root, checks)
             self.assertIn(
                 "acceptance_make_dependency",
+                {problem.code for problem in checks.problems},
+            )
+
+    def test_make_graph_rejects_duplicate_external_evidence_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Makefile").write_text(
+                "verify-specs:\n"
+                "run-acceptance-439: verify-specs\n"
+                "\tpython3 -B scripts/run_acceptance.py\n"
+                "verify-execution-evidence: run-acceptance-439\n"
+                "\tpython3 -B scripts/validation/effective_acceptance.py --mode evidence\n"
+                "verify-acceptance: verify-execution-evidence\n",
+                encoding="utf-8",
+            )
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+            self.assertIn(
+                "acceptance_make_duplicate_evidence_validation",
                 {problem.code for problem in checks.problems},
             )
 

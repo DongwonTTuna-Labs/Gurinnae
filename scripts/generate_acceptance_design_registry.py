@@ -13,8 +13,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from git_authority import AUTHORITY_ZIP_SHA256
 from generate_effective_execution_registry import (
-    AUTHORITY_ZIP_SHA256,
     BASE_LOCK,
     BASE_MAPPING,
     OUTPUT as EFFECTIVE_REGISTRY,

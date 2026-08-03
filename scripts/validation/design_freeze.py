@@ -18,7 +18,6 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 from design_bundle_digest import (  # noqa: E402
-    DEFAULT_AUTHORITY_ZIP,
     ROOT,
     BundleError,
     build_manifest,
@@ -70,15 +69,14 @@ from validation.design_freeze_self_test import self_test  # noqa: E402
 
 def run_validation(
     root: Path,
-    authority_zip: Path,
     mode: str,
 ) -> dict[str, object]:
-    registry, structure_problems = build_registry(root, authority_zip)
+    registry, structure_problems = build_registry(root)
     release_checks = Checks()
     manifest: dict[str, object] = {}
     if mode == "freeze":
         try:
-            manifest = build_manifest(root, authority_zip)
+            manifest = build_manifest(root)
         except BundleError as error:
             release_checks.require(
                 False,
@@ -92,11 +90,10 @@ def run_validation(
             validate_reviews(root, manifest, release_checks)
         validate_mapped_test_sources(root, release_checks)
         validate_supplemental_acceptance_release(root, release_checks)
-        validate_authority_gate(root, authority_zip, release_checks)
+        validate_authority_gate(root, release_checks)
         if manifest:
             _validate_manifest_stability(
                 root,
-                authority_zip,
                 manifest,
                 release_checks,
             )
@@ -139,12 +136,11 @@ def run_validation(
 
 def _validate_manifest_stability(
     root: Path,
-    authority_zip: Path,
     manifest: dict[str, object],
     checks: Checks,
 ) -> None:
     try:
-        final_manifest = build_manifest(root, authority_zip)
+        final_manifest = build_manifest(root)
     except BundleError as error:
         checks.require(
             False,
@@ -167,7 +163,6 @@ def _validate_manifest_stability(
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--root", type=Path, default=ROOT)
-    parser.add_argument("--authority-zip", type=Path, default=DEFAULT_AUTHORITY_ZIP)
     parser.add_argument("--mode", choices=("lint", "freeze"), default="freeze")
     parser.add_argument("--json-output", type=Path)
     parser.add_argument("--max-problems", type=int, default=100)
@@ -194,7 +189,6 @@ def main() -> int:
 
     payload = run_validation(
         args.root.resolve(),
-        args.authority_zip.resolve(),
         args.mode,
     )
     if args.json_output is not None:

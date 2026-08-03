@@ -12,25 +12,19 @@ Verified on 2026-07-15 UTC against the sole supplied authority archive:
 - Ordered authority-tree digest: `3136450c3d01f950e123ab52813c3992cd7239f1e691166e6694669cffe13f98`
 - Authority spec migrations: `24/24` local files are byte-exact with the archive manifest.
 
-The verifier is `scripts/verify_authority_base_lock.py` (SHA-256
-`e3ba8f3a403d776c4de73d95b4c5263c863f52d3591b8c08899e73b28bcdd1de`).
-Archive scope returns `RESULT: PASS`. Migration scope is fail-closed and returns
-nonzero until the exact six-file 0025–0030 set exists:
+This is a historical record of the original pack check. Current tree authority
+comes from the pinned Git tag `authority-v13-frozen` through
+`scripts/git_authority.py`; migration closure is fail-closed in
+`scripts/verify_migrations.py`:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/verify_authority_base_lock.py --scope archive
-PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/verify_authority_base_lock.py --scope migrations
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/validation/design_freeze.py --mode lint
+PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/verify_migrations.py
 ```
 
-The current strict migration command exits `1` with
-`additive_migration_missing` for the five reserved physical migrations. Only a
-clearly marked diagnostic command can inspect the partial tree without that
-final-completeness error:
-
-```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/verify_authority_base_lock.py \
-  --scope migrations --allow-pending-additive
-```
+The former partial-tree diagnostic was retired with the archive/base-lock
+verifier. The current migration check requires the exact 24-file base prefix
+and the fixed six-file 0025–0030 additive set.
 
 Negative self-tests also removed 0030 from an isolated copy and introduced a
 wrongly named ordinal-0025 file. Both diagnostic-flag runs exited `1` with,

@@ -1,5 +1,0 @@
-PASS specs/api/public-api.openapi.yaml operations=41
-PASS specs/api/submission-api.openapi.yaml operations=34
-PASS specs/api/control-api.openapi.yaml operations=131
-PASS specs/api/identity-provider.openapi.yaml operations=6
-PASS specs/api/identity-service-internal.openapi.yaml operations=9

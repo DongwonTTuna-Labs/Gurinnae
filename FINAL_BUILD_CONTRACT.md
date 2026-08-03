@@ -6,6 +6,12 @@
 
 Development/test는 외부 key 없이 synthetic adapter로 같은 domain/application path를 실행한다. Production은 adapter와 설정만 달라지며 별도의 임시 구현 branch를 두지 않는다.
 
+## 권위와 명세 트리
+
+활성 명세는 루트 `specs/` 단일 트리다. Git tag `authority-v13-frozen`은 불변
+v13 원본과 base provenance를 검증하는 기준이며 현재 `specs/`를 대체하는
+두 번째 명세 트리가 아니다. 루트 Manifest 파일은 권위 또는 검증 입력이 아니다.
+
 ## 완성 수량
 
 - Public 34 + Response 8 + Internal 52 = **94 화면**
@@ -61,7 +67,15 @@ Development/test는 외부 key 없이 synthetic adapter로 같은 domain/applica
 
 ## 완료 판정
 
-`make verify-final`은 다음을 모두 실행하고 통과해야 한다.
+`make verify-final`은 `verify-specs`, `verify-codegen`, Rust/SQLx, Bun/UI, runtime,
+container/recovery 검증을 하나의 종속성 체인으로 실행한다. `build-ui`는 Bun 검증과
+E2E/visual test가 공유하는 단일 UI build 경계다.
+
+- `verify-specs`: 현재 `specs/`, frozen tag 핀, migration, acceptance source/design 계약
+- `verify-codegen`: OpenAPI/client, response, acceptance registry, UI registry 결정성
+- `build-ui`: SvelteKit SSR UI build
+
+`make verify-final`의 hard gate는 다음을 모두 통과해야 한다.
 
 - format, lint, strict typecheck, first-party unsafe/panic/code-size gate
 - Rust unit/integration/property test와 SQLx prepare
@@ -71,5 +85,12 @@ Development/test는 외부 key 없이 synthetic adapter로 같은 domain/applica
 - Agent, Connector, Parser/OCR, Detection evaluation
 - Docker network isolation, restart persistence, backup/restore
 - security header, session, CSRF, assertion, IDOR, prompt-injection test
+
+Sealed acceptance는 `make verify-acceptance`로 별도 실행하고 독립 evidence validation을
+통과해야 한다. override가 없으면 Git이 무시하는 `artifacts/acceptance/`에
+run-scoped evidence와 검증용 source bundle/extraction receipt를 생성한다.
+
+`make source-archive`는 배포 archive를 `artifacts/`에 만든다. Manifest는 archive 내부에서만
+생성·검증하며 루트 소스 트리의 권위 검증 근거로 사용하지 않는다.
 
 하나라도 미검증이면 완료가 아니다.

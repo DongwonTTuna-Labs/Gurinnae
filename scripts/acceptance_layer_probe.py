@@ -137,14 +137,14 @@ def compose_facts() -> dict[str, object]:
     compose = shutil.which("docker")
     if not compose:
         raise RuntimeError("COMPOSE probe requires docker")
-    config = run([compose, "compose", "-f", "compose.production.yaml", "config", "--format", "json"])
+    config = run([compose, "compose", "-f", "compose.yaml", "config", "--format", "json"])
     parsed = json.loads(config)
     services = parsed.get("services") if isinstance(parsed, dict) else None
     if not isinstance(services, dict):
         raise RuntimeError("compose config has no services object")
     networks = parsed.get("networks", {})
     health = run(
-        [compose, "compose", "-f", "compose.production.yaml", "ps", "--format", "json"]
+        [compose, "compose", "-f", "compose.yaml", "ps", "--format", "json"]
     )
     image_rows = sorted(
         (name, body.get("image", ""))

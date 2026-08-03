@@ -15,6 +15,8 @@ import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
+from archive_manifest import verify_archive_manifest
+
 
 EXPECTED_ROOT = "gurine"
 
@@ -88,8 +90,9 @@ def verify_extracted(root: Path) -> None:
     project = root / EXPECTED_ROOT
     if not project.is_dir():
         raise RuntimeError(f"Archive root {EXPECTED_ROOT}/ is missing")
+    entries = verify_archive_manifest(project, EXPECTED_ROOT)
+    print(f"archive internal manifest: PASS files={len(entries)}", flush=True)
     run([sys.executable, "-B", "scripts/validate_final_spec.py", "--strict"], project)
-    run(["sha256sum", "--quiet", "--check", "MANIFEST.sha256"], project)
 
 
 def tree_digest(root: Path) -> tuple[str, int]:

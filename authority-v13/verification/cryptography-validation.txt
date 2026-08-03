@@ -1,7 +1,0 @@
-specification_version: 13.0.0
-cryptographic_envelope_vectors: 5
-cryptographic_negative_cases: 8
-duplicate_key_canaries: PASS
-warnings: 0
-errors: 0
-RESULT: PASS
