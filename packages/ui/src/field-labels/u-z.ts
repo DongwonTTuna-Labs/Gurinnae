@@ -47,4 +47,6 @@ export const FIELD_LABELS_U_Z = {
   watermarkPolicy: "워터마크 정책",
   whyMaterial: "중요한 이유",
   whyNow: "현재 필요한 이유",
+  withdrawn: "철회 여부",
+  withholdingPublicExplanation: "공개 보류 설명",
 } as const satisfies Readonly<Record<string, string>>;

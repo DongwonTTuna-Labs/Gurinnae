@@ -1,0 +1,173 @@
+- generic [ref=f2e2]:
+  - link "본문으로 건너뛰기" [ref=f2e3] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=f2e4]:
+    - banner [ref=f2e5]:
+      - generic [ref=f2e6]:
+        - link "구린네 홈" [ref=f2e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=f2e9]: 구린네
+        - navigation "주요 탐색" [ref=f2e10]:
+          - link "사례" [ref=f2e11] [cursor=pointer]:
+            - /url: /cases
+          - link "계약" [ref=f2e12] [cursor=pointer]:
+            - /url: /contracts
+          - generic [ref=f2e13]:
+            - link "기관·업체" [ref=f2e14] [cursor=pointer]:
+              - /url: /agencies
+            - link "업체" [ref=f2e15] [cursor=pointer]:
+              - /url: /suppliers
+          - link "방법론" [ref=f2e16] [cursor=pointer]:
+            - /url: /methodology
+          - link "데이터 범위" [ref=f2e17] [cursor=pointer]:
+            - /url: /coverage
+          - link "정정" [ref=f2e18] [cursor=pointer]:
+            - /url: /corrections
+        - generic [ref=f2e19]:
+          - link "검색" [ref=f2e20] [cursor=pointer]:
+            - /url: /search
+          - link "업데이트 구독" [ref=f2e21] [cursor=pointer]:
+            - /url: /subscribe
+    - main [ref=f2e22]:
+      - generic [ref=f2e23]:
+        - navigation "현재 위치" [ref=f2e24]:
+          - link "홈" [ref=f2e25] [cursor=pointer]:
+            - /url: /
+          - generic [ref=f2e26]: /
+          - link "소개" [ref=f2e27] [cursor=pointer]:
+            - /url: /about
+          - generic [ref=f2e28]: /
+          - generic [ref=f2e29]: 재원·수익 투명성
+        - heading "재원·수익 투명성" [level=1] [ref=f2e30]
+        - paragraph [ref=f2e31]: 후원·수익과 편집 독립성의 분리 원칙.
+      - generic "화면 동작" [ref=f2e32]:
+        - generic [ref=f2e34]:
+          - link "투명성 보고서 다운로드" [ref=f2e35] [cursor=pointer]:
+            - /url: /downloads/transparency-reports/55555555-5555-4555-8555-555555555555?format=JSON
+          - link "거버넌스 보기" [ref=f2e36] [cursor=pointer]:
+            - /url: /about/governance
+      - paragraph [ref=f2e37]: "현재 상태: 최신 상태"
+      - generic [ref=f2e39]:
+        - region [ref=f2e40]:
+          - generic [ref=f2e41]:
+            - generic [ref=f2e42]:
+              - paragraph [ref=f2e43]: 공개 재원 원장
+              - heading "독립성 원칙" [level=2] [ref=f2e44]
+              - paragraph [ref=f2e45]: 후원·수익과 편집 독립성의 분리 원칙.
+            - generic [ref=f2e46]:
+              - strong [ref=f2e48]: 공개됨
+              - time [ref=f2e49]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e50]: 후원은 접근권이 아니며 조사 면제가 아닙니다.
+        - region [ref=f2e51]:
+          - generic [ref=f2e52]:
+            - generic [ref=f2e53]:
+              - paragraph [ref=f2e54]: 공개 재원 원장
+              - heading "재원" [level=2] [ref=f2e55]
+              - paragraph [ref=f2e56]: 후원·지원금·조직용 서비스.
+            - generic [ref=f2e57]:
+              - strong [ref=f2e59]: 공개됨
+              - time [ref=f2e60]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e61]: 승인 공개 후원 범주가 있으며 집중도 산정 분모는 확인되지 않았습니다.
+            - list "재원 공개 근거" [ref=f2e62]:
+              - listitem [ref=f2e63]:
+                - link "승인 공개 근거 1" [ref=f2e64] [cursor=pointer]:
+                  - /url: https://example.test/public-funding-evidence
+        - region [ref=f2e65]:
+          - generic [ref=f2e66]:
+            - generic [ref=f2e67]:
+              - paragraph [ref=f2e68]: 공개 재원 원장
+              - heading "비용" [level=2] [ref=f2e69]
+              - paragraph [ref=f2e70]: 인프라·인력·법률.
+            - generic [ref=f2e71]:
+              - strong [ref=f2e73]: 권위 없음
+              - time [ref=f2e74]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e75]: 승인된 공개 비용 계약이 없어 비용 공개 권위가 없습니다. 내부 원가를 추정하거나 공개값으로 바꾸지 않습니다.
+        - region [ref=f2e76]:
+          - generic [ref=f2e77]:
+            - generic [ref=f2e78]:
+              - paragraph [ref=f2e79]: 공개 재원 원장
+              - heading "공개 기준" [level=2] [ref=f2e80]
+              - paragraph [ref=f2e81]: 기준 이상 후원 공개.
+            - generic [ref=f2e82]:
+              - strong [ref=f2e84]: 공개됨
+              - time [ref=f2e85]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e86]: 개인 후원 · 승인 공개 금액대
+        - region [ref=f2e87]:
+          - generic [ref=f2e88]:
+            - generic [ref=f2e89]:
+              - paragraph [ref=f2e90]: 공개 재원 원장
+              - heading "이해상충" [level=2] [ref=f2e91]
+              - paragraph [ref=f2e92]: 회피·검토.
+            - generic [ref=f2e93]:
+              - strong [ref=f2e95]: 공개됨
+              - time [ref=f2e96]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e97]: 집중도 확인 불가 · 후원은 접근권이 아니며 조사 면제가 아닙니다.
+            - list "이해상충 공개 근거" [ref=f2e98]:
+              - listitem [ref=f2e99]:
+                - link "독립성 정책" [ref=f2e100] [cursor=pointer]:
+                  - /url: /about/governance
+        - region [ref=f2e101]:
+          - generic [ref=f2e102]:
+            - generic [ref=f2e103]:
+              - paragraph [ref=f2e104]: 공개 재원 원장
+              - heading "보고서" [level=2] [ref=f2e105]
+              - paragraph [ref=f2e106]: 기간별 투명성 보고서.
+            - generic [ref=f2e107]:
+              - strong [ref=f2e109]: 공개됨
+              - time [ref=f2e110]: 기준 2026-08-02T12:00:00Z
+            - paragraph [ref=f2e111]: 2026년 1분기 · 개정 1
+            - table [ref=f2e113]:
+              - caption [ref=f2e114]: 승인 공개 개정별 투명성 보고서
+              - rowgroup [ref=f2e115]:
+                - row [ref=f2e116]:
+                  - columnheader "기간" [ref=f2e117]
+                  - columnheader "보고서" [ref=f2e118]
+                  - columnheader "발행 시각" [ref=f2e119]
+                  - columnheader "다운로드" [ref=f2e120]
+              - rowgroup [ref=f2e121]:
+                - row [ref=f2e122]:
+                  - cell "2026-01-01–2026-04-01" [ref=f2e123]
+                  - cell "2026년 1분기 재원 공개 독립 승인된 공개 재원 개정 1" [ref=f2e124]:
+                    - strong [ref=f2e125]: 2026년 1분기 재원 공개
+                    - generic [ref=f2e126]: 독립 승인된 공개 재원 개정 1
+                  - cell [ref=f2e127]:
+                    - time [ref=f2e128]: 2026-08-02T12:00:00Z
+                  - cell [ref=f2e129]:
+                    - link "JSON" [ref=f2e130] [cursor=pointer]:
+                      - /url: /downloads/transparency-reports/55555555-5555-4555-8555-555555555555?format=JSON
+                    - link "CSV" [ref=f2e131] [cursor=pointer]:
+                      - /url: /downloads/transparency-reports/55555555-5555-4555-8555-555555555555?format=CSV
+    - contentinfo [ref=f2e132]:
+      - generic [ref=f2e133]:
+        - paragraph [ref=f2e134]: 구린네는 자동 분석 결과를 범죄 또는 비리의 확정 판단으로 표현하지 않습니다.
+        - navigation "푸터 탐색" [ref=f2e135]:
+          - link "검증 방법" [ref=f2e136] [cursor=pointer]:
+            - /url: /methodology
+          - link "데이터 범위" [ref=f2e137] [cursor=pointer]:
+            - /url: /coverage
+          - link "출처" [ref=f2e138] [cursor=pointer]:
+            - /url: /sources
+          - link "데이터 정책" [ref=f2e139] [cursor=pointer]:
+            - /url: /data
+          - link "API" [ref=f2e140] [cursor=pointer]:
+            - /url: /api
+          - link "소개" [ref=f2e141] [cursor=pointer]:
+            - /url: /about
+          - link "후원·재정" [ref=f2e142] [cursor=pointer]:
+            - /url: /about/funding
+          - link "거버넌스" [ref=f2e143] [cursor=pointer]:
+            - /url: /about/governance
+          - link "편집 정책" [ref=f2e144] [cursor=pointer]:
+            - /url: /editorial-policy
+          - link "정정" [ref=f2e145] [cursor=pointer]:
+            - /url: /corrections
+          - link "정정 요청" [ref=f2e146] [cursor=pointer]:
+            - /url: /correction-request
+          - link "접근성" [ref=f2e147] [cursor=pointer]:
+            - /url: /accessibility
+          - link "도움말·문의" [ref=f2e148] [cursor=pointer]:
+            - /url: /contact
+          - link "개인정보" [ref=f2e149] [cursor=pointer]:
+            - /url: /privacy
+          - link "이용약관" [ref=f2e150] [cursor=pointer]:
+            - /url: /terms

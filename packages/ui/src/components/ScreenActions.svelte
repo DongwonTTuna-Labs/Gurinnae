@@ -207,7 +207,7 @@ const visibleActions = $derived(
           {/if}
         {/if}
         {#each visibleActions as action (action.id)}
-          {#if operationId(action)}
+          {#if operationId(action) && interactionKind(action) !== "DOWNLOAD"}
             {#if screen.id === "RSP-008" && action.id === "request-new-link"}<span id="new-link" class="fragment-anchor" aria-hidden="true"></span>{/if}
             {#if screen.id === "RSP-008" && action.id === "contact-owner"}<span id="contact" class="fragment-anchor" aria-hidden="true"></span>{/if}
             <form id={`action-${action.id}`} method="POST" action={formAction(action.id)} data-action-id={action.id} onformdata={(event) => appendChallengeProof(action.id, event)}>

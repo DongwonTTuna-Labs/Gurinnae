@@ -15,6 +15,7 @@ struct ProducerJobFence {
     id: Uuid,
     lease_token: Uuid,
     fencing_token: i64,
+    lease_expires_at: time::OffsetDateTime,
 }
 
 #[derive(Debug)]

@@ -7,7 +7,7 @@ not_a_crime_detector: true
 delivery_mode: ONE_SHOT_COMPLETE_PRODUCT
 surfaces:
 - id: public-web
-  screens: 34
+  screens: 35
   access: anonymous-first
   runtime: SvelteKit SSR on Bun
   api: public-api
@@ -43,6 +43,7 @@ backend:
   - migrator
   - egress-gateway
   - oidc-test-provider
+  - billing-gateway
 frontend:
   language: TypeScript strict
   package_runtime: Bun 1.3.14
@@ -50,21 +51,34 @@ frontend:
   formatter_linter: Biome 2.5.3
   clients: four generated Fetch clients (public, submission, control, internal identity)
 counts:
-  operations: 217
-  public_operations: 43
-  submission_operations: 34
-  control_operations: 134
+  base_external_operations: 217
+  additive_operations: 54
+  additive_external_operations: 51
+  additive_private_identity_api_operations: 3
+  operations: 268
+  public_operations: 44
+  submission_operations: 42
+  control_operations: 176
   identity_flows: 6
-  query_operations: 110
-  command_operations: 107
-  http_write_operations: 104
-  screens: 94
-  database_migrations: 24
-  database_tables: 107
+  query_operations: 123
+  command_operations: 145
+  http_write_operations: 142
+  all_scope_http_operations: 271
+  all_scope_http_query_operations: 123
+  all_scope_http_command_operations: 148
+  all_scope_http_write_operations: 145
+  private_identity_service_operations: 9
+  screens: 95
+  database_migrations: 41
+  owner_declared_migrations: 15
+  post_base_migrations: 17
+  database_tables: 309
   domain_and_integration_events: 99
-  cargo_members: 32
+  cargo_members: 34
+  services: 18
   bun_workspaces: 9
-  compose_services: 20
+  compose_services: 22
+  images: 18
   acceptance_features: 35
   acceptance_scenarios: 271
   agent_eval_cases: 50
@@ -74,7 +88,14 @@ launch_modes:
   development: Synthetic data and local adapters; no external key required.
   test: Ephemeral isolated data; deterministic.
   staging: Live connectors may run in shadow; no public allegation.
-  production: Configured official sources, human publication gate, production secrets.
+  production: Configured official sources, human publication gate, production secrets; donation is UNAVAILABLE because R6e defines no live provider or production tier authority.
+commercial_and_funding_boundaries:
+  free_forever: public facts, evidence, correction history, right of reply, basic verified subscriptions, and reasonable public API/export
+  b2b: offered collection remains signed written contract plus external electronic tax invoice and bank transfer; cash application may additionally accept signed typed PG_SETTLEMENT_IMPORT accounting evidence, stored as source kind PG_SETTLEMENT, for an externally completed settlement with an exact invoice fence, but this is not live PG, checkout, card billing, entitlement, or a donation-to-invoice path
+  donation: TEST_MODE_ONLY public fundraising unrelated to SKU, contract, invoice, paid-workspace value, or entitlement; no live PG or ASP and no invented price, tier, or payment success
+  public_routes:
+  - PUB-035 /donate
+  - PUB-023 downloadTransparencyReport
 immutable_principles:
 - No automated corruption or crime assertion.
 - No public publication without human approval.
@@ -84,9 +105,10 @@ immutable_principles:
 - No institutional or supplier corruption ranking.
 - External input cannot mutate editorial state directly.
 - Crawled documents are untrusted data, never instructions.
+- Donation and commercial state never reduce free public access or create editorial priority.
 final_acceptance:
-- All 94 screens implemented.
-- All 217 external operation contracts and the internal identity service contract implemented.
+- All 95 screens implemented.
+- All 268 external operation contracts and all 3 additive PRIVATE_IDENTITY_API supplier operation contracts (271 all-scope HTTP operations in their disjoint union), plus the separate 9-operation internal identity service contract, implemented.
 - All PostgreSQL migrations and grants tested.
 - All generated artifacts reproducible.
 - Development and production Docker paths work.

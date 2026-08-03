@@ -1008,3 +1008,353 @@ Exact tuple resolution:
   prove deterministic replay.
 - Status: `RESOLVED_R6D_RUNTIME`; the event-consumer smoke owns the exact route,
   completion, stored-result replay, and owner-graph zero-mutation oracle.
+
+## SPEC-CONFLICT-033 — Funding projector named an undeclared third R6e event
+
+- Conflict: the lower-priority 0029 funding projector contract named
+  `public.funding_disclosure_projected.v1` as an atomic outbox write, but that
+  event exists in neither the active event catalog nor the owner R6e exact
+  two-event addendum. Adding it would violate the closed event allowlist.
+- Resolution: the projector still atomically claims and verifies one work item,
+  appends the immutable public transparency-report revision, terminalizes the
+  inbox and job, appends audit evidence, and returns its immutable typed
+  receipt. It emits no outbox event and the receipt carries exactly an empty
+  `outbox_event_ids` array. Direct raw-source SELECT remains forbidden; exact
+  replay returns the stored receipt and changed input remains a conflict.
+- Rejected alternatives: invent a third event; reuse either donation or payment
+  review event with different semantics; omit the audit, receipt, or replay
+  proof; or grant the projector raw source-table access.
+- Status: `RESOLVED_R6E_EVENT_ALLOWLIST`; the higher owner event contract and
+  exact two-event inventory remain authoritative.
+
+## SPEC-CONFLICT-034 — 0030 retains runtime-role DDL forbidden by the additive executor contract
+
+- Conflict: `specs/database/addendum/global.yaml` forbids role DDL in every
+  additive migration from 0025 through 0041, while
+  `db/migrations/0030_v13_submission_session_hardening.sql` lines 5–14 still
+  create and alter `gurine_egress_gateway` inside migration SQL.
+- Current-wave boundary: migration 0030 is explicitly untouched in R6e. The
+  four R6e roles are instead created or pristine-verified by the separately
+  checksummed control-plane provisioner before the migrator can start; 0041
+  contains no role DDL and only consumes that exact inert role set.
+- Required resolution: move the `gurine_egress_gateway` bootstrap to the same
+  checksummed control-plane model, with an exact pre-existing-state oracle and
+  no silent `ALTER` repair, in a separately authorized owner round that can
+  update 0030 provenance and all pinned checksums together.
+- Rejected alternatives: edit 0030 during R6e; exempt 0030 role DDL from the
+  global prohibition; let a migration actor acquire `CREATEROLE`; or treat the
+  existing create-and-repair block as current control-plane evidence.
+- Status: `OPEN_OWNER_ROUND`; the R6e provisioner closes only the four new 0041
+  principals and does not overclaim closure of the historical 0030 conflict.
+
+## SPEC-CONFLICT-035 — Paid packet member digest authority is cyclic
+
+- Conflict: `PaidEvidencePacketMemberRecordV1` includes
+  `packetMemberSetDigest` in every member-record digest preimage, while the same
+  0029 commercial digest contract orders the ten `member_record_digest` values
+  before `member_set_digest` and requires a no-cycle oracle. A conforming
+  materializer therefore cannot derive either side first without omitting a
+  required field or inventing a fixed-point algorithm that the V1 authority
+  does not declare.
+- Approved high-level decision: `감독자 결정 v1 / PAID-EVIDENCE-V2-AUTHORITY` preserves
+  all 0029 V1 bytes and relations and authorizes only a forward-additive V2.
+  Each V2 leaf excludes the global member-set digest, carries a separate exact
+  `categoryDigest`, and is hashed before the complete leaf set is hashed in
+  ordinal order and bound into the packet. Any existing paid packet, member, or
+  paid-bound outcome row aborts migration before schema effects; no backfill or
+  V1 reinterpretation is allowed.
+- Reciprocal binding resolution: both packet-to-outcome and outcome-to-packet
+  composite foreign keys are `MATCH FULL DEFERRABLE INITIALLY DEFERRED`. The
+  current physical 0029 state has a non-deferrable `paid_packet_outcome_fk` and
+  no `outcome_facts_paid_packet_fk`; 0041 must add both exact forward repairs
+  before the V2 transaction can open.
+- Remaining canonical authority: the package does not enumerate the exact V2
+  composite/relation/function/field inventory, digest domains and ordered
+  preimages, category/global-set byte edges, terminal proof mapping,
+  PAID_OUTCOME_SUBJECT_HMAC_V2 message/version ABI, migration ordering, or
+  golden vectors. Those values remain open and must not be inferred.
+- Current fail-closed boundary: the existing materializer and terminal
+  binder keep their exact SQLSTATE `55000`, zero-write latches and zero runtime
+  `EXECUTE`/input-type `USAGE` until the V2 types, relations, reciprocal FKs,
+  terminal binding, owner ACL, cross-language vectors, and mutation tests are
+  complete. Approval alone is not a runtime path.
+- Rejected alternatives: omit either digest field only in SQL; hash a
+  placeholder or caller-supplied digest; iterate until an accidental digest
+  stabilizes; accept the review manifest digest as the packet member-set digest;
+  backfill V1 rows; weaken one reciprocal FK; or activate a compile-valid draft
+  without a matching no-cycle proof.
+- Status: `HIGH_LEVEL_DECISION_APPROVED_CANONICAL_AUTHORITY_OPEN_R6E`; the cycle
+  direction is decided, but the blocked functions remain non-runtime until one
+  exact physical/proof authority and its implementation are approved and
+  verified.
+
+## SPEC-CONFLICT-036 — Frozen 0028 review-snapshot fields are absent physically
+
+- Conflict: the active 0028 governance addendum declares sixteen staged legacy
+  additions on `editorial.review_snapshots`, including `member_set_digest` and
+  the three paid-evidence manifest cells, but the preserved 0028 physical
+  migration and the migration-0040 baseline contain none of those columns.
+  The 0029 paid packet foreign-key contract therefore cannot bind a review
+  snapshot in the actual baseline.
+- Current observed 0041 snapshot: migration 0041 forward-adds only nullable
+  `member_set_digest`, `paid_evidence_member_manifest`, its canonical bytes, and
+  the generated SHA-256 digest, with zero-or-all, canonical-byte, digest and
+  candidate-key constraints. Existing rows remain nullable legacy rows; no
+  manifest, member digest, or historical value is inferred or backfilled.
+- Approved high-level decision: `감독자 결정 v1 / PAID-EVIDENCE-V2-AUTHORITY` authorizes
+  the remaining twelve exact 0028-declared fields as a forward-only additive
+  delta with zero-or-all presence. Together with the observed four, the target
+  inventory is exactly sixteen fields. The general snapshot tuple and the paid
+  manifest tuple retain their active 0028 semantics; no legacy byte is guessed.
+- Canonical and implementation boundary: the 16/4/12 inventory is closed, but
+  its exact V2 physical/proof ABI shares SPEC-CONFLICT-035's open canonical
+  authority. 0041 must still add and validate those twelve fields, complete the
+  snapshot producer/catalog closure, and prove the V2 packet binding. The
+  existing four-column partial forward fix does not make the materializer
+  callable or claim complete physical 0028 conformance.
+- Rejected alternatives: keep the incorrect 15/4/11 count; infer historical
+  snapshot bytes; backfill a digest placeholder; permit a partial twelve-field
+  tuple; or treat four columns as complete V2 authority.
+- Status: `COUNT_RESOLVED_CANONICAL_PHYSICAL_AUTHORITY_OPEN_R6E`; the inventory
+  is fixed at 16 total, 4 currently observed, and 12 approved, while the exact
+  V2 physical/proof closure remains open.
+
+## SPEC-CONFLICT-037 — Commercial offer parent schemaVersion has no exact digest authority
+
+- Conflict: the top-level business-model contract fixes
+  `OfferProfileV1.schemaVersion` to numeric `1`, while `OfferCapabilityV1` has no
+  `schemaVersion` field. The lower database contract places `schemaVersion`
+  first in the exact `CommercialContractOfferParentV1` digest preimage but does
+  not fix that scalar's value, JSON type, or encoding. The active authority
+  contains none of the guessed literals `commercial-contract-offer-parent.v1`,
+  `offer-capability.v1`, or `offer-profile.v1`; a type suffix is not digest
+  authority.
+- Superseding authority: `감독자 결정 v1 / ECO-AUTHORITY-V1` fixes
+  `CommercialContractOfferParentV1.schemaVersion` to exact JSON number `1`.
+  `OfferCapabilityV1` remains schemaVersion-free. The value is not caller
+  selectable and none of the undeclared kebab-case strings is introduced.
+- Current implementation boundary: the `recordCommercialContractPeriod` branch
+  remains outside the callable FINAL apply matrix. It raises SQLSTATE `55000`
+  before its first protected write and leaves contract periods, twelve
+  capability rows, economics receipts, audit, outbox, inbox, jobs, and
+  idempotency state unchanged until SQL/Rust canonical bytes and golden mutation
+  vectors adopt the approved scalar together.
+- Rejected alternatives: use any of the three undeclared kebab-case literals;
+  omit the required parent field; accept a caller-selected schemaVersion; copy
+  the action-payload schema string; or create a dummy digest that satisfies only
+  the database shape checks.
+- Status: `RESOLVED_AUTHORITY_IMPLEMENTATION_PENDING_R6E`; the scalar authority
+  is closed, while the pre-write `55000` latch remains until verified bytes and
+  the complete contract-import path exist.
+
+## SPEC-CONFLICT-038 — Tariff stage authority is circular for the first paid contract
+
+- Conflict: `commercial_stage_target_contract` resolves `PILOT` only from the
+  first current paid-workspace contract and resolves `GENERAL_AVAILABILITY`
+  only from an exact current non-reversed READY GA evaluation at or before the
+  cutoff. The first paid-workspace contract itself has mandatory foreign keys
+  to an existing tariff version and tariff digest. Consequently, no current
+  contract exists to authorize the stage of the tariff required to create that
+  first contract.
+- Authority boundary: the stage-specific `6000` and `7000` basis-point values
+  constrain a tariff after stage resolution; they do not resolve stage in
+  reverse. The higher contract expressly forbids deriving stage from a date,
+  customer count, revenue, operator flag, route, or current tariff label. Price,
+  projected margin, a caller assertion, or an approval actor likewise supplies
+  no missing current-contract or GA-readiness evidence.
+- Superseding authority: `감독자 결정 v1 / ECO-AUTHORITY-V1` authorizes exactly one
+  first-tariff `PILOT` bootstrap for a deployment and SKU only when tariff and
+  commercial-contract history are both zero, current GA READY count is zero, an
+  approved complete/current digest-equal cost close is locked, and the approval
+  binds the intended first contract/qualification tuple plus both validity
+  periods. Stage is exact `PILOT`, required margin is exact `6000`, and the later
+  contract import must match the bootstrap tuple exactly. Every later tariff
+  uses the ordinary stage authority.
+- Deliberately unopened branch: low-margin tariff and discount exceptions remain
+  exact SQLSTATE `55000` with write zero until a separate oversight authority is
+  approved. The bootstrap, price, fixture, or approval actor cannot substitute.
+- Current implementation boundary: `createTariffVersion` remains outside the callable
+  FINAL economics apply matrix. The tariff branch raises exact SQLSTATE `55000`
+  before its first protected write and leaves tariff versions, contract periods,
+  economics receipts, audit, outbox, inbox, jobs, and idempotency state
+  unchanged until the exact one-shot fence, tuple consumption, replay, and
+  concurrency tests are implemented. The exact approved-detail wire fields and
+  their canonical bytes also remain blocked by SPEC-CONFLICT-039.
+- Rejected alternatives: infer `PILOT` from `6000`, infer
+  `GENERAL_AVAILABILITY` from `7000`, choose from price or projected margin,
+  default every first tariff to PILOT, accept caller- or operator-selected
+  stage, use effective dates or approval time, weaken the contract tariff
+  foreign key, or insert a temporary tariff row solely to bootstrap its own
+  authority.
+- Status: `RESOLVED_AUTHORITY_IMPLEMENTATION_PENDING_R6E`; the acyclic bootstrap
+  authority is closed, while the pre-write latch remains until implemented and
+  verified.
+
+## SPEC-CONFLICT-039 — ECONOMICS_IMPORT lacked a target-version and digest ABI
+
+- Conflict: the generic action target and ApprovalBinding require a positive
+  target version, but ECONOMICS_IMPORT addresses no pre-existing versioned
+  aggregate and cannot truthfully supply `1`. Separately, several economics,
+  invoice, cash, and tax records had declared digest fields without one shared
+  executable byte framing, while hidden database-generated child identities
+  would make approved operation bytes and replay incomplete.
+- Approved high-level decision: `감독자 결정 v1 / ECO-AUTHORITY-V1` keeps
+  `draft.target.expectedVersion = null` and narrows nullable storage and binding
+  only to authoritative action kind ECONOMICS_IMPORT; all other kinds retain
+  positive versions and both zero and `1` sentinels are forbidden. All new/root/
+  successor usage identities and invoice/header/line/membership, revenue, cash,
+  tax, and correction identities are explicit approved operation bytes.
+- Digest ABI: `GURINE_LENGTH_PREFIXED_UTF8_V1` uses unsigned u64 big-endian byte
+  lengths to frame domain, schema version, type tag, and value separately;
+  explicit NULL, array member count, fixed-six decimal, lowercase UUID/SHA, and
+  UTC microsecond timestamp rules apply. Existing field order is preserved;
+  otherwise every immutable business column except self digest and
+  `created_at`/`updated_at` is included. Funding digests do not use this ABI.
+- Remaining canonical authority: the recommendation does not enumerate every
+  exact wire field, per-record domain and schema-version value, type-tag bytes,
+  NULL/array byte grammar, omitted 0029 field order, or golden vector. Those
+  values remain `R6E-ECO-WIRE-DIGEST-CANONICAL-AUTHORITY` and may not be inferred
+  from SQL catalog order or implementation convenience.
+- Fail-closed boundary: PostgreSQL/Rust golden vectors, cross-language byte
+  equality, one-byte mutations, explicit identity replay, and same-invoice
+  backward-only non-adjustment references must all pass before any affected
+  branch becomes callable. Until then it stays excluded or pre-write
+  fail-closed with transaction delta zero and no invented error mapping.
+- Status: `HIGH_LEVEL_DECISION_APPROVED_CANONICAL_AUTHORITY_OPEN_R6E`; no final
+  digest or runtime readiness is claimed from this authority record.
+
+## SPEC-CONFLICT-040 — Donation scheduling, keys, and payment review lacked authority
+
+- Conflict: MONTHLY plus `first_charge_at` did not determine a timezone,
+  month-end behavior, catch-up policy, permanent occurrence identity, or release
+  status; donation failure supplied no request-bound assignee; the notification
+  catalog had no stable payment-review topic/endpoint/evaluator/deployment tuple;
+  and existing assertion/web keys could not safely become payment identity or
+  billing-vault key authority.
+- Approved high-level decision: `감독자 결정 v1 / PAYMENT-TEST-V1` creates separate identity and
+  billing-vault current/previous opaque-version TEST_ONLY keyrings, with current
+  issuance only, no assertion/webhook/public-web reuse or derivation, and
+  restart-time missing in-memory material fail-closed without recovery or
+  recharge. Default and production remain DISABLED with zero live credentials.
+- Schedule and review: use the `first_charge_at` UTC monthly anchor with
+  non-drifting month-end clamp, current-month only, no catch-up/backcharge, and
+  permanent `(schedule_id,schedule_version,scheduledFor)` occurrence identity.
+  Pending/accepted/reconciliation blocks later months; only definitive
+  pre-dispatch rejection or fetch-confirmed success/refund/failure releases a
+  separate next month. Exact `reviewAssigneeUserId`, `PAYMENT_REVIEW_V1`, the two
+  closed source kinds, one active subject/authorization, exact-one current
+  endpoint/evaluator, source-bound deployment, and `occurredAt + 24h` bind the
+  atomic task/intent/outbox/audit path.
+- Safety boundary: zero, multiple, stale, or mismatched review authority is
+  SQLSTATE `55000` with write zero. `RECONCILIATION_REQUIRED` creates no task,
+  notification, or retry. Failure or authoritative-refetch mismatch never
+  changes entitlement, contract, or public access automatically. The exact
+  public copy is `후원은 접근권이 아니며 조사 대상 면제가 아닙니다`; existing
+  funding-name, amount-band, and concentration-band rules remain unchanged.
+- Remaining canonical authority: `PAYMENT_REVIEW_V1` still lacks an exact 0027
+  TopicScope/authorization storage ABI, source-to-deployment tuple, endpoint and
+  evaluator candidate keys/order, task-to-intent timing, and canonical request/
+  receipt/outbox/audit bytes. The high-level topic and exact-one rule cannot
+  supply those bindings.
+- Status: `HIGH_LEVEL_DECISION_APPROVED_COMM_BINDING_AUTHORITY_OPEN_R6E`;
+  scheduler/key policy is decided, but the combined task/notification path and
+  its runtime latch remain closed until the communication binding authority,
+  ACL, and negative tests are complete.
+
+## SPEC-CONFLICT-041 — Funding publisher quorum and private digest ABI were incomplete
+
+- Conflict: slot names alone did not define conditional capabilities, roles,
+  assurance, actor separation, related-case prerequisites, candidate target
+  version, positional decision evidence, publisher ACL, private digest framing,
+  or the full published-event binding. Independently sorted decision ID and
+  digest arrays destroyed pair identity, and revisionDigest depended on a
+  receiptDigest that itself depended on the revision.
+- Resolution: `감독자 결정 v1 / GFD-AUTHORITY-V1` fixes the four ordered slots:
+  funding preparer (`funding.manage`, EXECUTIVE_APPROVER or OPERATIONS), funding
+  publisher (`funding.publish`, EXECUTIVE_APPROVER), conditional oversight
+  (`review.legal`, LEGAL_REVIEWER), and conditional board approval
+  (`funding.publish`, EXECUTIVE_APPROVER). Every counted slot also requires
+  `actions.review`, STEP_UP, pairwise-distinct actors, and non-counting VACANT.
+  Each distinct related case requires one current
+  `PUBLICATION.independent_editorial` APPROVE with `review.editorial`, EDITOR or
+  PUBLISHER, `actions.review`, and STEP_UP. Candidate revision N is first `1` or
+  locked head plus 1; null and zero are forbidden.
+- Publisher and digest: workflow-worker/gurine_workflow_worker may execute only
+  migrator-owned `editorial.publish_funding_disclosure_v1`; runtime direct table
+  DML is zero. Closed Gurine Canonical JSON V1 uses fixed-six decimal strings,
+  UTC microsecond timestamps and explicit null, includes stored `entryDigest` in
+  public content, excludes `receiptDigest` from the revision preimage, computes
+  entry/set then revision then receipt then event/response, and binds counted
+  decisions as ordered `(slotOrdinal,slotId,decisionId,decisionReceiptDigest,
+  actorId)` tuples. The published event binds every approved revision, source,
+  governance, digest, decision, publisher, and time category.
+- Implementation hold: until quorum, publisher, ACL, digest, event, projection,
+  and tests are implemented, the exact six lifecycle operations retain
+  `55000/FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE -> INTERNAL_ERROR/500`, write
+  zero. PUB-023 availability or download readiness cannot be claimed early.
+- Status: `RESOLVED_AUTHORITY_IMPLEMENTATION_PENDING_R6E`; authority is closed,
+  implementation and independent verification are not.
+
+## SPEC-CONFLICT-042 — GFD high-level authority lacks a lossless owner ABI
+
+- Conflict: `specs/product/addendum-persistence-contracts.yaml` records that
+  `감독자 결정 v1 / GFD-AUTHORITY-V1` closes the ordered review slots, publisher
+  principal/owner boundary, and digest computation order. It does not close the
+  physical command-to-owner wire. The current FUNDING_DISCLOSURE variant of
+  `ActionPayloadV1` in `specs/api/control-api.openapi.yaml` has exactly ten
+  variant fields after the common envelope: snapshot batch/digest, prior
+  revision, fiscal year, amount/concentration bands, purpose, conflict summary,
+  policy-request outcomes, and effective time. The 0029
+  `required_cross_contract_changes` section in
+  `specs/database/addendum/0029-funding-disclosure.yaml` says that shape cannot
+  reconstruct the disclosure ledger and requires additional disclosure,
+  quarter/period, threshold, ordered-entry, source/evidence, policy-snapshot,
+  conflict-snapshot, and first-revision-null bindings. Its declared publisher
+  also consumes a wide publish composite plus an ordered entry-composite array.
+  The current encrypted action payload therefore cannot losslessly supply that
+  input without inventing data or moving database-owned derivation into the
+  worker.
+- Physical finding: `db/migrations/0041_r6e_monetization_runtime.sql` contains
+  GFD digest and projection support but no callable
+  `editorial.publish_funding_disclosure_v1`, and no owner loader/result ABI is
+  present. `services/workflow-worker/src/workflow_funding_disclosure.rs`
+  validates only the authorization envelope and producer fence, then returns
+  `FUNDING_DISCLOSURE_OWNER_ABI_UNAVAILABLE` without mutation. The
+  `private.PublishFundingDisclosureRevision` persistence entry in
+  `specs/product/addendum-persistence-contracts.yaml` likewise labels the path
+  source-only/database-final-blocked and explicitly identifies the exact
+  callable argument/result ABI, lock order, and activation evidence as missing.
+- Event mismatch: the GFD payload contract at
+  `specs/events/payloads/governance_funding_disclosure_published_v1.schema.json`
+  requires the full 43-field revision, period, policy, conflict, gate, entry,
+  proposal/execution, decision, publisher, time, and receipt binding. The 0041
+  `ops.event_types` upsert for the same event name registers only an 11-field
+  schema, omitting those full-contract categories. It therefore cannot be used
+  as activation evidence for the approved published-event contract.
+- Required resolution: a separate supervisor canonical delta must make the
+  action/detail source, owner loader and publish argument/result ABI, lock
+  order, event bytes, and complete activation matrix exact together. This
+  requirement is mirrored by the top-level
+  `GFD-CANONICAL-OWNER-ABI` unresolved gate; this ledger does not select or
+  authorize a replacement schema. Until that delta is approved, implemented,
+  and independently verified, the exact six GFD
+  lifecycle operations retain SQLSTATE `55000`
+  `FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE`, external
+  `INTERNAL_ERROR/500`, and write zero; the worker publisher remains
+  non-mutating.
+- Rejected alternatives: synthesize missing wide-input fields from the ten
+  payload fields; let the worker derive or trust quorum, entry, policy, or
+  conflict state; call the legacy composite without a closed loader/result ABI;
+  treat the 11-field 0041 event schema as the full contract; or remove the hold
+  based only on the approved high-level package.
+- Status: `OPEN_CANONICAL_OWNER_ABI`.
+
+The decisions recorded in SPEC-CONFLICT-035 through SPEC-CONFLICT-041 are the four
+approved packages under authority label `감독자 결정 v1`. Their values may be
+revised only by a later explicit pre-production review jointly owned by the
+designated legal and finance owners and recorded as a new decision revision
+that preserves this one as provenance. They are not external legal or financial
+approval, and they do not turn any pending implementation or SHA into FINAL.
+In particular, ECO wire/digest bytes, Paid V2 physical/proof bytes, payment
+review communication binding, and the GFD canonical owner ABI remain explicit
+OPEN fail-closed subgates.

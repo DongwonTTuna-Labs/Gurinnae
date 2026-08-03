@@ -27,6 +27,13 @@ from git_authority import (
     authority_file,
     authority_paths as git_authority_paths,
 )
+from validation.http_operation_inventory import (
+    derive_http_operation_inventory,
+    non_get_count,
+    operation_api_counts,
+    operation_ids,
+    operation_kind_counts,
+)
 
 
 MIGRATION_RE = re.compile(r"^(\d{4})_[a-z0-9_]+\.sql$")
@@ -629,6 +636,26 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     effective_screen_doc = load_yaml(root, "specs/ui/effective-screen-contracts.yaml", checks)
     accessibility_doc = load_yaml(root, "specs/ui/accessibility-responsive-contracts.yaml", checks)
 
+    http_operation_inventory = derive_http_operation_inventory(root)
+    inventory_base_external = set(operation_ids(
+        http_operation_inventory.base_external
+    ))
+    inventory_additive_all = set(operation_ids(
+        http_operation_inventory.additive_all
+    ))
+    inventory_additive_external = set(operation_ids(
+        http_operation_inventory.additive_external
+    ))
+    inventory_private_identity_api = set(operation_ids(
+        http_operation_inventory.private_identity_api
+    ))
+    inventory_final_external = set(operation_ids(
+        http_operation_inventory.final_external
+    ))
+    inventory_all_scope_http = set(operation_ids(
+        http_operation_inventory.all_scope_http
+    ))
+
     base_ops = row_ids(base_operations_doc.get("operations"), "operation_id", "base operations", checks)
     base_persistence = row_ids(base_persistence_doc.get("operations"), "operation_id", "base persistence", checks)
     base_commands = row_ids(base_commands_doc.get("commands"), "operation_id", "base commands", checks)
@@ -644,6 +671,13 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         if row.get("operation_kind") == "COMMAND"
     }
     checks.equal(base_ops, base_persistence, "base operation persistence", "operations", "persistence")
+    checks.equal(
+        base_ops,
+        inventory_base_external,
+        "base external HTTP inventory",
+        "base contract",
+        "derived inventory",
+    )
     checks.equal(base_commands, base_command_expected, "base command kinds", "semantics", "operation kind")
     # The immutable v13 architecture catalog intentionally covers 97 repository
     # commands, while command-semantics also owns protocol/boundary commands.
@@ -656,6 +690,112 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     checks.count(base_commands_doc.get("command_count"), base_commands, "base commands.command_count")
 
     owner_additive = row_ids(owner_doc.get("additive_operations"), "operation_id", "owner additive operations", checks)
+    checks.equal(
+        owner_additive,
+        inventory_additive_all,
+        "all additive HTTP operations",
+        "owner",
+        "derived inventory",
+    )
+    checks.equal(
+        inventory_additive_external,
+        set(http_operation_inventory.declared_additive_external_ids),
+        "additive external operation registry",
+        "derived inventory",
+        "declared set",
+    )
+    checks.equal(
+        inventory_additive_external,
+        set(http_operation_inventory.binding_additive_external_ids),
+        "additive external operation bindings",
+        "derived inventory",
+        "binding scope",
+    )
+    checks.equal(
+        inventory_private_identity_api,
+        set(http_operation_inventory.declared_private_identity_api_ids),
+        "private Identity API operation registry",
+        "derived inventory",
+        "declared set",
+    )
+    checks.equal(
+        inventory_private_identity_api,
+        set(http_operation_inventory.binding_private_identity_api_ids),
+        "private Identity API operation bindings",
+        "derived inventory",
+        "binding scope",
+    )
+    checks.require(
+        not (inventory_additive_external & inventory_private_identity_api)
+        and inventory_additive_external | inventory_private_identity_api
+        == inventory_additive_all
+        and not (inventory_base_external & inventory_additive_all)
+        and inventory_base_external | inventory_additive_external
+        == inventory_final_external
+        and inventory_final_external | inventory_private_identity_api
+        == inventory_all_scope_http,
+        "operation_partition",
+        "external/private Identity API HTTP operation layers",
+        "disjoint exact unions",
+        {
+            "base": len(inventory_base_external),
+            "additive_external": len(inventory_additive_external),
+            "private_identity_api": len(inventory_private_identity_api),
+            "final_external": len(inventory_final_external),
+            "all_scope_http": len(inventory_all_scope_http),
+        },
+    )
+    checks.require(
+        len(inventory_base_external) == 217
+        and len(inventory_additive_all) == 54
+        and len(inventory_additive_external) == 51
+        and len(inventory_private_identity_api) == 3
+        and len(inventory_final_external) == 268
+        and len(inventory_all_scope_http) == 271
+        and operation_api_counts(http_operation_inventory.final_external)
+        == {
+            "public-api": 44,
+            "submission-api": 42,
+            "control-api": 176,
+            "identity-provider": 6,
+        }
+        and operation_kind_counts(http_operation_inventory.final_external)
+        == {"QUERY": 123, "COMMAND": 145}
+        and operation_kind_counts(http_operation_inventory.all_scope_http)
+        == {"QUERY": 123, "COMMAND": 148}
+        and non_get_count(http_operation_inventory.final_external) == 142
+        and non_get_count(http_operation_inventory.all_scope_http) == 145,
+        "operation_count",
+        "external/private Identity API HTTP operation layers",
+        "217+51=268 external and 268+3=271 all-scope",
+        {
+            "base": len(inventory_base_external),
+            "additive_all": len(inventory_additive_all),
+            "additive_external": len(inventory_additive_external),
+            "private_identity_api": len(inventory_private_identity_api),
+            "final_external": len(inventory_final_external),
+            "all_scope_http": len(inventory_all_scope_http),
+        },
+    )
+    owner_private_billing = row_ids(
+        owner_doc.get("private_billing_gateway_operations"),
+        "operation_id",
+        "owner private billing operations",
+        checks,
+    )
+    owner_private_billing_rows = {
+        row["operation_id"]: row
+        for row in owner_doc.get("private_billing_gateway_operations", [])
+        if isinstance(row, dict) and isinstance(row.get("operation_id"), str)
+    }
+    owner_private_billing_commands = {
+        operation_id
+        for operation_id, row in owner_private_billing_rows.items()
+        if row.get("kind") == "COMMAND"
+    }
+    owner_private_billing_queries = (
+        owner_private_billing - owner_private_billing_commands
+    )
     owner_private_control = row_ids(
         owner_doc.get("private_control_service_operations"),
         "operation_id",
@@ -672,6 +812,11 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         checks,
     )
     contract_additive = row_ids(operation_doc.get("operations"), "operation_id", "additive operation contracts", checks)
+    contract_private_billing = mapping_keys(
+        operation_doc.get("private_billing_gateway_operations"),
+        "private billing operation contracts",
+        checks,
+    )
     contract_private_control = mapping_keys(
         operation_doc.get("private_control_service_operations"),
         "private control operation contracts",
@@ -695,6 +840,13 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         "private control persistence",
         checks,
     )
+    exact_private_billing = mapping_keys(
+        exact_registry.get("private_billing_gateway_persistence")
+        if isinstance(exact_registry, dict)
+        else None,
+        "private billing persistence",
+        checks,
+    )
     exact_private_application = mapping_keys(
         exact_registry.get("private_application_command_persistence")
         if isinstance(exact_registry, dict)
@@ -705,6 +857,11 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     exact_additive = exact_query | exact_commands
     callback_ops = row_ids(owner_doc.get("private_communication_gateway_operations"), "operation_id", "owner callbacks", checks)
     callback_semantics = mapping_keys(command_doc.get("private_callback_operations"), "callback semantics", checks)
+    private_billing_semantics = mapping_keys(
+        command_doc.get("private_billing_gateway_operations"),
+        "private billing semantics",
+        checks,
+    )
     private_control_semantics = mapping_keys(
         command_doc.get("private_control_service_commands"),
         "private control semantics",
@@ -740,6 +897,23 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         "private application lifecycle bindings",
         checks,
     )
+    private_billing_lifecycle_raw = state_doc.get(
+        "private_billing_gateway_lifecycle_bindings", {}
+    )
+    private_billing_lifecycle = mapping_keys(
+        private_billing_lifecycle_raw.get("current_bindings")
+        if isinstance(private_billing_lifecycle_raw, dict)
+        else None,
+        "private billing lifecycle bindings",
+        checks,
+    )
+    private_billing_query_dispositions = mapping_keys(
+        private_billing_lifecycle_raw.get("query_dispositions")
+        if isinstance(private_billing_lifecycle_raw, dict)
+        else None,
+        "private billing query dispositions",
+        checks,
+    )
     resource_ops = mapping_keys(resource_doc.get("operation_bindings"), "resource operation bindings", checks)
     resource_external = resource_ops - callback_ops - owner_private_control
     resource_private_application = mapping_keys(
@@ -757,6 +931,21 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         "private application error sets",
         checks,
     )
+    resource_private_billing_bindings = mapping_keys(
+        resource_doc.get("private_billing_gateway_operation_bindings"),
+        "private billing resource bindings",
+        checks,
+    )
+    resource_private_billing_requests = mapping_keys(
+        resource_doc.get("private_billing_gateway_request_schemas"),
+        "private billing request schemas",
+        checks,
+    )
+    resource_private_billing_errors = mapping_keys(
+        resource_doc.get("private_billing_gateway_error_sets"),
+        "private billing error sets",
+        checks,
+    )
     for witness_name, witness in {
         "contract": contract_additive,
         "screen-binding": screen_binding_ops,
@@ -768,6 +957,51 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     checks.equal(callback_ops, callback_semantics, "callback semantics", "owner", "semantics")
     checks.equal(callback_ops, exact_callbacks, "callback persistence", "owner", "persistence")
     checks.equal(callback_ops, resource_ops & callback_ops, "callback resources", "owner", "resource")
+    for witness_name, witness in {
+        "contract": contract_private_billing,
+        "semantics": private_billing_semantics,
+        "persistence": exact_private_billing,
+        "resource-binding": resource_private_billing_bindings,
+        "resource-request": resource_private_billing_requests,
+        "resource-error": resource_private_billing_errors,
+    }.items():
+        checks.equal(
+            owner_private_billing,
+            witness,
+            f"private billing/{witness_name}",
+            "owner",
+            witness_name,
+        )
+    checks.equal(
+        owner_private_billing_commands,
+        private_billing_lifecycle,
+        "private billing command lifecycle",
+        "owner command subset",
+        "lifecycle",
+    )
+    checks.equal(
+        owner_private_billing_queries,
+        private_billing_query_dispositions,
+        "private billing query dispositions",
+        "owner query subset",
+        "lifecycle",
+    )
+    query_disposition_rows = (
+        private_billing_lifecycle_raw.get("query_dispositions", {})
+        if isinstance(private_billing_lifecycle_raw, dict)
+        else {}
+    )
+    checks.require(
+        isinstance(query_disposition_rows, dict)
+        and all(
+            disposition == "NON_STATE_QUERY"
+            for disposition in query_disposition_rows.values()
+        ),
+        "private_billing_query_disposition",
+        "private billing lifecycle query dispositions",
+        "NON_STATE_QUERY for every private billing query",
+        query_disposition_rows,
+    )
     for witness_name, witness in {
         "contract": contract_private_control,
         "semantics": private_control_semantics,
@@ -809,23 +1043,64 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     checks.require(not (base_ops & owner_additive), "operation_collision", "effective operations", [], sorted(base_ops & owner_additive))
     checks.require(not ((base_ops | owner_additive) & callback_ops), "operation_collision", "callback operations", [], sorted((base_ops | owner_additive) & callback_ops))
     checks.require(
-        not (owner_private_control & (base_ops | owner_additive | callback_ops)),
+        not (
+            owner_private_billing
+            & (base_ops | owner_additive | callback_ops)
+        ),
+        "operation_collision",
+        "private billing operations",
+        [],
+        sorted(
+            owner_private_billing
+            & (base_ops | owner_additive | callback_ops)
+        ),
+    )
+    checks.require(
+        not (
+            owner_private_control
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+            )
+        ),
         "operation_collision",
         "private control operations",
         [],
-        sorted(owner_private_control & (base_ops | owner_additive | callback_ops)),
+        sorted(
+            owner_private_control
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+            )
+        ),
     )
     checks.require(
         not (
             owner_private_application
-            & (base_ops | owner_additive | callback_ops | owner_private_control)
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+                | owner_private_control
+            )
         ),
         "operation_collision",
         "private application commands",
         [],
         sorted(
             owner_private_application
-            & (base_ops | owner_additive | callback_ops | owner_private_control)
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+                | owner_private_control
+            )
         ),
     )
 
@@ -836,6 +1111,12 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     }
     additive_commands = {key for key, row in additive_rows.items() if row.get("kind") == "COMMAND"}
     additive_queries = {key for key, row in additive_rows.items() if row.get("kind") == "QUERY"}
+    additive_external_commands = additive_commands & inventory_additive_external
+    additive_external_queries = additive_queries & inventory_additive_external
+    private_identity_api_commands = (
+        additive_commands & inventory_private_identity_api
+    )
+    private_identity_api_queries = additive_queries & inventory_private_identity_api
     command_semantics = mapping_keys(command_doc.get("external_commands"), "external command semantics", checks)
     operation_dispositions = mapping_keys(state_doc.get("operation_dispositions"), "operation dispositions", checks)
     checks.equal(additive_commands, command_semantics, "additive commands", "operation kind", "semantics")
@@ -990,7 +1271,6 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         if isinstance(row, dict) and isinstance(row.get("operation_id"), str)
     }
     callback_commands = {key for key, row in callback_rows.items() if row.get("kind") == "COMMAND"}
-    callback_queries = callback_ops - callback_commands
     private_control_rows = {
         row["operation_id"]: row
         for row in owner_doc.get("private_control_service_operations", [])
@@ -999,19 +1279,36 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     private_control_commands = {
         key for key, row in private_control_rows.items() if row.get("kind") == "COMMAND"
     }
-    private_control_queries = owner_private_control - private_control_commands
     identity_commands = row_ids(
         identity_trace_doc.get("operations"),
         "operation_id",
-        "private identity operation count witness",
+        "private Identity service operation count witness",
         checks,
     )
     checks.require(
-        not (identity_commands & (base_ops | owner_additive | callback_ops)),
+        not (
+            identity_commands
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+                | owner_private_control
+            )
+        ),
         "operation_collision",
-        "private identity operations",
+        "private Identity service operations",
         [],
-        sorted(identity_commands & (base_ops | owner_additive | callback_ops)),
+        sorted(
+            identity_commands
+            & (
+                base_ops
+                | owner_additive
+                | callback_ops
+                | owner_private_billing
+                | owner_private_control
+            )
+        ),
     )
     owner_operation_counts = owner_doc.get("operation_counts", {})
     if isinstance(owner_operation_counts, dict):
@@ -1030,6 +1327,20 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         base_declared = owner_operation_counts.get("base", {})
         additive_declared = owner_operation_counts.get("additive", {})
         final_declared = owner_operation_counts.get("final", {})
+        separate_declared = owner_operation_counts.get(
+            "separate_private_inventories", {}
+        )
+        declared_private_identity_api = checks.unique(
+            owner_operation_counts.get("private_identity_api_operation_ids", []),
+            "owner private Identity API operation IDs",
+        )
+        checks.equal(
+            inventory_private_identity_api,
+            declared_private_identity_api,
+            "owner private Identity API operation IDs",
+            "derived inventory",
+            "owner registry",
+        )
         for name, value in base_by_api.items():
             if isinstance(base_declared, dict):
                 checks.count_value(base_declared.get(name), value, f"owner operations base.{name}")
@@ -1038,20 +1349,32 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
                 checks.count_value(additive_declared.get(name), value, f"owner operations additive.{name}")
         if isinstance(base_declared, dict):
             checks.count(base_declared.get("external_total"), base_ops, "owner base external operations")
-            checks.count(base_declared.get("private_identity"), identity_commands, "owner private identity operations")
-        if isinstance(final_declared, dict):
-            checks.count(final_declared.get("external_total"), base_ops | owner_additive, "owner final external operations")
-            checks.count(final_declared.get("private_identity"), identity_commands, "owner final private identity operations")
-            checks.count(final_declared.get("private_communication_gateway"), callback_ops, "owner private callback operations")
+        if isinstance(additive_declared, dict):
             checks.count(
-                final_declared.get("private_control_service"),
-                owner_private_control,
-                "owner private control operations",
+                additive_declared.get("external_total"),
+                inventory_additive_external,
+                "owner additive external operations",
             )
             checks.count(
-                final_declared.get("private_application_commands"),
-                owner_private_application,
-                "owner private application commands",
+                additive_declared.get("private_identity_api"),
+                inventory_private_identity_api,
+                "owner additive private Identity API operations",
+            )
+            checks.count(
+                additive_declared.get("all_scope_http_total"),
+                inventory_additive_all,
+                "owner additive all-scope HTTP operations",
+            )
+        if isinstance(final_declared, dict):
+            checks.count(
+                final_declared.get("external_total"),
+                inventory_final_external,
+                "owner final external operations",
+            )
+            checks.count(
+                final_declared.get("all_scope_http_total"),
+                inventory_all_scope_http,
+                "owner final all-scope HTTP operations",
             )
             for name in base_by_api:
                 checks.count_value(
@@ -1059,43 +1382,78 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
                     base_by_api[name] + additive_by_api[name],
                     f"owner operations final.{name}",
                 )
+        if isinstance(separate_declared, dict):
+            checks.count(
+                separate_declared.get("private_identity_service"),
+                identity_commands,
+                "owner private Identity service operations",
+            )
+            checks.count(
+                separate_declared.get("private_communication_gateway"),
+                callback_ops,
+                "owner private communication operations",
+            )
+            checks.count(
+                separate_declared.get("private_billing_gateway"),
+                owner_private_billing,
+                "owner private billing operations",
+            )
+            checks.count(
+                separate_declared.get("private_control_service"),
+                owner_private_control,
+                "owner private control operations",
+            )
+            checks.count(
+                separate_declared.get("private_application_commands"),
+                owner_private_application,
+                "owner private application commands",
+            )
         kind_counts = owner_operation_counts.get("kind_counts", {})
         if isinstance(kind_counts, dict):
+            base_queries = base_ops - base_commands
+            final_external_queries = base_queries | additive_external_queries
+            final_external_commands = base_commands | additive_external_commands
+            all_scope_queries = final_external_queries | private_identity_api_queries
+            all_scope_commands = (
+                final_external_commands | private_identity_api_commands
+            )
             kind_witnesses = {
-                "base": {"query": len(base_ops - base_commands), "command": len(base_commands)},
-                "additive": {"query": len(additive_queries), "command": len(additive_commands)},
-                "external_final": {"query": len((base_ops - base_commands) | additive_queries), "command": len(base_commands | additive_commands)},
-                "private_identity": {"query": 0, "command": len(identity_commands)},
-                "private_communication_gateway": {"query": len(callback_queries), "command": len(callback_commands)},
-                "private_control_service": {
-                    "query": len(private_control_queries),
-                    "command": len(private_control_commands),
+                "base": {
+                    "query": len(base_queries),
+                    "command": len(base_commands),
+                    "non_get": non_get_count(
+                        http_operation_inventory.base_external
+                    ),
                 },
-                "private_application_commands": {
-                    "query": 0,
-                    "command": len(owner_private_application),
+                "additive_external": {
+                    "query": len(additive_external_queries),
+                    "command": len(additive_external_commands),
+                    "non_get": non_get_count(
+                        http_operation_inventory.additive_external
+                    ),
                 },
-                "complete_http_catalog": {
-                    "query": len(
-                        (base_ops - base_commands)
-                        | additive_queries
-                        | callback_queries
-                        | private_control_queries
+                "private_identity_api": {
+                    "query": len(private_identity_api_queries),
+                    "command": len(private_identity_api_commands),
+                    "non_get": non_get_count(
+                        http_operation_inventory.private_identity_api
                     ),
-                    "command": len(
-                        base_commands
-                        | additive_commands
-                        | identity_commands
-                        | callback_commands
-                        | private_control_commands
+                },
+                "external_final": {
+                    "query": len(final_external_queries),
+                    "command": len(final_external_commands),
+                    "non_get": non_get_count(
+                        http_operation_inventory.final_external
                     ),
-                    "total": len(
-                        base_ops
-                        | owner_additive
-                        | identity_commands
-                        | callback_ops
-                        | owner_private_control
+                    "total": len(inventory_final_external),
+                },
+                "all_scope_http": {
+                    "query": len(all_scope_queries),
+                    "command": len(all_scope_commands),
+                    "non_get": non_get_count(
+                        http_operation_inventory.all_scope_http
                     ),
+                    "total": len(inventory_all_scope_http),
                 },
             }
             for group, expected in kind_witnesses.items():
@@ -1122,6 +1480,9 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         collect_event_tokens(base_commands_doc.get("commands"))
         | collect_event_tokens(command_doc.get("external_commands"))
         | collect_event_tokens(command_doc.get("private_callback_operations"))
+        | collect_event_tokens(
+            command_doc.get("private_billing_gateway_operations")
+        )
         | collect_event_tokens(command_doc.get("private_control_service_commands"))
         | collect_event_tokens(command_doc.get("private_application_commands"))
         | collect_event_tokens(state_doc.get("machines"))
@@ -1953,8 +2314,10 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
     machine_operations: set[str] = set()
     machine_private_operations: set[str] = set()
     machine_private_commands: set[str] = set()
+    machine_private_billing_operations: set[str] = set()
     private_operation_machine_targets: dict[str, set[str]] = {}
     private_command_machine_targets: dict[str, set[str]] = {}
+    private_billing_machine_targets: dict[str, set[str]] = {}
     machine_edges: list[str] = []
     for machine, row in machine_rows.items():
         if not isinstance(row, dict):
@@ -2004,6 +2367,19 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
                 "exactly one operation, private_operation or actor",
                 owner_fields,
             )
+            private_executor_fields = {
+                key: edge.get(key)
+                for key in ("private_command", "private_billing_operation")
+                if isinstance(edge.get(key), str)
+                and bool(edge[key].strip())
+            }
+            checks.require(
+                len(private_executor_fields) <= 1,
+                "invalid_machine_edge",
+                f"{machine}[{index}] private executor",
+                "at most one private command or private billing operation",
+                private_executor_fields,
+            )
             canonical = json.dumps(edge, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
             edge_digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()
             machine_edges.append(f"{machine}::{edge_digest}")
@@ -2019,6 +2395,21 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
                 private_command_machine_targets.setdefault(
                     edge["private_command"], set()
                 ).add(machine)
+            if isinstance(edge.get("private_billing_operation"), str):
+                machine_private_billing_operations.add(
+                    edge["private_billing_operation"]
+                )
+                private_billing_machine_targets.setdefault(
+                    edge["private_billing_operation"], set()
+                ).add(machine)
+                checks.require(
+                    isinstance(edge.get("actor"), str)
+                    and bool(edge["actor"].strip()),
+                    "invalid_machine_edge",
+                    f"{machine}[{index}] private billing operation",
+                    "nonempty executor actor",
+                    edge.get("actor"),
+                )
     checks.unique(machine_edges, "state machine semantic edges")
     checks.subset(machine_operations, base_ops | owner_additive, "state-machine operation references")
     checks.equal(
@@ -2033,6 +2424,13 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         machine_private_commands,
         "state-machine private command references",
         "owner",
+        "machine edges",
+    )
+    checks.equal(
+        owner_private_billing_commands,
+        machine_private_billing_operations,
+        "state-machine private billing operation references",
+        "owner command subset",
         "machine edges",
     )
     private_control_binding_rows = (
@@ -2073,6 +2471,25 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
             "binding",
             "machine edges",
         )
+    private_billing_binding_rows = (
+        private_billing_lifecycle_raw.get("current_bindings", {})
+        if isinstance(private_billing_lifecycle_raw, dict)
+        else {}
+    )
+    for operation_id in sorted(owner_private_billing_commands):
+        targets = private_billing_binding_rows.get(operation_id, [])
+        binding_roots = {
+            target.split(".", 1)[0]
+            for target in targets
+            if isinstance(target, str)
+        }
+        checks.equal(
+            binding_roots,
+            private_billing_machine_targets.get(operation_id, set()),
+            f"private billing lifecycle target {operation_id}",
+            "binding",
+            "machine edges",
+        )
     base_lifecycle = state_doc.get("base_operation_lifecycle_bindings", {})
     base_lifecycle_bindings = mapping_keys(
         base_lifecycle.get("current_bindings") if isinstance(base_lifecycle, dict) else None,
@@ -2104,6 +2521,12 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
             "private application lifecycle bindings",
             private_application_lifecycle_raw.get("current_bindings", {})
             if isinstance(private_application_lifecycle_raw, dict)
+            else {},
+        ),
+        (
+            "private billing lifecycle bindings",
+            private_billing_lifecycle_raw.get("current_bindings", {})
+            if isinstance(private_billing_lifecycle_raw, dict)
             else {},
         ),
     ):
@@ -2300,10 +2723,93 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         if isinstance(item, dict) and item.get("source") != "v13-authority" and isinstance(item.get("operation_id"), str)
     }
     checks.equal(owner_additive, additive_screen_trace, "additive operation screen trace", "operations", "screen trace")
-    trace_operations = row_ids(base_trace_doc.get("operations"), "operation_id", "base operation trace", checks)
-    checks.equal(base_ops, trace_operations, "base operation trace", "operations", "trace")
-    identity_operations = row_ids(identity_trace_doc.get("operations"), "operation_id", "private identity trace", checks)
-    checks.count(identity_trace_doc.get("operation_count"), identity_operations, "private identity trace count")
+    trace_rows = base_trace_doc.get("operations", [])
+    trace_operations = row_ids(
+        trace_rows,
+        "operation_id",
+        "final external operation trace",
+        checks,
+    )
+    base_trace_operations = {
+        row["operation_id"]
+        for row in trace_rows
+        if isinstance(row, dict)
+        and isinstance(row.get("operation_id"), str)
+        and row.get("trace_scope") is None
+    }
+    additive_external_trace = {
+        row["operation_id"]
+        for row in trace_rows
+        if isinstance(row, dict)
+        and isinstance(row.get("operation_id"), str)
+        and row.get("trace_scope") == "ADDITIVE_EXTERNAL"
+    }
+    checks.equal(
+        inventory_final_external,
+        trace_operations,
+        "final external operation trace",
+        "derived inventory",
+        "trace",
+    )
+    checks.equal(
+        base_ops,
+        base_trace_operations,
+        "base external operation trace",
+        "operations",
+        "trace",
+    )
+    checks.equal(
+        inventory_additive_external,
+        additive_external_trace,
+        "additive external operation trace",
+        "derived inventory",
+        "trace",
+    )
+    trace_private_identity_registry = base_trace_doc.get(
+        "private_identity_api_registry", {}
+    )
+    trace_private_identity_ids = checks.unique(
+        trace_private_identity_registry.get(
+            "private_identity_api_operation_ids", []
+        )
+        if isinstance(trace_private_identity_registry, dict)
+        else [],
+        "trace private Identity API registry",
+    )
+    checks.require(
+        isinstance(trace_private_identity_registry, dict)
+        and trace_private_identity_registry.get("scope")
+        == "PRIVATE_IDENTITY_API",
+        "operation_scope",
+        "trace private Identity API registry",
+        "PRIVATE_IDENTITY_API",
+        trace_private_identity_registry,
+    )
+    checks.equal(
+        inventory_private_identity_api,
+        trace_private_identity_ids,
+        "trace private Identity API registry",
+        "derived inventory",
+        "trace",
+    )
+    identity_operations = row_ids(
+        identity_trace_doc.get("operations"),
+        "operation_id",
+        "private Identity service trace",
+        checks,
+    )
+    checks.count(
+        identity_trace_doc.get("operation_count"),
+        identity_operations,
+        "private Identity service trace count",
+    )
+    checks.require(
+        not (identity_operations & inventory_all_scope_http),
+        "operation_collision",
+        "private Identity service versus all-scope HTTP operations",
+        [],
+        sorted(identity_operations & inventory_all_scope_http),
+    )
     accessibility_counts = accessibility_doc.get("set_equality", {})
     if isinstance(accessibility_counts, dict):
         checks.count(accessibility_counts.get("screen_contracts"), accessibility_screens, "accessibility screen count")
@@ -2579,34 +3085,59 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
         "source_derived": True,
         "inventories": {
             "operations": {
-                "base_external": _source_rows(base_ops),
-                "additive_external": _source_rows(owner_additive),
-                "private_identity": _source_rows(identity_operations),
+                "base_external": _source_rows(inventory_base_external),
+                "additive_all": _source_rows(inventory_additive_all),
+                "additive_external": _source_rows(inventory_additive_external),
+                "private_identity_api": _source_rows(
+                    inventory_private_identity_api
+                ),
+                "final_external": _source_rows(inventory_final_external),
+                "all_scope_http": _source_rows(inventory_all_scope_http),
+                "private_identity_service": _source_rows(identity_operations),
                 "private_communication": _source_rows(callback_ops),
+                "private_billing": _source_rows(owner_private_billing),
                 "private_control": _source_rows(owner_private_control),
                 "private_application_commands": _source_rows(
                     owner_private_application
                 ),
-                "effective_http": _source_rows(
-                    base_ops
-                    | owner_additive
+                "complete_http_catalog": _source_rows(
+                    inventory_all_scope_http
                     | identity_operations
                     | callback_ops
+                    | owner_private_billing
                     | owner_private_control
                 ),
             },
             "commands": {
                 "base_external": _source_rows(base_commands),
-                "additive_external": _source_rows(additive_commands),
-                "private_identity": _source_rows(identity_operations),
+                "additive_all": _source_rows(additive_commands),
+                "additive_external": _source_rows(
+                    additive_external_commands
+                ),
+                "private_identity_api": _source_rows(
+                    private_identity_api_commands
+                ),
+                "final_external": _source_rows(
+                    base_commands | additive_external_commands
+                ),
+                "all_scope_http": _source_rows(
+                    base_commands
+                    | additive_external_commands
+                    | private_identity_api_commands
+                ),
+                "private_identity_service": _source_rows(identity_operations),
                 "private_callbacks": _source_rows(callback_commands),
+                "private_billing": _source_rows(
+                    owner_private_billing_commands
+                ),
                 "private_control": _source_rows(private_control_commands),
                 "private_application": _source_rows(owner_private_application),
-                "effective_http": _source_rows(
+                "complete_http_catalog": _source_rows(
                     base_commands
                     | additive_commands
                     | identity_operations
                     | callback_commands
+                    | owner_private_billing_commands
                     | private_control_commands
                 ),
                 "effective": _source_rows(
@@ -2614,6 +3145,7 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
                     | additive_commands
                     | identity_operations
                     | callback_commands
+                    | owner_private_billing_commands
                     | private_control_commands
                     | owner_private_application
                 ),
@@ -2635,16 +3167,33 @@ def build_registry(root: Path = ROOT) -> tuple[dict[str, object], list[Problem]]
             "screen_actions": {"base": _source_rows(base_actions), "additive_command_placements": _source_rows(placement_actions), "effective": _source_rows(base_actions | placement_actions)},
             "trace": {
                 "screens": _source_rows(screens),
-                "base_operations": _source_rows(trace_operations),
-                "additive_operations": _source_rows(additive_screen_trace),
-                "private_identity_operations": _source_rows(identity_operations),
+                "base_operations": _source_rows(base_trace_operations),
+                "additive_external_operations": _source_rows(
+                    additive_external_trace
+                ),
+                "private_identity_api_operations": _source_rows(
+                    trace_private_identity_ids
+                ),
+                "final_external_operations": _source_rows(trace_operations),
+                "all_scope_http_operations": _source_rows(
+                    inventory_all_scope_http
+                ),
+                "additive_screen_operations": _source_rows(
+                    additive_screen_trace
+                ),
+                "private_identity_service_operations": _source_rows(
+                    identity_operations
+                ),
                 "private_callback_operations": _source_rows(callback_ops),
+                "private_billing_operations": _source_rows(
+                    owner_private_billing
+                ),
                 "private_control_operations": _source_rows(owner_private_control),
                 "effective_operations": _source_rows(
-                    trace_operations
-                    | additive_screen_trace
+                    inventory_all_scope_http
                     | identity_operations
                     | callback_ops
+                    | owner_private_billing
                     | owner_private_control
                 ),
             },

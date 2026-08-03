@@ -1,0 +1,18 @@
+{
+  "browser": {
+    "browserName": "chromium",
+    "isolated": true,
+    "launchOptions": {
+      "executablePath": "/home/dongwonttuna/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome",
+      "headless": true,
+      "chromiumSandbox": false
+    },
+    "contextOptions": {
+      "locale": "ko-KR",
+      "timezoneId": "Asia/Seoul",
+      "colorScheme": "light",
+      "reducedMotion": "reduce"
+    }
+  },
+  "outputDir": "output/playwright"
+}

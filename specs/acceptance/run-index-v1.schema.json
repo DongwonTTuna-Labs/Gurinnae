@@ -39,9 +39,9 @@
       ],
       "properties": {
         "base_scenarios": { "const": 271 },
-        "supplemental_scenarios": { "const": 168 },
-        "effective_scenarios": { "const": 439 },
-        "passed": { "const": 439 },
+        "supplemental_scenarios": { "const": 175 },
+        "effective_scenarios": { "const": 446 },
+        "passed": { "const": 446 },
         "failed": { "const": 0 },
         "skipped": { "const": 0 },
         "retried": { "const": 0 }
@@ -59,8 +59,8 @@
     },
     "receipts": {
       "type": "array",
-      "minItems": 439,
-      "maxItems": 439,
+      "minItems": 446,
+      "maxItems": 446,
       "uniqueItems": true,
       "items": { "$ref": "#/$defs/receipt_entry" }
     },

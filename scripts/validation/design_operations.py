@@ -19,6 +19,9 @@ class OperationFacts:
     owner_operation_kind_counts: Counter[Any]
     contracted_operations: list[dict[str, Any]]
     private_callback_ids: set[str]
+    private_billing_ids: set[str]
+    private_billing_command_ids: set[str]
+    private_billing_query_ids: set[str]
     private_control_ids: set[str]
     private_application_ids: set[str]
     base_operation_ids: set[str]
@@ -36,8 +39,10 @@ def validate_operations(documents: DesignDocuments) -> OperationFacts:
         owner_operation_kind_counts=owner.owner_operation_kind_counts,
         contracted_operations=owner.contracted_operations,
         private_callback_ids=private.private_callback_ids,
+        private_billing_ids=private.private_billing_ids,
+        private_billing_command_ids=private.private_billing_command_ids,
+        private_billing_query_ids=private.private_billing_query_ids,
         private_control_ids=private.private_control_ids,
         private_application_ids=private.private_application_ids,
         base_operation_ids=owner.base_operation_ids,
     )
-

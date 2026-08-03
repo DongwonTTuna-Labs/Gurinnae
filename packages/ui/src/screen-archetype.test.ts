@@ -116,9 +116,13 @@ const assemblyComponents = [
 ] as const;
 
 describe("closed screen archetype assemblies", () => {
-  it("assigns all 94 authority screens and keeps the manifest mapping closed", () => {
-    expect(catalogScreens).toHaveLength(94);
-    expect(new Set(catalogScreens.map(({ id }) => id)).size).toBe(94);
+  it("assigns all 95 authority screens and keeps the manifest mapping closed", () => {
+    expect(catalogScreens).toHaveLength(95);
+    expect(new Set(catalogScreens.map(({ id }) => id)).size).toBe(95);
+    expect(catalogScreens).toContainEqual({
+      id: "PUB-035",
+      archetype: "GUIDED_FORM",
+    });
     expect(manifestScreens).toEqual(catalogScreens);
 
     const archetypes = new Set(

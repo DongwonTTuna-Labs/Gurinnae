@@ -12,6 +12,12 @@ use uuid::Uuid;
 
 use crate::{service, state::AppState};
 
+mod problems;
+
+#[cfg(test)]
+use problems::service_error_contract;
+use problems::{assertion_problem, problem, service_problem};
+
 pub fn configure(config: &mut web::ServiceConfig) {
     let list_saved = spec("listSavedViews");
     let create_saved = spec("createSavedView");
@@ -135,37 +141,6 @@ async fn handle(
     }
 }
 
-fn service_problem(error: service::ServiceError) -> HttpResponse {
-    let (code, status) = service_error_contract(&error);
-    problem(code, status)
-}
-
-fn service_error_contract(error: &service::ServiceError) -> (&'static str, u16) {
-    match error {
-        service::ServiceError::InvalidRequest => ("INVALID_REQUEST", 400),
-        service::ServiceError::NotFound => ("RESOURCE_NOT_FOUND", 404),
-        service::ServiceError::VersionConflict => ("VERSION_CONFLICT", 409),
-        service::ServiceError::InvalidStateTransition => ("INVALID_STATE_TRANSITION", 409),
-        service::ServiceError::PreconditionFailed => ("PRECONDITION_FAILED", 422),
-        service::ServiceError::LegalHoldActive => ("LEGAL_HOLD_ACTIVE", 423),
-        service::ServiceError::LegalHoldTargetUnsupported => ("LEGAL_HOLD_TARGET_UNSUPPORTED", 422),
-        service::ServiceError::IdentityProofInvalid => ("IDENTITY_PROOF_INVALID", 403),
-        service::ServiceError::PrivacyScopeInvalid => ("PRIVACY_SCOPE_INVALID", 422),
-        service::ServiceError::PrivacyCorrectionTargetUnsupported => {
-            ("PRIVACY_CORRECTION_TARGET_UNSUPPORTED", 422)
-        }
-        service::ServiceError::RetentionVersionConflict => ("RETENTION_VERSION_CONFLICT", 409),
-        service::ServiceError::RetentionStateInvalid => ("RETENTION_STATE_INVALID", 409),
-        service::ServiceError::BusinessCalendarStale => ("BUSINESS_CALENDAR_STALE", 409),
-        service::ServiceError::DependencyUnavailable => ("DEPENDENCY_UNAVAILABLE", 503),
-        service::ServiceError::CapabilityDenied => ("CAPABILITY_DENIED", 403),
-        service::ServiceError::StepUpRequired => ("STEP_UP_REQUIRED", 403),
-        service::ServiceError::ProposalRequired => ("ACTION_PROPOSAL_REQUIRED", 409),
-        service::ServiceError::IdempotencyConflict => ("IDEMPOTENCY_CONFLICT", 409),
-        service::ServiceError::Persistence => ("INTERNAL_ERROR", 500),
-    }
-}
-
 async fn authorize(
     operation: &OperationSpec,
     request: &HttpRequest,
@@ -194,7 +169,34 @@ async fn authorize(
             .and_then(|value| value.to_str().ok()),
         next_submission_session,
     };
-    let authorization = effective_authorization(operation, body);
+    let proposal_id = request
+        .match_info()
+        .get("proposalId")
+        .and_then(|value| Uuid::parse_str(value).ok());
+    let now = OffsetDateTime::now_utc().unix_timestamp();
+    // Authenticate the signed, request-bound assertion before consulting the
+    // persisted proposal kind.  A valid ECONOMICS_IMPORT request can carry the
+    // stronger STEP_UP assertion while its proposal kind is not yet known, so
+    // this preflight accepts only the two closed authorization candidates and
+    // re-verifies the exact resolved candidate after the lookup.
+    let _preflight_claims = verify_before_economics_kind_lookup(
+        operation,
+        body,
+        token,
+        &state.assertion_keys,
+        &bound_request,
+        now,
+    )
+    .map_err(assertion_problem)?;
+    let economics_import_authorization = service::economics_import_authorization_required(
+        operation.id,
+        proposal_id,
+        body,
+        &state.pool,
+    )
+    .await
+    .map_err(service_problem)?;
+    let authorization = effective_authorization(operation, body, economics_import_authorization);
     let claims = verify_claims(
         token,
         &state.assertion_keys,
@@ -203,10 +205,16 @@ async fn authorize(
             operation: operation.id,
             capability: authorization.capability,
             assurance: authorization.assurance,
-            now: OffsetDateTime::now_utc().unix_timestamp(),
+            now,
         },
     )
     .map_err(assertion_problem)?;
+    if !economics_import_capabilities_are_satisfied(
+        economics_import_authorization,
+        &claims.capabilities,
+    ) {
+        return Err(assertion_problem(AssertionError::CapabilityDenied));
+    }
     let request_digest = canonical_request_digest(&bound_request).map_err(assertion_problem)?;
     let consumed = consume(
         &state.pool,
@@ -256,7 +264,80 @@ struct EffectiveAuthorization {
     assurance: &'static str,
 }
 
-fn effective_authorization(operation: &OperationSpec, body: &[u8]) -> EffectiveAuthorization {
+fn economics_import_capabilities_are_satisfied(
+    economics_import_authorization: bool,
+    capabilities: &[String],
+) -> bool {
+    !economics_import_authorization || capabilities.iter().any(|actual| actual == "budgets.manage")
+}
+
+fn verify_before_economics_kind_lookup(
+    operation: &OperationSpec,
+    body: &[u8],
+    token: &str,
+    keys: &gurine_auth::assertion::service::KeyRing,
+    bound_request: &BoundRequest<'_>,
+    now: i64,
+) -> Result<ActorClaims, AssertionError> {
+    let caller_selects_economics = service::caller_selects_economics_import(operation.id, body);
+    let generic = effective_authorization(operation, body, false);
+    let economics = effective_authorization(operation, body, true);
+    if caller_selects_economics {
+        return verify_authorization_candidate(
+            operation,
+            token,
+            keys,
+            bound_request,
+            economics,
+            now,
+        );
+    }
+    let generic_result =
+        verify_authorization_candidate(operation, token, keys, bound_request, generic, now);
+    if generic_result.is_ok()
+        || !service::economics_import_kind_may_be_persisted(operation.id)
+        || generic == economics
+    {
+        return generic_result;
+    }
+    match verify_authorization_candidate(operation, token, keys, bound_request, economics, now) {
+        Ok(claims) => Ok(claims),
+        Err(_) => generic_result,
+    }
+}
+
+fn verify_authorization_candidate(
+    operation: &OperationSpec,
+    token: &str,
+    keys: &gurine_auth::assertion::service::KeyRing,
+    bound_request: &BoundRequest<'_>,
+    authorization: EffectiveAuthorization,
+    now: i64,
+) -> Result<ActorClaims, AssertionError> {
+    verify_claims(
+        token,
+        keys,
+        bound_request,
+        ActorExpectation {
+            operation: operation.id,
+            capability: authorization.capability,
+            assurance: authorization.assurance,
+            now,
+        },
+    )
+}
+
+fn effective_authorization(
+    operation: &OperationSpec,
+    body: &[u8],
+    economics_import_authorization: bool,
+) -> EffectiveAuthorization {
+    if economics_import_authorization {
+        return EffectiveAuthorization {
+            capability: operation.capability,
+            assurance: "STEP_UP",
+        };
+    }
     if operation.id == "submitReview" {
         let Ok(payload) = serde_json::from_slice::<Value>(body) else {
             return EffectiveAuthorization {
@@ -313,7 +394,9 @@ fn effective_authorization(operation: &OperationSpec, body: &[u8]) -> EffectiveA
         };
     }
     let assurance = match action_kind {
-        Some("HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL") => "STEP_UP",
+        Some(
+            "HYPOTHESIS" | "CAPABILITY_ACTIVATION" | "COMMERCIAL_CONTROL" | "ECONOMICS_IMPORT",
+        ) => "STEP_UP",
         Some("PROVIDER_CONTROL") => {
             match payload.get("providerOperationId").and_then(Value::as_str) {
                 Some("testProviderConnection") => "ACTIVE_SESSION",
@@ -335,246 +418,9 @@ fn effective_authorization(operation: &OperationSpec, body: &[u8]) -> EffectiveA
     }
 }
 
-fn assertion_problem(error: AssertionError) -> HttpResponse {
-    match error {
-        AssertionError::Expired => problem("ACTOR_ASSERTION_EXPIRED", 401),
-        AssertionError::AudienceMismatch => problem("ACTOR_ASSERTION_AUDIENCE_MISMATCH", 401),
-        AssertionError::RequestMismatch => problem("ACTOR_ASSERTION_REQUEST_MISMATCH", 401),
-        AssertionError::CapabilityDenied => problem("CAPABILITY_DENIED", 403),
-        AssertionError::Replayed => problem("ACTOR_ASSERTION_REPLAYED", 409),
-        _ => problem("ACTOR_ASSERTION_INVALID", 401),
-    }
-}
-
-fn problem(code: &str, status: u16) -> HttpResponse {
-    let status_code = StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
-    HttpResponse::build(status_code)
-        .insert_header(("content-type", "application/problem+json"))
-        .json(serde_json::json!({
-            "code": code,
-            "title": code,
-            "status": status,
-        }))
-}
-
 #[cfg(test)]
-mod tests {
-    use std::sync::Mutex;
-
-    use actix_web::{App, test as actix_test};
-    use gurine_auth::{
-        assertion::service::{AssertionKey, KeyRing},
-        envelope::{EnvelopeKey, EnvelopeKeyRing},
-    };
-    use sqlx::postgres::PgPoolOptions;
-
-    use super::*;
-    use crate::state::InProcessDomainEventJournal;
-
-    const CONDITIONAL_OPERATION: OperationSpec = OperationSpec {
-        id: "submitActionDecision",
-        api: "control-api",
-        method: "POST",
-        path: "/v1/internal/action-proposals/{proposalId}:decide",
-        auth: "actor-assertion",
-        capability: "actions.review",
-        idempotency_required: true,
-        assurance_level: "conditional-by-action-and-decision",
-        step_up_required: false,
-        operation_kind: "COMMAND",
-        success_status: 200,
-        media_type: "application/json",
-        response_json: "{}",
-    };
-
-    const NEXT_SESSION: &str = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
-
-    #[test]
-    fn unsigned_next_submission_session_reaches_actor_rejection() {
-        let request = actix_test::TestRequest::post()
-            .uri("/v1/internal/commands/publish-case")
-            .insert_header(("x-gurine-next-submission-session", NEXT_SESSION))
-            .to_http_request();
-        assert_eq!(
-            next_submission_session_header(&request),
-            Ok(Some(NEXT_SESSION))
-        );
-    }
-
-    #[test]
-    fn duplicate_next_submission_session_is_rejected() {
-        let request = actix_test::TestRequest::post()
-            .uri("/v1/internal/commands/publish-case")
-            .append_header(("x-gurine-next-submission-session", NEXT_SESSION))
-            .append_header((
-                "x-gurine-next-submission-session",
-                "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
-            ))
-            .to_http_request();
-        assert_eq!(
-            next_submission_session_header(&request),
-            Err(AssertionError::RequestMismatch)
-        );
-    }
-
-    #[test]
-    fn proposal_required_error_uses_the_closed_problem_contract() {
-        assert_eq!(
-            service_error_contract(&service::ServiceError::ProposalRequired),
-            ("ACTION_PROPOSAL_REQUIRED", 409)
-        );
-    }
-
-    #[test]
-    fn privacy_dependency_error_does_not_reclassify_generic_persistence_failures() {
-        assert_eq!(
-            service_error_contract(&service::ServiceError::DependencyUnavailable),
-            ("DEPENDENCY_UNAVAILABLE", 503)
-        );
-        assert_eq!(
-            service_error_contract(&service::ServiceError::Persistence),
-            ("INTERNAL_ERROR", 500)
-        );
-    }
-
-    #[actix_web::test]
-    async fn registered_provider_control_routes_return_conflict_without_a_database()
-    -> Result<(), sqlx::Error> {
-        let state = web::Data::new(AppState {
-            pool: PgPoolOptions::new()
-                .connect_lazy("postgresql://gurine:unused@127.0.0.1:1/gurine")?,
-            assertion_keys: KeyRing {
-                current: AssertionKey::new([1_u8; 32]),
-                previous: None,
-            },
-            field_keys: EnvelopeKeyRing {
-                current: EnvelopeKey::new([2_u8; 32]),
-                previous: None,
-            },
-            domain_events: Mutex::new(InProcessDomainEventJournal::default()),
-        });
-        let app = actix_test::init_service(App::new().app_data(state).configure(configure)).await;
-
-        for operation_id in [
-            "disableProviderRouting",
-            "testProviderConnection",
-            "upgradeProviderModel",
-            "setModelAutoUpgrade",
-        ] {
-            let operation = OPERATIONS
-                .iter()
-                .find(|operation| operation.id == operation_id)
-                .ok_or(sqlx::Error::RowNotFound)?;
-            let request = actix_test::TestRequest::post()
-                .uri(operation.path)
-                .set_payload("{}")
-                .to_request();
-            let response = actix_test::call_service(&app, request).await;
-            assert_eq!(
-                response.status(),
-                StatusCode::CONFLICT,
-                "direct route was not fenced for {operation_id}"
-            );
-            let body: Value = actix_test::read_body_json(response).await;
-            assert_eq!(
-                body.get("code").and_then(Value::as_str),
-                Some("ACTION_PROPOSAL_REQUIRED")
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn provider_control_approval_selects_the_closed_operation_assurance() {
-        for (provider_operation_id, expected) in [
-            ("testProviderConnection", "ACTIVE_SESSION"),
-            ("disableProviderRouting", "STEP_UP"),
-            ("upgradeProviderModel", "STEP_UP"),
-            ("setModelAutoUpgrade", "STEP_UP"),
-        ] {
-            let body = format!(
-                r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"{provider_operation_id}","decision":{{"kind":"APPROVE"}}}}"#
-            );
-            assert_eq!(
-                effective_authorization(&CONDITIONAL_OPERATION, body.as_bytes()).assurance,
-                expected,
-                "wrong assurance for {provider_operation_id}"
-            );
-        }
-    }
-
-    #[test]
-    fn provider_control_approval_fails_closed_for_missing_or_unknown_operation() {
-        for body in [
-            br#"{"actionKind":"PROVIDER_CONTROL","decision":{"kind":"APPROVE"}}"#.as_slice(),
-            br#"{"actionKind":"PROVIDER_CONTROL","providerOperationId":"futureProviderCommand","decision":{"kind":"APPROVE"}}"#.as_slice(),
-        ] {
-            assert_eq!(
-                effective_authorization(&CONDITIONAL_OPERATION, body).assurance,
-                "STEP_UP"
-            );
-        }
-    }
-
-    #[test]
-    fn provider_control_non_approval_decisions_remain_active_session() {
-        for decision in ["REJECT", "CHANGES_REQUIRED", "RECUSE"] {
-            let body = format!(
-                r#"{{"actionKind":"PROVIDER_CONTROL","providerOperationId":"upgradeProviderModel","decision":{{"kind":"{decision}"}}}}"#
-            );
-            assert_eq!(
-                effective_authorization(&CONDITIONAL_OPERATION, body.as_bytes()).assurance,
-                "ACTIVE_SESSION",
-                "wrong assurance for {decision}"
-            );
-        }
-    }
-
-    #[test]
-    fn named_person_review_selects_capability_and_assurance_independently()
-    -> Result<(), &'static str> {
-        let operation = OPERATIONS
-            .iter()
-            .find(|operation| operation.id == "submitReview")
-            .ok_or("submitReview operation missing")?;
-        for body in [
-            br#"{"decision":"approve","criteria":{"namedIndividualOverride":{}}}"#.as_slice(),
-            br#"{"decision":"APPROVE","criteria":{"namedIndividualOverride":null}}"#.as_slice(),
-            br#"{}"#.as_slice(),
-            b"not-json".as_slice(),
-        ] {
-            assert_eq!(
-                effective_authorization(operation, body),
-                EffectiveAuthorization {
-                    capability: "review.legal",
-                    assurance: "STEP_UP",
-                }
-            );
-        }
-        for body in [br#"{"decision":"approve","criteria":{}}"#.as_slice()] {
-            assert_eq!(
-                effective_authorization(operation, body),
-                EffectiveAuthorization {
-                    capability: "review.editorial",
-                    assurance: "STEP_UP",
-                }
-            );
-        }
-        for body in [
-            br#"{"decision":"reject","criteria":{}}"#.as_slice(),
-            br#"{"decision":"changes_required","criteria":{}}"#.as_slice(),
-        ] {
-            assert_eq!(
-                effective_authorization(operation, body),
-                EffectiveAuthorization {
-                    capability: "review.editorial",
-                    assurance: "ACTIVE_SESSION",
-                }
-            );
-        }
-        Ok(())
-    }
-}
+#[path = "authorization_tests.rs"]
+mod tests;
 
 #[cfg(test)]
 #[path = "error_contract_tests.rs"]

@@ -154,6 +154,7 @@ pub enum ServiceError {
 
 mod command;
 mod domains;
+mod economics_import;
 mod owner_receipt;
 mod publication;
 mod publication_guard;
@@ -169,6 +170,11 @@ mod schema;
 mod util;
 
 use command::*;
+pub(crate) use economics_import::authorization::{
+    caller_selects_economics_import, economics_import_kind_may_be_persisted,
+    required as economics_import_authorization_required,
+};
+use economics_import::*;
 use owner_receipt::*;
 use publication::*;
 use publication_guard::*;

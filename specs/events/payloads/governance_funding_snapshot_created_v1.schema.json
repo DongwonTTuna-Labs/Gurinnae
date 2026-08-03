@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/governance.funding_snapshot_created.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshotBatchId",
+    "fiscalYear",
+    "asOf",
+    "reportingCurrency",
+    "fxSnapshotDigest",
+    "denominatorState",
+    "denominatorUnknownReason",
+    "denominator",
+    "denominatorApprovalDigest",
+    "entrySetDigest",
+    "snapshotDigest",
+    "receiptDigest"
+  ],
+  "properties": {
+    "snapshotBatchId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "fiscalYear": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9999
+    },
+    "asOf": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reportingCurrency": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "fxSnapshotDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "denominatorState": {
+      "type": "string",
+      "enum": [
+        "APPROVED",
+        "UNKNOWN"
+      ]
+    },
+    "denominatorUnknownReason": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "enum": [
+            "MISSING",
+            "ZERO",
+            "APPROVAL_MISSING",
+            "APPROVAL_STALE"
+          ]
+        }
+      ]
+    },
+    "denominator": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?$"
+        }
+      ]
+    },
+    "denominatorApprovalDigest": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      ]
+    },
+    "entrySetDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "snapshotDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "receiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

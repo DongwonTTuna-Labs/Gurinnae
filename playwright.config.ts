@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN } from "./tests/e2e/support/mock-api-donation";
 
 const mock = "http://127.0.0.1:29100";
 
@@ -30,13 +31,13 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "MOCK_API_PORT=29100 bun run tests/e2e/support/mock-api.ts",
+      command: `GURINE_ENV=test DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN=${DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN} MOCK_API_PORT=29100 bun run tests/e2e/support/mock-api.ts`,
       url: `${mock}/health/ready`,
       reuseExistingServer: false,
       timeout: 30_000,
     },
     {
-      command: `HOST=127.0.0.1 PORT=29101 GURINE_ENV=test ORIGIN=http://127.0.0.1:29101 PUBLIC_BASE_URL=http://127.0.0.1:29101 PUBLIC_API_INTERNAL_URL=${mock} SUBMISSION_API_INTERNAL_URL=${mock} BOT_CHALLENGE_SITE_KEY=synthetic-test PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/public-web/build/index.js`,
+      command: `HOST=127.0.0.1 PORT=29101 GURINE_ENV=test ORIGIN=http://127.0.0.1:29101 PUBLIC_BASE_URL=http://127.0.0.1:29101 PUBLIC_API_INTERNAL_URL=${mock} BILLING_GATEWAY_INTERNAL_URL=${mock} SUBMISSION_API_INTERNAL_URL=${mock} BOT_CHALLENGE_SITE_KEY=synthetic-test PUBLIC_WEB_BILLING_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= PUBLIC_WEB_SUBMISSION_HMAC_KEY_CURRENT=MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE= DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN=${DONATION_TEST_PAYMENT_AUTHORIZATION_TOKEN} SUBMISSION_COOKIE_KEY_CURRENT=GQBTWs9nf7Kq81QWQ95fHNnlF9jwS7ZS8SH92g968+g= bun apps/public-web/build/index.js`,
       url: "http://127.0.0.1:29101/",
       reuseExistingServer: false,
       timeout: 30_000,

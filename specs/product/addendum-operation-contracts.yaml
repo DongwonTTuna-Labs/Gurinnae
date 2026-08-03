@@ -2,11 +2,184 @@ schema_version: 1
 specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
+
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  canonical_contract: specs/product/business-model-contract.yaml#supervisor_decision_v1
+  canonical_contract_status: REVIEW_REQUIRED
+  canonical_delta_status: APPROVED_POLICY_WITH_OPEN_CANONICAL_DELTAS
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  approved_packages_ordered_exactly:
+    - {ordinal: 1, package_id: ECO-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 2, package_id: PAID-EVIDENCE-V2-AUTHORITY, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 3, package_id: PAYMENT-TEST-V1, approval: APPROVED_AS_RECOMMENDED, review_due_hours: 24}
+    - {ordinal: 4, package_id: GFD-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision preserving this decision as provenance; silent reinterpretation, partial package substitution and in-place weakening are forbidden
+  binding_rule: These four approved policy packages are set-equal to the canonical business-model supervisor decision; every unresolved canonical delta remains fail-closed and may not be inferred from an older addendum, migration, fixture or runtime implementation.
+
+economics_authority_v1_operation_contract:
+  authority: supervisor-decision-v1.ECO-AUTHORITY-V1
+  target_version:
+    economics_import: target.expectedVersion is present and exactly null; integer sentinel 1 is forbidden
+    all_other_action_kinds: target.expectedVersion remains a positive int64 and null is invalid
+    approval_binding: ApprovalBindingV1.targetVersion mirrors the same null-only ECONOMICS_IMPORT branch and remains positive for every other action kind
+  commercial_contract_offer_parent:
+    schema: CommercialContractOfferParentV1
+    schema_version: {value: 1, json_type: number}
+    forbidden_encodings: ['"1"', commercial-contract-offer-parent.v1, offer-profile.v1]
+  first_tariff_bootstrap:
+    cardinality: one-shot
+    stage: PILOT
+    required_margin_basis_points: 6000
+    guards_ordered_exactly:
+      - same deployment and SKU have zero tariff and commercial-contract history
+      - current GENERAL_AVAILABILITY READY count is zero
+      - one approved complete current cost close is locked and digest-equal
+      - the immutable approved detail binds the intended first contract and qualification tuple and both validity intervals
+    later_contract_fence: the later recordCommercialContractPeriod import must be exact-equal to the approved bootstrap tuple or fail with write zero
+    prohibited_inference: [date, price, label, caller assertion, operator flag, partial cost evidence, current wall clock]
+  low_margin:
+    branches_exactly: [createTariffVersion, recordInvoice.discount.APPEND]
+    condition: projected variable gross margin is below the exact required margin
+    exception_authority: UNAVAILABLE
+    database_error: {sqlstate: "55000", writes: 0}
+    affected_write_sets: tariff, discount, invoice, receipt, audit, outbox, inbox, job and idempotency writes are all zero
+  approved_operation_identity:
+    rule: Every newly inserted identity is an immutable approved operation byte; PostgreSQL, Rust and repository code may not synthesize a hidden random UUID.
+    current_typed_identity_paths:
+      recordUsageWindow: [receipt.rootReceiptId, receipt.supersedesReceiptId, fact.rootUsageFactId, fact.supersedesUsageFactId, fact.sourceReceiptId]
+      recordInvoice: [invoice.rootInvoiceId, invoice.supersedesInvoiceId, 'lines[*].lineOrdinal', 'memberships[*].rootMembershipId', 'memberships[*].supersedesMembershipId', 'memberships[*].invoiceLineOrdinal']
+      recordAccountingCorrection: ['rows[*].rootCorrectionId', 'rows[*].supersedesCorrectionId', 'rows[*].reversesCorrectionId']
+      recordCashApplication: ['rows[*].rootFactId', 'rows[*].supersedesFactId']
+      recordTaxInvoiceIssuance: ['rows[*].rootReceiptId', 'rows[*].supersedesReceiptId']
+    open_wire_name_gate:
+      status: BLOCKING_OWNER_SCHEMA_DECISION
+      required_by_approved_decision: every new successor receipt/fact row plus invoice line/membership, revenue, cash, tax-invoice and accounting-correction child row must have its new row identity in approved bytes
+      unresolved_names: [usage successor row IDs, invoice line row ID, revenue fact row ID]
+      rule: The approval fixes identity provenance but does not rename the current typed fields or authorize a new generic id field; until the canonical resource schema and Rust typed ABI fix each unresolved wire name set-equal, the affected positive branch remains unavailable with zero protected writes.
+    exact_replay: returns the committed identities and writes zero second child
+  invoice_adjustment:
+    reference: correctsLineId selects only an earlier line ordinal in the same approved invoice array whose lineKind is not ADJUSTMENT
+    forbidden: [cross-invoice reference, forward reference, missing reference, adjustment-to-adjustment reference, cycle]
+    failure_writes: 0
+  digest_abi:
+    name: GURINE_LENGTH_PREFIXED_UTF8_V1
+    scope: [economics, usage, invoice, revenue, cash, tax-invoice, accounting-correction]
+    framing: unsigned u64 big-endian byte length frames domain, schema version, type tag and value separately
+    scalar_rules: [explicit NULL, fixed-six decimal, lowercase UUID, lowercase SHA-256, UTC timestamp with exactly six fractional digits]
+    array_rule: an unsigned u64 member count is framed before members in declared order
+    preimage_rule: preserve the declared field order and include every immutable business column except the self digest and created_at or updated_at
+    per_digest_registry_status: OPEN_CANONICAL_DELTA
+    positive_runtime_rule: No digest-dependent positive operation is available until the exact domain, schema-version, type-tag, field-order and nullable/array preimage registry is additionally approved.
+    verification: PostgreSQL and Rust golden vectors plus one-byte mutation rejection are mandatory
+    funding_use: FORBIDDEN; funding uses its separately approved closed Gurine Canonical JSON V1 contract
+
+paid_evidence_v2_operation_contract:
+  authority: supervisor-decision-v1.PAID-EVIDENCE-V2-AUTHORITY
+  versioning:
+    v1: migration 0029 V1 bytes and relations remain byte-identical and are never reinterpreted
+    v2: forward-only additive schemas, preimages, constraints, functions and key domain
+    migration_fence: any existing paid packet, paid packet member or paid-bound outcome row aborts before schema effect; backfill, coercion and mixed V1/V2 interpretation are forbidden
+  member_digest:
+    leaf_preimage: excludes global memberSetDigest and includes the category-local digest under exact field name categoryDigest
+    computation_order: compute each leaf first, then compute the global member-set digest over complete leaves in ordinal order
+    rejected: [global digest inside a leaf, caller-supplied leaf digest, reordered category/ordinal arrays, incomplete membership]
+  review_snapshot_forward_field_count: 12
+  review_snapshot_exact_field_registry: OPEN_CANONICAL_DELTA
+  review_snapshot_source_constraint: The exact twelve-name subset must be selected from the fields declared by migration 0028 through an additional approved canonical schema; this policy approval does not authorize guessing a subset.
+  review_snapshot_presence: all twelve fields are null for a non-paid legacy snapshot or all twelve are present for a paid-eligible V2 snapshot; partial presence is invalid and no historical value is reconstructed
+  packet_outcome_cycle:
+    outcome_to_packet: MATCH FULL DEFERRABLE INITIALLY DEFERRED
+    packet_to_outcome: MATCH FULL DEFERRABLE INITIALLY DEFERRED
+    atomicity: the final packet and eligible outcome bind in one transaction with no partially null composite key
+  terminal_binding:
+    workflow_proofs: exact existing four ordered VerifiedWorkflowProofV1 milestones
+    additional_authorities: [exact terminal receipt, policy digest, formula digest, accounting timezone, effective-until]
+    stale_rule: missing, expired, reordered, partially present or digest-mismatched evidence is UNKNOWN and cannot finalize a packet or outcome
+  subject_hmac:
+    domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+    key_versions: [CURRENT, PREVIOUS]
+    concrete_environment_names: OPEN_CANONICAL_DELTA; this approval does not authorize invented variable names
+    issue_rule: current issues new HMACs and the persisted opaque key version selects current or previous for verification
+    forbidden_reuse_or_derivation: [payment, webhook, public-web, assertion, donor, billing-key, generic identity]
+    injection: TEST_FIXTURE_ONLY
+
+payment_test_v1_operation_contract:
+  authority: supervisor-decision-v1.PAYMENT-TEST-V1
+  runtime_modes: {default: DISABLED, production: DISABLED, allowed_exactly: [DISABLED, TEST_ONLY], source_live_credentials: 0}
+  keyrings_ordered_exactly:
+    - {key_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT, version_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION, role: ISSUE_AND_VERIFY}
+    - {key_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS, version_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION, role: VERIFY_ONLY}
+    - {key_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT, version_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION, role: ISSUE_AND_VERIFY}
+    - {key_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS, version_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION, role: VERIFY_ONLY}
+  key_rule: persisted opaque version selects current or previous; webhook assertion, public-web and every other key cannot be reused or used as a derivation input
+  post_restart_missing_billing_material: fail closed with zero automatic recovery, replacement, recharge or resubmission
+  recurring_schedule_policy_b:
+    anchor: first_charge_at UTC monthly anchor with non-drifting month-end clamp
+    eligible_window: current UTC month only
+    catch_up_or_backcharge: FORBIDDEN
+    occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+    occurrence_uniqueness: PERMANENT
+    later_month_blockers: [PENDING, ACCEPTED, RECONCILIATION_REQUIRED]
+    next_month_release_authorities: [DEFINITIVE_PRE_DISPATCH_REJECTION, FETCH_CONFIRMED_SUCCESS, FETCH_CONFIRMED_REFUND, FETCH_CONFIRMED_FAILURE]
+    same_occurrence_resubmission_writes: 0
+    scheduler_effect_exactly: insert one DONATION_CHARGE job
+    scheduler_direct_effects_forbidden: [payment, contract, entitlement, public_access]
+  payment_review:
+    required_request_field: reviewAssigneeUserId
+    applies_to: [TEST_ONLY donation intent, recordCollectionFailure]
+    request_binding: request-bound exact UUID and included in request digest, immutable detail digest and receipt digest
+    topic: PAYMENT_REVIEW_V1
+    source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+    required_current_bindings: [one active internal subject, current authorization, exactly one endpoint, exactly one evaluator, source-bound deployment]
+    communication_authority_abi: OPEN_CANONICAL_DELTA
+    positive_runtime_rule: Task and notification materialization remain unavailable until the exact communication subject, authorization, endpoint/evaluator candidate keys, source-deployment binding, owner function and receipt ABI are additionally approved.
+    mismatch: {sqlstate: "55000", writes: 0}
+    due_at: occurredAt plus exactly 24 hours
+    reconciliation_required: {task_writes: 0, notification_writes: 0, automatic_retry_writes: 0}
+    forbidden_effects: [external_dunning, automatic_entitlement_change, automatic_contract_change, automatic_public_access_change]
+    fixture_identity_rule: test UUIDs and digests are generated only in an ephemeral database with authority TEST_FIXTURE
+
+gfd_authority_v1_operation_contract:
+  authority: supervisor-decision-v1.GFD-AUTHORITY-V1
+  target_revision: candidate revision N is 1 for the first publication and locked head plus 1 thereafter; zero sentinel is forbidden
+  slots_ordered_exactly:
+    - {ordinal: 1, slot_id: funding_preparer, capability: funding.manage, allowed_roles: [EXECUTIVE_APPROVER, OPERATIONS], conditional: false}
+    - {ordinal: 2, slot_id: funding_publisher, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER], conditional: false}
+    - {ordinal: 3, slot_id: oversight_reviewer, capability: review.legal, allowed_roles: [LEGAL_REVIEWER], conditional_on: requires_oversight_review}
+    - {ordinal: 4, slot_id: board_approver, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER], conditional_on: requires_board_approval}
+  slot_rule: Every present slot also requires actions.review and STEP_UP, counted actors are pairwise distinct, a conditional slot exists only when its exact boolean is true, and VACANT never counts or closes quorum.
+  related_case_prerequisite: Every distinct related case binds one current existing PUBLICATION.independent_editorial APPROVE with review.editorial, role EDITOR or PUBLISHER, actions.review and STEP_UP.
+  publisher: {service: workflow-worker, database_principal: gurine_workflow_worker, function: editorial.publish_funding_disclosure_v1, function_owner: gurine_migrator, direct_table_dml: 0}
+  digest_abi:
+    name: closed Gurine Canonical JSON V1
+    scalar_rules: [fixed-six decimal string, UTC timestamp with exactly six fractional digits, explicit null]
+    public_content_rule: includes every stored entryDigest
+    revision_preimage_rule: excludes receiptDigest
+    computation_order: entry and set digests -> revisionDigest -> receiptDigest -> event and response digests
+    counted_decision_tuple_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+  published_event_required_binding_groups: [revision and prior revision, period, snapshot, policy, conflict, concentration, conditional gates, entry and public-content digests, proposal, execution, approval, counted decisions, related-case reviews, publisher, effective and published timestamps, receipt digest]
+  implementation_hold:
+    affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+    database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+    external_error: {code: INTERNAL_ERROR, http_status: 500}
+    release_rule: Approval alone does not remove the hold; every authority, ACL, digest, event and test obligation must first be implemented and verified.
 counts:
   operations: derived len(operations)
   queries: derived count(operations where kind=QUERY)
   commands: derived count(operations where kind=COMMAND)
   by_api:
+    public-api: derived count(operations where api=public-api)
     control-api: derived count(operations where api=control-api)
     submission-api: derived count(operations where api=submission-api)
     identity-api: derived count(operations where api=identity-api)
@@ -48,6 +221,7 @@ action_payloads:
     - ASSET_RIGHTS_DECISION
     - RETENTION_SCHEDULE
     - FUNDING_DISCLOSURE
+    - ECONOMICS_IMPORT
     - CAPABILITY_ACTIVATION
     - RESPONSE_POLICY_CALENDAR
     - COMMERCIAL_CONTROL
@@ -121,6 +295,31 @@ action_payloads:
       required: [snapshotBatchId, snapshotDigest, priorDisclosureRevision, fiscalYear, amountBand, concentrationBand, purpose, conflictSummary, policyRequestOutcomes, effectiveAt]
       executor: private.PublishFundingDisclosureRevision
       proposer_capability: funding.manage
+      invariants:
+        - target.targetType is FUNDING_DISCLOSURE and target.expectedVersion is the positive candidate revision N: 1 for the first publication and locked head plus 1 thereafter; zero is forbidden.
+        - PostgreSQL derives requires_oversight_review, requires_board_approval, related case IDs and every conditional-gate digest from the locked snapshot graph; the immutable approval detail binds those derived values without accepting caller substitutes.
+        - The exact four-slot, conditional, pairwise-distinct actor, VACANT and related-case prerequisite rules are gfd_authority_v1_operation_contract and the approval-policy FUNDING_DISCLOSURE quorum.
+        - Publication uses closed Gurine Canonical JSON V1 in the approved digest order and never GURINE_LENGTH_PREFIXED_UTF8_V1.
+    ECONOMICS_IMPORT:
+      required: [operation, sourceEvidenceDigests, importPolicyDigest, asOf]
+      executor: private.ExecuteEconomicsImport
+      proposer_capability: actions.propose
+      required_capabilities: [actions.propose, budgets.manage]
+      invariants:
+        - target.targetType is ECONOMICS_IMPORT and target.expectedVersion is present and exactly null; sentinel 1 is forbidden. Every other action kind retains a positive expectedVersion.
+        - operation is one closed row-valued EconomicsImportOperationV1 discriminator; it carries no untyped JSON, caller-authored summary digest, dummy hash, cash balance or inferred payment state.
+        - EconomicsImportOperationV1 has exactly eleven operationId branches: recordCommercialQualification, importCostAllocationClose, createTariffVersion, recordCommercialContractPeriod, recordUsageWindow, recordInvoice, recordRevenue, recordAccountingCorrection, recordCashApplication, recordTaxInvoiceIssuance and recordCollectionFailure. replaceCommercialContractPeriod is not a branch.
+        - Each branch is the mechanical flat camelCase projection of every field in its selected stable SQL composite. SQL import_kind and all non-selected wrapper slots are never wire fields; nested composites and arrays remain closed named schemas, SQL enums retain their exact literals, and numeric(p,s) values are canonical decimal strings with the same precision and scale.
+        - Every nullable SQL field remains a required nullable<T> wire field unless the stable owner ABI explicitly derives or defaults it. Omission is never inferred from nullability, and every array preserves the SQL validator cardinality, canonical order and uniqueness rule.
+        - The server resolves rationale.evidenceSegmentIds to immutable ID and digest pairs, sorts them canonically, requires their digest set to equal sourceEvidenceDigests, and persists the parallel ID and digest arrays. Branch-specific named receipt anchors are additional equality checks, never a replacement wire map; private.ExecuteEconomicsImport reloads the immutable detail and accepts neither array again.
+        - recordCashApplication accepts only signed typed external import evidence with sourceKind BANK_TRANSFER or PG_SETTLEMENT and the exact invoice ID, record digest, reconciliation digest and expected head fence. PG_SETTLEMENT is not live provider execution, B2B checkout, a payment or entitlement API, and a donation fact never creates an invoice or cash application.
+        - CommercialContractOfferParentV1.schemaVersion is JSON number 1; a string or type-name-derived literal is invalid.
+        - createTariffVersion admits one PILOT bootstrap only under economics_authority_v1_operation_contract.first_tariff_bootstrap; later contract import must exact-match the approved bootstrap tuple.
+        - A low-margin tariff or APPEND discount branch always raises SQLSTATE 55000 with zero writes; R6e has no oversight exception branch.
+        - The current typed identity paths and unresolved wire-name gate are exact economics_authority_v1_operation_contract.approved_operation_identity; neither database UUID synthesis nor an invented generic id field is authorized.
+        - Invoice adjustments follow economics_authority_v1_operation_contract.invoice_adjustment and can reference only an earlier non-adjustment line in the same approved array.
+        - Economics, usage, invoice, revenue, cash, tax-invoice and accounting-correction digests use GURINE_LENGTH_PREFIXED_UTF8_V1; funding digests never use that ABI.
+        - recordCollectionFailure requires exact reviewAssigneeUserId bound into request, immutable detail and receipt digests, accepts only signed external evidence bound to the exact invoice digest or provider-fetch-confirmed donation failure, and never derives a dunning state from absence, elapsed time or a missing webhook.
     CAPABILITY_ACTIVATION:
       required: [capabilityClass, capabilityId, environment, configurationDigest, evidenceReceiptIds, policyDigest, contractDigest, rightsDigest, jurisdiction, effectiveAt, expiresAt]
       executor: private.DecideCapabilityActivation
@@ -142,6 +341,78 @@ action_payloads:
         testProviderConnection: {capability: jobs.operate, assurance: ACTIVE_SESSION}
         upgradeProviderModel: {capability: kill_switch.execute, assurance: STEP_UP}
         setModelAutoUpgrade: {capability: kill_switch.execute, assurance: STEP_UP}
+
+economics_import_effect_disposition_registry:
+  key: operationId
+  dispositions_exactly: [RECORDED, REPLACED, REVERSED, REVIEW_TASK_CREATED]
+  transport_from_state:
+    aggregate: ECONOMICS_IMPORT
+    state: UNRECORDED
+    meaning: Pre-effect wire sentinel used only to review the requested durable effect; it is not a lifecycle state, stored head, transition source, or state-machine node.
+  variants:
+    recordCommercialQualification:
+      target_relations: [ops.acquisition_source_receipts, ops.commercial_qualification_receipts]
+      atomic_cardinality: optional zero-or-one acquisition source plus exactly one qualification receipt
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    importCostAllocationClose:
+      target_relations: [ops.fx_rate_facts, ops.cost_allocations]
+      atomic_cardinality: zero-or-more inline FX facts plus one period head and one-or-more allocation lines
+      allowed_result_effects: [RECORDED, REPLACED]
+    createTariffVersion:
+      target_relations: [ops.tariff_versions]
+      atomic_cardinality: exactly one tariff version
+      allowed_result_effects: [RECORDED]
+    recordCommercialContractPeriod:
+      target_relations: [ops.commercial_contract_periods, ops.offer_profile_capabilities]
+      atomic_cardinality: exactly one contract period plus exactly twelve ordered offer-capability rows
+      allowed_result_effects: [RECORDED, REPLACED]
+    recordUsageWindow:
+      target_relations: [ops.usage_window_receipts, ops.usage_facts]
+      atomic_cardinality: exactly one paired usage-window receipt and usage fact
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    recordInvoice:
+      target_relations: [ops.discount_decisions, ops.invoice_facts, ops.invoice_line_facts, ops.invoice_usage_memberships]
+      atomic_cardinality: zero-or-more discounts, exactly one invoice, one-or-more lines, and complete expected usage memberships
+      allowed_result_effects: [RECORDED, REPLACED]
+    recordRevenue:
+      target_relations: [ops.revenue_facts]
+      atomic_cardinality: one-or-more revenue facts fenced to persisted invoice-line ID and digest
+      allowed_result_effects: [RECORDED]
+    recordAccountingCorrection:
+      target_relations: [ops.accounting_corrections]
+      atomic_cardinality: one-or-more append-only corrections
+      allowed_result_effects: [RECORDED, REVERSED]
+    recordCashApplication:
+      target_relations: [ops.cash_application_facts]
+      atomic_cardinality: one-or-more signed imported facts
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    recordTaxInvoiceIssuance:
+      target_relations: [ops.tax_invoice_issuance_receipts]
+      atomic_cardinality: one-or-more signed imported receipts
+      allowed_result_effects: [RECORDED, REPLACED, REVERSED]
+    recordCollectionFailure:
+      target_relations: [ops.tasks]
+      atomic_cardinality: exactly one operator review task and no economics, entitlement, or public-access mutation
+      allowed_result_effects: [REVIEW_TASK_CREATED]
+  invariants:
+    - The ordered variant keys are set-equal to EconomicsImportOperationV1 and contain exactly eleven entries.
+    - ActionEffectV1 for ECONOMICS_IMPORT has effectClass INTERNAL_MATERIALIZATION, externalSideEffect false, fromState exactly the transport-only UNRECORDED sentinel and toState exactly one allowed_result_effect for the selected operationId.
+    - Existing ActionProposal, ActionDecision and ExecutionAuthorization lifecycles are the only lifecycle authority. This registry is a closed immutable effect/disposition contract and never defines a pseudo-machine or generic state transition.
+    - Target relations, atomic cardinality and allowed result effects are exact-equal in operation, approval, persistence, command semantics, database addendum and validators.
+
+economics_import_terminal_contract:
+  owner_dispositions_exactly: [SUCCEEDED, OPERATION_REJECTED, PERMANENT_FAILED]
+  receipt_field: terminalKind
+  generic_action_execution_state_selector:
+    SUCCEEDED: SUCCEEDED
+    OPERATION_REJECTED: PERMANENT_FAILED
+    PERMANENT_FAILED: PERMANENT_FAILED
+  operation_rejected: The nested branch apply is rolled back and only a redacted business or constraint rejection terminalization is retained; it is not retryable and is not reconciliation.
+  commit_ack_ambiguity: SQLSTATE class 08 or equivalent commit acknowledgement uncertainty creates no terminal receipt, terminal state or second submission. The same claim, idempotency identity and execution fence recalls the owner until it returns the committed replay or executes the previously uncommitted transaction.
+  invariants:
+    - The generic action execution state enum remains unchanged and never gains OPERATION_REJECTED.
+    - RECONCILIATION_REQUIRED is absent from the economics owner disposition and EconomicsImportExecutionReceiptV1 terminalKind sets.
+    - Worker job success is selected only by terminalKind SUCCEEDED; no external send, automatic resubmission or new idempotency identity exists in this database-only executor.
 
 action_digest_contract:
   normative_source: specs/product/addendum-approval-policy.yaml#digest_contracts
@@ -169,6 +440,19 @@ provider_control_http_side_door:
     - No browser, BFF or Control API handler may invoke relay or mutate provider state outside the authorized analysis-worker executor path.
 
 operations:
+  - operation_id: downloadTransparencyReport
+    api: public-api
+    method: GET
+    path: /v1/transparency-reports/{reportId}/download
+    kind: QUERY
+    capability: public.read
+    assurance: NONE
+    request:
+      required: [reportId]
+      fields: {reportId: uuid}
+      optional: {format: 'enum<JSON|CSV>=JSON'}
+    response: TransparencyReportDownloadV1
+    errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, PRECONDITION_FAILED, RATE_LIMITED, INTERNAL_ERROR]
   - operation_id: listActionApprovalQueue
     api: control-api
     method: GET
@@ -179,7 +463,7 @@ operations:
     request:
       required: []
       optional:
-        actionKind: unique-array<action_payloads.kinds>[1..18]
+        actionKind: unique-array<action_payloads.kinds>[1..19]
         proposalState: unique-array<DRAFT|PENDING_QUORUM|APPROVED|REJECTED|CHANGES_REQUIRED|EXPIRED|SUPERSEDED|WITHDRAWN>[1..8]
         assignmentState: unique-array<ASSIGNED|IN_PROGRESS|COMPLETED|RECUSED|CANCELLED|VACANT>[1..6]
         dueBefore: datetime
@@ -1108,6 +1392,7 @@ operations:
     errors: [INVALID_PARAMETER, RESOURCE_NOT_FOUND, VERSION_CONFLICT, CAPABILITY_DENIED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
 
 operation_screen_bindings:
+  downloadTransparencyReport: [PUB-023.reports]
   listActionApprovalQueue: [INT-002.tasks, INT-004.notifications]
   createActionProposal: [CAS-002.next, CAS-006.editor, CAS-007.board, CAS-009.preview, CAS-011.decisions, CAS-015.proposal, RULE-004.approval, REV-003.gates, OPS-005.status, OPS-006.approval, ADM-002.requests]
   getActionProposal: [INT-002.handoff]
@@ -1189,6 +1474,22 @@ derived_session_authorization_overlay:
       successful_rotation: revoke endpoint authorization rows, revoke the current child and issue one same-subject/same-origin COMMUNICATION_PROFILE child atomically
   next_token: X-Gurine-Next-Submission-Session is BFF-generated, request-assertion-bound and persisted only as lowercase SHA-256; it is forbidden from request/response bodies, receipts, events, audit, logs and telemetry
 
+funding_report_query_error_overlays:
+  authority: services/public-api/src/service/public_funding.rs#verify_ready_funding_report
+  shared_failure: a selected funding-disclosure report that is not the exact ready immutable projection fails closed as PRECONDITION_FAILED with HTTP 422 and no partial success envelope
+  operations:
+    getFundingContent:
+      preserved_base_statuses: [404, 429, 500]
+      canonical_statuses: [404, 422, 429, 500]
+      effective_errors: [RATE_LIMITED, RESOURCE_NOT_FOUND, PRECONDITION_FAILED, INTERNAL_ERROR]
+    listTransparencyReports:
+      preserved_base_statuses: [400, 429, 500]
+      canonical_statuses: [400, 422, 429, 500]
+      effective_errors: [INVALID_PARAMETER, INVALID_CURSOR, RATE_LIMITED, PRECONDITION_FAILED, INTERNAL_ERROR]
+  invariants:
+    - The overlay adds only PRECONDITION_FAILED at 422 and preserves every existing operation-specific error code and status.
+    - getFundingContent, listTransparencyReports and downloadTransparencyReport use the same verify_ready_funding_report failure mapping; malformed or non-funding rows never produce a partial 200 response.
+
 private_control_service_operations:
   reconcileAgentRun:
     transport: PRIVATE_CONTROL_SERVICE
@@ -1213,6 +1514,73 @@ private_action_executor_contract:
     - The targetRequest is one closed action-kind-specific schema and its digest equals the authorization target digest.
     - The worker commits dispatch/claim fencing before any egress and appends one definitive or reconciliation-required receipt after observation.
     - Exact replay returns stored bytes and changed bytes fail with zero second effect.
+
+private_billing_gateway_operations:
+  private.GetDonationFixtureOffer:
+    operation_kind: QUERY
+    transport: PRIVATE_BILLING_GATEWAY_HTTP
+    entrypoint: {method: GET, path: /internal/v1/donation-offers}
+    caller: public-web SvelteKit server load
+    effect_owner: billing-gateway
+    authorization: request-bound service assertion with issuer public-web and audience billing-gateway, durable JTI replay rejection, and exact method/path/request digest
+    required_headers: {X-Gurine-Service-Assertion: request-bound-service-assertion}
+    request_schema: GetDonationFixtureOfferRequestV1
+    response_schema: DonationFixtureOfferV1
+    availability:
+      TEST_ONLY: {status: 200, authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY}
+      PRODUCTION: {status: 503, state: DISABLED, effect: NONE}
+    errors: [SERVICE_ASSERTION_INVALID, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+  private.QueueDonationIntent:
+    operation_kind: COMMAND
+    transport: PRIVATE_BILLING_GATEWAY_HTTP
+    entrypoint: {method: POST, path: /internal/v1/donation-intents, success_status: 202}
+    caller: public-web SvelteKit server action
+    effect_owner: billing-gateway
+    authorization: request-bound service assertion with issuer public-web and audience billing-gateway, durable JTI replay rejection, exact method/path/request digest, and required Idempotency-Key
+    required_headers: {Idempotency-Key: 'secret-string[8..200]', X-Gurine-Service-Assertion: request-bound-service-assertion}
+    request_schema: DonationIntentQueueRequestV1
+    required_request_overlay: [reviewAssigneeUserId]
+    response_schema: DonationIntentQueuedReceiptV1
+    authority_boundary:
+      authority: TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY
+      test: offerVersionId, offerDigest and tierId resolve against the exact in-memory TEST_ONLY fixture registry
+      production: UNAVAILABLE; no donation intent or provider handoff is created
+    consent_receipt_digest: billing-gateway recomputes the exact UTF-8 LF preimage declared by DonationIntentQueueRequestV1; mismatch is INVALID_REQUEST with zero writes or provider handoff
+    payment_review_binding:
+      reviewAssigneeUserId: required request-bound UUID in TEST_ONLY; it is included in the canonical request digest, immutable donation-intent detail digest and queued receipt digest
+      due_rule: A later authoritative fetched failure uses occurredAt plus exactly 24 hours; request time and scheduler time never substitute.
+      routing: PAYMENT_REVIEW_V1 with source kind DONATION_PAYMENT_FAILURE and the exact current subject, authorization, one endpoint, one evaluator and source-bound deployment
+      mismatch: {sqlstate: "55000", writes: 0}
+      reconciliation_required: no task, notification or automatic retry
+      forbidden_effects: [external dunning, entitlement change, contract change, public-access change]
+    errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, IDEMPOTENCY_CONFLICT, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+  private.ReceivePaymentWebhook:
+    operation_kind: COMMAND
+    transport: PRIVATE_BILLING_GATEWAY_HTTP
+    entrypoint: {method: POST, path: '/internal/v1/payment-webhooks/{provider}'}
+    path_parameter: {provider: 'enum<toss-payments|kakao-pay|stripe>'}
+    request_media_type: application/json
+    maximum_raw_body_bytes: 65536
+    caller: payment-fixture TEST_ONLY ingress
+    effect_owner: payment-owner-function-boundary
+    authorization: request-bound service assertion with issuer payment-fixture and audience billing-gateway bound to exact method, path, raw-body digest and content type; maximum TTL is 30 seconds and JTI replay rejection is durable
+    provider_authentication:
+      STRIPE: stripe-signature is required and verified over the exact raw bytes before acceptance
+      TOSS_PAYMENTS: NOT_AVAILABLE_FETCH_REQUIRED and never VERIFIED from the webhook request
+      KAKAO_PAY: NOT_AVAILABLE_FETCH_REQUIRED and never VERIFIED from the webhook request
+    availability: {TEST_ONLY: enabled for deterministic fixture acceptance, PRODUCTION: PAYMENT_RUNTIME_UNAVAILABLE before body parsing or provider call}
+    request_schema: PaymentWebhookIngressV1
+    response_schema: PaymentWebhookAcceptanceV1
+    errors: [INVALID_REQUEST, SERVICE_ASSERTION_INVALID, PAYMENT_WEBHOOK_CONFLICT, PAYMENT_RUNTIME_UNAVAILABLE, DEPENDENCY_UNAVAILABLE, INTERNAL_ERROR]
+
+donation_fact_producer_contract:
+  event_type: donation.fact_recorded.v1
+  producer_operations_exactly: [private.ExecuteDonationCharge, private.ReceivePaymentWebhook]
+  shared_effect_owner: payment-owner-function-boundary
+  invariants:
+    - Both producers converge on the same closed payment-owner apply path and exact charge-attempt, provider-fetch and donation-fact source binding.
+    - Any other producer operation is rejected; exact replay emits zero second donation fact or outbox event.
+    - Donation success creates no contract, invoice, cash application, entitlement, access, investigation priority or publication priority effect.
 
 private_application_commands:
   private.RecordOutboundDeliveryObservation:
@@ -1266,7 +1634,53 @@ private_application_commands:
   private.RecordCommunicationAuthorizationDecision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.communication-authorization-executor, authorization: private_action_executor_contract, action_kind: COMMUNICATION_AUTHORIZATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommunicationAuthorizationActionTargetV1}, response_schema: CommunicationAuthorizationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMUNICATION_NOT_AUTHORIZED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.ReviseAssetRightsDecision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.asset-rights-executor, authorization: private_action_executor_contract, action_kind: ASSET_RIGHTS_DECISION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: AssetRightsActionTargetV1}, response_schema: AssetRightsDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, RIGHTS_DECISION_STALE, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.CreateRecordClassScheduleRevision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.retention-schedule-executor, authorization: private_action_executor_contract, action_kind: RETENTION_SCHEDULE, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: RetentionScheduleActionTargetV1}, response_schema: RecordClassScheduleReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, RETENTION_POLICY_STALE, LEGAL_HOLD_ACTIVE, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
-  private.PublishFundingDisclosureRevision: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.funding-disclosure-executor, authorization: private_action_executor_contract, action_kind: FUNDING_DISCLOSURE, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: FundingDisclosureActionTargetV1}, response_schema: FundingDisclosureExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.PublishFundingDisclosureRevision:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker
+    effect_owner: workflow-worker
+    database_role: gurine_workflow_worker
+    owner_function: editorial.publish_funding_disclosure_v1
+    owner_function_role: gurine_migrator
+    runtime_direct_table_dml: 0
+    authorization: private_action_executor_contract plus the exact GFD four-slot/conditional quorum, related-case prerequisite decisions and immutable STEP_UP receipts
+    action_kind: FUNDING_DISCLOSURE
+    request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: FundingDisclosureActionTargetV1}
+    response_schema: FundingDisclosureExecutionReceiptV1
+    errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]
+  private.ExecuteEconomicsImport: {transport: PRIVATE_APPLICATION_COMMAND, caller: workflow-worker.economics-import-executor, effect_owner: workflow-worker.economics-import-executor, database_role: gurine_economics_importer, authorization: private_action_executor_contract plus economics.import capability and immutable STEP_UP assurance receipt, action_kind: ECONOMICS_IMPORT, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: EconomicsImportActionTargetV1}, response_schema: EconomicsImportExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, STEP_UP_REQUIRED, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
+  private.ExecuteDonationCharge:
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: billing-gateway.donation-charge-executor
+    effect_owner: payment-owner-function-boundary
+    database_role: gurine_billing_gateway
+    authorization: gurine_billing_gateway plus one claimed RUNNING DONATION_CHARGE job on queue billing-gateway whose current job ID, worker ID, nonexpired lease token, positive fencing token and canonical payload digest are execution context outside the request payload
+    request_schema:
+      additional_properties: false
+      required: [schemaVersion, donationScheduleId, donationScheduleVersion, donationScheduleDigest, paymentMethodBindingId, paymentMethodBindingDigest, offerVersionId, offerDigest, tierId, consentReceiptDigest, logicalChargeId, chargeIdempotencyKeySha256, scheduledFor]
+      fields: {schemaVersion: 'const<donation-charge-job.v1>', donationScheduleId: uuid, donationScheduleVersion: 'int64[1..max]', donationScheduleDigest: sha256, paymentMethodBindingId: uuid, paymentMethodBindingDigest: sha256, offerVersionId: uuid, offerDigest: sha256, tierId: uuid, consentReceiptDigest: sha256, logicalChargeId: uuid, chargeIdempotencyKeySha256: sha256, scheduledFor: datetime}
+      invariants:
+        - The payload has exactly thirteen fields; jobId, workerId, leaseToken, fencingToken and jobPayloadDigest are claimed-job context and are forbidden payload fields.
+        - chargeIdempotencyKeySha256 is recomputed from the exact logicalChargeId, paymentMethodBindingDigest and canonical scheduledFor binding before claim.
+        - Billing keys, provider authorization material, merchant order identifiers, raw provider bytes and replayable credentials are absent from the payload, result, errors, logs and audit.
+    lifecycle_contract:
+      core_target_relations: [ops.payment_method_bindings, ops.payment_charge_attempts, ops.donation_facts]
+      auxiliary_relations: [ops.tasks, ops.audit_events, ops.outbox]
+      success_binding_transitions:
+        SINGLE_CHARGE: {from: ACTIVE, to: REVOKED, terminal_disposition: CONSUMED}
+        RECURRING: {from: ACTIVE, to: ACTIVE, terminal_disposition: RETAINED}
+      success_atomicity: the definitive SUCCEEDED charge attempt, donation fact and credential-use-policy-selected binding transition commit in one payment-owner transaction; only SINGLE_CHARGE appends the ACTIVE to REVOKED consumption transition
+      recurring_scheduler_owner: ops.enqueue_due_r6e_donation_charge_jobs_v1
+      recurring_schedule_policy: payment_test_v1_operation_contract.recurring_schedule_policy_b
+      review_assignee_source: exact request-bound reviewAssigneeUserId persisted by the TEST_ONLY donation intent and reloaded for a later authoritative payment failure; it is never synthesized by the scheduler or failure handler
+      local_reject_terminal_owner: ops.fail_r6e_donation_charge_v1
+      failure_outcomes:
+        LOCAL_REJECT: {attempt_transition: REQUESTED_TO_FAILED, review_tasks: ZERO, donation_facts: ZERO, binding_consumptions: ZERO}
+        FETCHED_FAILED: {attempt_transition: PROVIDER_ACCEPTED_TO_FAILED, review_tasks: EXACTLY_ONE, donation_facts: ZERO, binding_consumptions: ZERO}
+        FETCHED_CANCELED: {attempt_transition: PROVIDER_ACCEPTED_TO_FAILED, review_tasks: EXACTLY_ONE, donation_facts: ZERO, binding_consumptions: ZERO}
+      non_success_rule: replay, reconciliation and every failure append no second binding consumption and authorize no automatic resubmission, new logical charge or new idempotency identity
+      authority_effects: entitlement, access, investigation-priority, publication-priority and public-readiness effects are always zero
+    response_schema: DonationChargeExecutionResultV1
+    errors: [INVALID_REQUEST, IDEMPOTENCY_CONFLICT, PAYMENT_RUNTIME_UNAVAILABLE, RECONCILIATION_REQUIRED, INTERNAL_ERROR]
   private.DecideCapabilityActivation: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.capability-activation-executor, authorization: private_action_executor_contract, action_kind: CAPABILITY_ACTIVATION, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CapabilityActivationActionTargetV1}, response_schema: CapabilityActivationDecisionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, CAPABILITY_UNCONFIGURED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.CreateBusinessCalendarVersion: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.business-calendar-executor, authorization: private_action_executor_contract, action_kind: RESPONSE_POLICY_CALENDAR, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: BusinessCalendarActionTargetV1}, response_schema: BusinessCalendarVersionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, VALIDATION_FAILED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}
   private.ApplyCommercialControl: {transport: PRIVATE_APPLICATION_COMMAND, caller: action-execution-worker.commercial-control-executor, authorization: private_action_executor_contract, action_kind: COMMERCIAL_CONTROL, request_schema: {additional_properties: false, required: [executionId, generation, executionDigest, approvalDigest, countedDecisionReceiptSetDigest, effectIdempotencyKeySha256, targetRequest], targetRequest: CommercialControlActionTargetV1}, response_schema: CommercialControlExecutionReceiptV1, errors: [RESOURCE_NOT_FOUND, VERSION_CONFLICT, EXECUTION_FENCE_STALE, EXECUTION_STATE_INVALID, ACTION_DIGEST_MISMATCH, COMMERCIAL_CONTROL_TRIGGER_STALE, COMMERCIAL_CONTROL_RECEIPT_INVALID, RECONCILIATION_REQUIRED, IDEMPOTENCY_CONFLICT, INTERNAL_ERROR]}

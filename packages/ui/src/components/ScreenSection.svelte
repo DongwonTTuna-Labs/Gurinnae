@@ -27,6 +27,8 @@ import PageHeader from "./sections/PageHeader.svelte";
 import PublicCorrectionRequestForm from "./sections/PublicCorrectionRequestForm.svelte";
 import PublicCorrections from "./sections/PublicCorrections.svelte";
 import PublicDatasetExportForm from "./sections/PublicDatasetExportForm.svelte";
+import PublicDonationSection from "./sections/PublicDonationSection.svelte";
+import PublicFundingTransparencySection from "./sections/PublicFundingTransparencySection.svelte";
 import PublicLedger from "./sections/PublicLedger.svelte";
 import PublicSubscriptionForm from "./sections/PublicSubscriptionForm.svelte";
 import RelatedPublicCases from "./sections/RelatedPublicCases.svelte";
@@ -75,6 +77,8 @@ const actionLabel = (actionId: string, fallback: string) =>
 {:else if ((props.screen.id === "PUB-008" || props.screen.id === "PUB-010") && props.section.id === "cases") || (props.screen.id === "PUB-012" && props.section.id === "related")}<RelatedPublicCases {...props} />
 {:else if props.screen.id === "PUB-031" || props.screen.id === "PUB-032"}<LegalContentSection {...props} />
 {:else if props.screen.id === "PUB-029" && props.section.id === "email"}<PublicSubscriptionForm {...props} />
+{:else if props.screen.id === "PUB-035"}<PublicDonationSection {...props} />
+{:else if props.screen.id === "PUB-023"}<PublicFundingTransparencySection {...props} />
 {:else if props.screen.id === "PUB-020" && props.section.id === "datasets"}
   <SectionHeading section={props.section} kicker="데이터 내려받기" />
   <PublicDatasetExportForm

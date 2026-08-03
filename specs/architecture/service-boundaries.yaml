@@ -1,6 +1,32 @@
 version: 3
 specification_version: 13.0.0
 status: FINAL
+authority_decisions:
+- id: PAID-EVIDENCE-V2-AUTHORITY
+  provenance: 감독자 결정 v1
+  change_control: May be revised only by legal and finance owners before a production deployment.
+  approved_boundary:
+    subject_hmac_domain: PAID_OUTCOME_SUBJECT_HMAC_V2
+    key_versions:
+    - CURRENT
+    - PREVIOUS
+    issuance: current-only
+    persisted_lookup: exact opaque persisted version selects current or previous material
+    injection: TEST_FIXTURE_ONLY
+    forbidden_reuse_or_derivation:
+    - payment
+    - webhook
+    - public-web
+    - assertion
+    - donor
+    - billing-key
+    - generic identity
+  unresolved_configuration_authority:
+    status: OPEN_CANONICAL_DELTA
+    missing:
+    - concrete environment variable names
+    - runtime service owner
+    fail_closed: No service may own, inject, issue or verify this domain until canonical authority fixes both values.
 services:
 - id: public-api
   kind: actix-http
@@ -81,6 +107,104 @@ services:
     browser_direct_access: false
     service_assertion_replay_guard: ops.assertion_replay_guard via ops.consume_assertion_jti
     session_scope_owner: intake.submission_sessions
+- id: billing-gateway
+  kind: actix-http-private-and-tokio-worker
+  db_role: gurine_billing_gateway
+  writes: true
+  authority:
+    id: PAYMENT-TEST-V1
+    provenance: 감독자 결정 v1
+    change_control: May be revised only by legal and finance owners before a production deployment.
+  schemas: []
+  database_access:
+    direct_table_dml: false
+    allowed_mutation: EXECUTE on exact payment owner functions only
+    read_only_access: bounded payment ledger relations required for reconciliation
+  network:
+  - internal
+  - data
+  external_egress: []
+  public_ingress: false
+  private_ingress:
+  - public-web BFF with a request-bound service assertion
+  - provider ingress is TEST_ONLY fixture traffic authenticated by a billing-owned fixture HMAC; live provider ingress is disabled
+    and unconfigured in R6e
+  authentication:
+    accepted_credential: X-Gurine-Service-Assertion from public-web on private BFF routes
+    issuer: public-web
+    audience: billing-gateway
+    request_binding: exact method, path, body digest and idempotency identity
+    replay_guard: ops.assertion_replay_guard via durable JTI consumption
+    fixture_webhook_assertion: PAYMENT_FIXTURE_BILLING_HMAC_KEY_CURRENT with optional previous rotation key; raw key and assertion material
+      are nonobservable and invalid outside GURINE_ENV=test
+    fixture_provider_semantics:
+      stripe: fixture signature input is accepted only from the request header and verified with the billing-owned fixture key
+      toss_payments: authentication state is NOT_AVAILABLE_FETCH_REQUIRED
+      kakao_pay: authentication state is NOT_AVAILABLE_FETCH_REQUIRED
+  test_only_keyrings:
+    identity_hmac:
+      current: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT
+      current_version: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION
+      previous: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS
+      previous_version: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION
+      issuance: current key and its exact opaque version only
+      persisted_lookup: select current or previous material only by the exact opaque version persisted with the HMAC
+    billing_key_vault_hmac:
+      current: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT
+      current_version: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION
+      previous: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS
+      previous_version: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION
+      issuance: current key and its exact opaque version only
+      persisted_lookup: select current or previous material only by the exact opaque version persisted with the billing-key reference HMAC
+      missing_material: fail closed without automatic recovery, replacement, reissuance, resubmission or recharge
+    separation: >-
+      The two keyrings are independent and are never reused or derived from each other,
+      PAYMENT_FIXTURE_BILLING_HMAC_KEY webhook assertion material,
+      PUBLIC_WEB_BILLING_HMAC_KEY assertion material, or any other public/assertion key.
+  recurring_donation_schedule:
+    policy: SCHEDULE_B
+    anchor: first_charge_at is a UTC monthly anchor; short months use a non-drifting last-day clamp against the original anchor day
+    eligible_period: current UTC month only
+    catch_up_or_backcharge: forbidden
+    occurrence_identity: permanent unique tuple (schedule_id,schedule_version,scheduledFor)
+    blocking_prior_states: pending, provider-accepted or reconciliation-required blocks every later monthly occurrence
+    next_occurrence_gate: >-
+      A distinct later-month occurrence is eligible only after fetch-confirmed success,
+      full refund, failure or a definitive pre-dispatch rejection of the prior occurrence.
+    same_occurrence_resubmission_count: 0
+    scheduler_effect: insert one DONATION_CHARGE job only; direct payment, contract, entitlement and public-access effects are zero
+  payment_review:
+    topic_scope: PAYMENT_REVIEW_V1
+    source_kinds:
+    - DONATION_PAYMENT_FAILURE
+    - SIGNED_COLLECTION_FAILURE
+    request_binding: >-
+      TEST_ONLY donation intent and recordCollectionFailure require the exact
+      reviewAssigneeUserId bound into the request, typed detail and receipt digest.
+    materialization_gate: >-
+      Create the task, notification intent, outbox event and audit in one transaction
+      only when the internal subject is active, authorization is current, exactly one
+      endpoint and evaluator match, and deployment is bound to the source.
+    mismatch: SQLSTATE 55000 and write count zero for zero, multiple or mismatched authority
+    due_at: occurredAt plus exactly 24 hours
+    reconciliation_required: zero task, notification and automatic retry
+    forbidden_effects: external dunning and automatic entitlement, contract or public-access changes
+    fixture_identity_rule: test UUIDs and digests exist only as TEST_FIXTURE rows in an ephemeral database
+    unresolved_canonical_authority:
+      status: OPEN_QUESTION_FAIL_CLOSED
+      missing:
+      - concrete request schema path
+      - immutable detail schema path
+      - receipt schema path
+      - canonical reviewAssigneeUserId preimage field order
+      fail_closed: The positive PAYMENT_REVIEW materialization path remains unavailable; do not infer these identifiers or bytes.
+  runtime_mode:
+    default: DISABLED
+    allowed:
+    - DISABLED
+    - TEST_ONLY
+    test_only_rule: TEST_ONLY is valid only when GURINE_ENV=test; every other combination fails closed
+    live_provider_configuration: absent
 - id: ingest-worker
   kind: tokio-worker
   db_role: gurine_ingest_worker
@@ -137,6 +261,21 @@ services:
   - internal
   - data
   egress_via: egress-gateway:object-store
+  funding_disclosure_publication:
+    authority:
+      id: GFD-AUTHORITY-V1
+      provenance: 감독자 결정 v1
+      change_control: May be revised only by legal and finance owners before a production deployment.
+    logical_command: private.PublishFundingDisclosureRevision
+    logical_effect_owner: action-execution-worker.funding-disclosure-executor
+    database_principal: gurine_workflow_worker
+    sole_mutation_function: editorial.publish_funding_disclosure_v1
+    function_owner: gurine_migrator
+    security: SECURITY DEFINER with fixed search path [pg_catalog, editorial, ops, core, pg_temp]
+    non_owner_execute_roles:
+    - gurine_workflow_worker
+    public_execute: false
+    direct_funding_relation_dml: false
 - id: document-extractor
   kind: tokio-worker-sandbox-controller
   db_role: gurine_document_extractor
@@ -220,6 +359,16 @@ network_rules:
 - Control API accepts only X-Gurine-Actor-Assertion and verifies audience, request binding, capability, expiry and JTI replay.
 - Submission API has no public ingress; public-web and response-portal call it only over the internal network with request-bound
   service assertions.
+- Billing Gateway has no public port or direct external egress; public-web reaches it only over the internal network with an exact
+  request-bound service assertion, and its database role has zero direct table DML.
+- Payment merchant credentials, webhook secrets and provider host allowlists never belong to billing-gateway. R6e configures none;
+  any future live provider transport requires a separately approved egress-gateway channel and strong request-bound caller assertion.
+- PAYMENT-TEST-V1 fixture identity and billing-key-vault keyrings exist only in TEST_ONLY, remain distinct from webhook and
+  public-web assertions, issue only with current material, and resolve persisted opaque versions against current or previous
+  in-memory material fail-closed.
+- PAID_OUTCOME_SUBJECT_HMAC_V2 is a separate TEST_FIXTURE_ONLY current-and-previous domain and cannot reuse or derive from payment,
+  webhook, public-web, assertion, donor, billing-key or generic identity material. Its environment names and runtime owner remain
+  OPEN_CANONICAL_DELTA, so no service owns or activates it yet.
 - Raw response, receipt, draft, verification and management tokens are accepted only by one-time BFF exchange operations in request
   bodies and never in Submission API paths or queries.
 - Scoped Submission sessions are opaque tokens forwarded in X-Gurine-Submission-Session; browsers hold them only inside authenticated-encrypted

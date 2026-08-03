@@ -20,6 +20,14 @@ import {
   SCREEN_PROJECTION_BINDINGS,
   type ScreenProjectionBinding,
 } from "./generated-screen-projections";
+import { privateBillingScreenOperationFields } from "./private-billing-screen-operation.test-support";
+import {
+  PRE_R6E_ENUM_LABEL_GAPS,
+  R6E_OPERATION_IDS,
+  R6E_RUNTIME_ONLY_ENUM_LABEL_GAPS,
+  R6E_SCREEN_OPERATION_IDS,
+  r6eOperationLabelContract,
+} from "./r6e-label-contract.test-support";
 
 const mockDirectory = fileURLToPath(
   new URL("../../../tests/e2e/support/", import.meta.url),
@@ -69,10 +77,15 @@ function screenOperationEnumValues(): Set<string> {
   );
   const operations = indexOperations(documents);
   const result = new Set<string>();
-  for (const operationId of screenOperationIds()) {
+  const operationIds = screenOperationIds();
+  const privateFields = privateBillingScreenOperationFields(operationIds);
+  for (const operationId of operationIds) {
     const operation = operations.get(operationId);
-    if (!operation) throw new Error(`화면 API 작업 계약 누락: ${operationId}`);
-    for (const field of operationFields(operation, {}))
+    const fields = operation
+      ? operationFields(operation, {})
+      : privateFields.get(operationId);
+    if (!fields) throw new Error(`화면 API 작업 계약 누락: ${operationId}`);
+    for (const field of fields)
       for (const value of field.options ?? [])
         if (isEnumCandidate(value)) result.add(value);
   }
@@ -127,7 +140,7 @@ function requiredEnumValues(): Set<string> {
 }
 
 describe("closed Korean enum presentation", () => {
-  it("covers every enum option rendered by the 94-screen operation forms", () => {
+  it("covers every enum option rendered by the 95-screen operation forms", () => {
     const required = screenOperationEnumValues();
     expect(required.size).toBeGreaterThan(0);
     expect(
@@ -135,12 +148,27 @@ describe("closed Korean enum presentation", () => {
     ).toEqual([]);
   });
 
-  it("covers every UI contract, generated sample, and mock-api enum literal", () => {
+  it("pins the exact pre-R6e UI contract, sample, and mock enum gaps", () => {
     const required = requiredEnumValues();
     expect(required.size).toBeGreaterThan(0);
     expect(
-      [...required].filter((value) => !hasEnumPresentation(value)),
+      [...required].filter((value) => !hasEnumPresentation(value)).sort(),
+    ).toEqual(PRE_R6E_ENUM_LABEL_GAPS);
+  });
+
+  it("covers the exact R6e request and success-response enum set", () => {
+    const contract = r6eOperationLabelContract();
+    expect(contract.operationIds).toEqual(R6E_OPERATION_IDS);
+    expect(contract.labelOperationIds).toEqual(R6E_SCREEN_OPERATION_IDS);
+    expect(contract.enums.size).toBeGreaterThan(0);
+    expect(
+      [...contract.enums].filter((value) => !hasEnumPresentation(value)).sort(),
     ).toEqual([]);
+    expect(
+      [...contract.runtimeOnlyEnums]
+        .filter((value) => !hasEnumPresentation(value))
+        .sort(),
+    ).toEqual(R6E_RUNTIME_ONLY_ENUM_LABEL_GAPS);
   });
 
   it("fails closed for an unregistered uppercase enum", () => {

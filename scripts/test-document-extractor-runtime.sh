@@ -19,12 +19,11 @@ trap cleanup EXIT
 cd "$root"
 cargo build -p gurine-scheduler -p gurine-document-extractor -p gurine-ingest-worker -p gurine-analysis-worker -p gurine-projection-worker -p gurine-notification-worker
 docker run --rm -d --name "$container" \
-  -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres \
-  -p 127.0.0.1::5432 postgres:18.4-bookworm >/dev/null
+  -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_HOST_AUTH_METHOD=trust \
+  -p 127.0.0.1::5432 postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 bash scripts/wait-postgres-container.sh "$container" "$database"
-for migration in db/migrations/*.sql; do
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
-done
+mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
+bash scripts/apply-test-migrations-with-r6e-roles.sh "$container" "$database" "${migrations[@]}"
 docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
   "ALTER ROLE gurine_scheduler LOGIN PASSWORD 'scheduler_test'; ALTER ROLE gurine_document_extractor LOGIN PASSWORD 'extractor_test'; ALTER ROLE gurine_ingest_worker LOGIN PASSWORD 'ingest_test'; ALTER ROLE gurine_analysis_worker LOGIN PASSWORD 'analysis_test'; ALTER ROLE gurine_public_projector LOGIN PASSWORD 'projector_test'; ALTER ROLE gurine_notification_worker LOGIN PASSWORD 'notification_test';" >/dev/null
 

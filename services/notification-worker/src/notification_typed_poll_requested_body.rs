@@ -55,7 +55,7 @@
     };
     let receipt = state
         .delivery
-        .poll_for_channel_with_binding(&channel, provider_message_id, &binding)
+        .poll_for_channel_with_binding(channel, provider_message_id, &binding)
         .await
         .map_err(|error| match error {
             DeliveryError::PollUnsupported => WorkerError::Contract,

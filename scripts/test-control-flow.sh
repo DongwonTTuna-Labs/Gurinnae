@@ -22,19 +22,23 @@ trap cleanup EXIT
 
 cd "$root"
 CARGO_TARGET_DIR="$build_target" cargo build -p gurine-control-api -p gurine-analysis-worker -p gurine-scheduler -p gurine-projection-worker
-docker run --rm -d --name "$container" -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 127.0.0.1::5432 \
+docker run --rm -d --name "$container" -e POSTGRES_DB="$database" -e POSTGRES_USER=postgres -e POSTGRES_HOST_AUTH_METHOD=trust -p 127.0.0.1::5432 \
   postgres:18.4-bookworm@sha256:d9c83446333daec3f0588cc709adb80c26090b7f9f0f7ec8d43c243385d79818 >/dev/null
 bash scripts/wait-postgres-container.sh "$container" "$database"
 r6d_legacy_boundary_migration="db/migrations/0038_r6d_legal_hardening.sql"
 r6d_authority_closure_migration="db/migrations/0039_r6d_authority_closure.sql"
 r6d_privacy_authority_closure_migration="db/migrations/0040_r6d_privacy_authority_closure.sql"
-for migration in db/migrations/*.sql; do
-  if [[ "$migration" == "$r6d_legacy_boundary_migration" \
-    || "$migration" == "$r6d_authority_closure_migration" \
-    || "$migration" == "$r6d_privacy_authority_closure_migration" ]]; then
-    continue
+mapfile -t migrations < <(
+  printf '%s\n' db/migrations/*.sql | LC_ALL=C sort
+)
+source scripts/apply-test-migrations-with-r6e-roles.sh
+r6e_test_migrations_prepare "$container" "$database" "${migrations[@]}"
+r6e_test_migrations_provision
+for migration in "${migrations[@]}"; do
+  if [[ "$migration" == "$r6d_legacy_boundary_migration" ]]; then
+    break
   fi
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
+  r6e_test_migrations_apply_next "$migration"
 done
 # The control runtime seed contains intentional pre-R6d historical publication
 # and response rows.  Exercise the real upgrade boundary: load those rows under
@@ -42,16 +46,15 @@ done
 # instead of trying to bypass the new publication owners after migration.
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/reference-seed.sql >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-runtime-seed.sql >/dev/null
-docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
-  <"$r6d_legacy_boundary_migration" >/dev/null
+r6e_test_migrations_apply_next "$r6d_legacy_boundary_migration"
 # 0039 owns only forward authority closure. It must observe the complete 0038
 # schema and staged-legacy rows, never run in the pre-0038 seed boundary.
-docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
-  <"$r6d_authority_closure_migration" >/dev/null
+r6e_test_migrations_apply_next "$r6d_authority_closure_migration"
 # 0040 must observe every 0039 immutable authority before it installs the
 # forward-only privacy snapshot and legal-hold bindings.
-docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
-  <"$r6d_privacy_authority_closure_migration" >/dev/null
+r6e_test_migrations_apply_next "$r6d_privacy_authority_closure_migration"
+r6e_test_migrations_apply_remaining
+r6e_test_migrations_assert_complete
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
   -d "$database" < db/test-fixtures/r6d-approved-policy-authority.sql \
   >/dev/null

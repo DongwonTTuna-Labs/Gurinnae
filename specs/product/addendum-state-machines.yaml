@@ -23,6 +23,83 @@ registry_contract:
     actor_edge: explicit edge.atomic_transition_group when cross-aggregate, otherwise machine name plus edge ordinal
   closure: every additive command has exactly one operation_disposition; every event-producing actor is a logical component in addendum-event-contracts
 
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  canonical_contract: specs/product/business-model-contract.yaml#supervisor_decision_v1
+  canonical_contract_status: NORMATIVE_AUTHORITY_FROZEN
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  approved_packages_ordered_exactly:
+    - {ordinal: 1, package_id: ECO-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 2, package_id: PAID-EVIDENCE-V2-AUTHORITY, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 3, package_id: PAYMENT-TEST-V1, approval: APPROVED_AS_RECOMMENDED, review_due_hours: 24}
+    - {ordinal: 4, package_id: GFD-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision preserving this decision as provenance; silent reinterpretation, partial package substitution and in-place weakening are forbidden
+  binding_rule: Every lifecycle rule below is set-equal to specs/product/business-model-contract.yaml#supervisor_decision_v1 and specs/product/addendum-approval-policy.yaml#approved_r6e_authority_bindings; no pseudo-machine or unapproved edge may fill a missing physical contract.
+  lifecycle_bindings:
+    ECO-AUTHORITY-V1:
+      target_version: ECONOMICS_IMPORT target.expectedVersion and ApprovalBindingV1.targetVersion are null; every other action kind remains positive and sentinel 1 is forbidden
+      low_margin_tariff_discount: {sqlstate: "55000", writes: 0, exception_authority: UNAVAILABLE}
+      effect_rule: Approved operation bytes own every successor identity and invoice adjustment may reference only an earlier non-adjustment line in the same array.
+      digest_rule: GURINE_LENGTH_PREFIXED_UTF8_V1 applies in declared field order and never applies to funding.
+    PAID-EVIDENCE-V2-AUTHORITY:
+      mode: FORWARD_ONLY_SEPARATE_FROM_V1
+      v1_preservation: Migration 0029 V1 relations, bytes and the existing paid_evidence_packet machine are unchanged and never reinterpreted or backfilled.
+      digest_order: V2 leaves excluding global memberSetDigest, then global member-set digest in ordinal order; categoryDigest remains separate.
+      migration_fence: any existing paid packet, member or paid-bound outcome row aborts before schema effect
+      activation_status: OPEN_FAIL_CLOSED
+    PAYMENT-TEST-V1:
+      runtime_modes: {default: DISABLED, production: DISABLED, only_non_disabled: TEST_ONLY, source_live_credentials: 0}
+      recurring_schedule_policy_b:
+        anchor: first_charge_at UTC monthly anchor with non-drifting month-end clamp
+        eligible_window: current UTC month only; catch-up and backcharge are forbidden
+        occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+        occurrence_uniqueness: permanent
+        later_month_blockers: [pending, accepted, reconciliation_required]
+        next_month_release_authorities: [definitive_pre_dispatch_rejection, fetch_confirmed_success, fetch_confirmed_refund, fetch_confirmed_failure]
+        same_occurrence_resubmission_writes: 0
+        scheduler_effect_exactly: insert one DONATION_CHARGE job
+        scheduler_direct_effects: {payment: 0, contract: 0, entitlement: 0, public_access: 0}
+      payment_review:
+        required_field: reviewAssigneeUserId
+        required_for: [TEST_ONLY donation intent, recordCollectionFailure]
+        digest_bindings: [request, immutable_detail, receipt]
+        topic: PAYMENT_REVIEW_V1
+        source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+        due_at: occurredAt plus exactly 24 hours
+        mismatch: {sqlstate: "55000", writes: 0}
+        reconciliation_required: {task_writes: 0, notification_writes: 0, automatic_retry_writes: 0}
+        automatic_effects_forbidden: [external_dunning, entitlement_change, contract_change, public_access_change]
+    GFD-AUTHORITY-V1:
+      review_slots_ordered_exactly:
+        - {ordinal: 1, slot_id: funding_preparer, capability: funding.manage, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER, OPERATIONS], assurance: STEP_UP, conditional: false}
+        - {ordinal: 2, slot_id: funding_publisher, capability: funding.publish, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional: false}
+        - {ordinal: 3, slot_id: oversight_reviewer, capability: review.legal, required_capability: actions.review, allowed_roles: [LEGAL_REVIEWER], assurance: STEP_UP, conditional_on: requires_oversight_review}
+        - {ordinal: 4, slot_id: board_approver, capability: funding.publish, required_capability: actions.review, allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional_on: requires_board_approval}
+      present_slot_count: 2 through 4
+      quorum_rule: counted actors are pairwise distinct; VACANT never counts; conditional slots exist only when their approved boolean is true
+      target_revision: candidate N is at least 1; first is 1 and successors are locked head plus 1; zero is forbidden
+      publisher: {service: workflow-worker, database_principal: gurine_workflow_worker, function: editorial.publish_funding_disclosure_v1, function_owner: gurine_migrator, direct_table_dml: 0}
+      digest_order: entry and set digests, then revisionDigest, then receiptDigest, then event and response digests
+      counted_decision_tuple_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+      implementation_hold: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0, external_code: INTERNAL_ERROR, http_status: 500}
+  OPEN_QUESTIONS:
+    - id: R6E-PAID-V2-EXACT-LIFECYCLE-SCHEMA
+      unresolved: PAID-EVIDENCE-V2-AUTHORITY does not uniquely supply V2 payload, relation, procedure, receipt, event, field or complete digest-preimage identifiers, including the twelve review-snapshot field names and physical terminal binding.
+      fail_closed: Keep the existing V1 machine unchanged and V2 activation unavailable; never add an inferred V2 machine or edge and never backfill.
+    - id: R6E-RUNTIME-PHYSICAL-BINDINGS
+      unresolved: Approved high-level ECO, payment-review and GFD rules do not by themselves supply every physical ABI and canonical preimage field order.
+      fail_closed: Keep the corresponding database-final and implementation holds until exact source authority and verification exist.
+
 machines:
   action_proposal:
     states: [DRAFT, PENDING_QUORUM, APPROVED, REJECTED, CHANGES_REQUIRED, WITHDRAWN, EXPIRED, SUPERSEDED]
@@ -65,6 +142,7 @@ machines:
       - {actor: execution-worker, from: RUNNING, to: RETRYABLE_FAILED, guard: definitive-not-accepted-and-safe-retry-proof-and-dispatch-attempt-count-below-3, event: action.execution_completed.v1}
       - {actor: execution-worker, from: RUNNING, to: PERMANENT_FAILED, guard: definitive-permanent-failure-or-definitive-not-accepted-at-dispatch-attempt-count-3, event: action.execution_completed.v1}
       - {actor: execution-worker, from: RUNNING, to: RECONCILIATION_REQUIRED, guard: any-possible-effect-without-definitive-proof, event: action.execution_completed.v1}
+      - {actor: workflow-worker, private_command: private.ExecuteEconomicsImport, from: RUNNING, to: SUCCEEDED|PERMANENT_FAILED, selector: action-kind-ECONOMICS_IMPORT, owner_terminal_mapping: {SUCCEEDED: SUCCEEDED, OPERATION_REJECTED: PERMANENT_FAILED, PERMANENT_FAILED: PERMANENT_FAILED}, guard: exact current authorization and economics.import STEP_UP evidence are claimed under the execution and producer-job fences before one typed PostgreSQL owner transaction appends the selected immutable branch effect or rolls its nested apply back and appends the exact terminal receipt; SQLSTATE class 08 commit-ack ambiguity keeps the producer job nonterminal and retries the identical owner call until committed exact replay or the original uncommitted transaction executes, event: action.execution_completed.v1, receipt: EconomicsImportExecutionReceiptV1, effect_owner: workflow-worker.economics-import-executor, atomic_transition_group: gurine.private.ExecuteEconomicsImport.v1}
       - {actor: analysis-worker, private_command: private.ExecuteProviderControl, from: RUNNING, to: SUCCEEDED|PERMANENT_FAILED|RECONCILIATION_REQUIRED, selector: action-kind-PROVIDER_CONTROL, guard: ops.claim_provider_control_execution_v1 committed the exact current authorization providerOperationId providerId expectedVersion target digest capability assurance generation and fencing token before egress and exactly one ops.complete_provider_control_execution_v1 or ops.fail_provider_control_execution_v1 consumes that fence with definitive connection-test proof, event: action.execution_completed.v1, effect_owner: analysis-worker.provider-control-executor, atomic_transition_group: gurine.private.ExecuteProviderControl.v1}
       - {operation: cancelActionExecution, from: QUEUED|RETRYABLE_FAILED|RUNNING, to: CANCELLED, selector: locked-current-attempt-has-no-dispatch-ordinal, guard: effect-then-authorization-then-attempt-lock-wins-before-dispatch, event: action.execution_cancel_requested.v1}
       - {operation: cancelActionExecution, from: RUNNING|RECONCILIATION_REQUIRED, to: CANCEL_REQUESTED, selector: locked-current-attempt-has-dispatch-ordinal-or-possible-effect, guard: dispatch-or-possible-effect-proof, event: action.execution_cancel_requested.v1}
@@ -82,6 +160,7 @@ machines:
       - The aggregate state is stored only in ops.in_flight_effects; authorization, attempt and receipt states have their own closed machines and are not copied enum-for-enum.
       - Final APPROVE creates the effect exactly once inside submitActionDecision; execution workers cannot materialize an effect from an event replay.
       - A third definitive failed dispatch terminalizes PERMANENT_FAILED in the same receipt transaction and cannot remain RETRYABLE_FAILED.
+      - The ECONOMICS_IMPORT owner terminalKind set is exactly SUCCEEDED, OPERATION_REJECTED and PERMANENT_FAILED; SUCCEEDED maps to action_execution.SUCCEEDED while both rejection values map to action_execution.PERMANENT_FAILED, and only SUCCEEDED completes the producer job successfully. A SQLSTATE class 08 commit-ack ambiguity changes no action_execution state, keeps the producer job nonterminal and permits only an identical fenced owner-function recall; branch result dispositions remain immutable effect classifications rather than lifecycle states.
   action_execution_attempt:
     states: [QUEUED, CLAIMED, DISPATCHING, PROVIDER_ACCEPTED, SUCCEEDED, PARTIALLY_SUCCEEDED, RETRYABLE_FAILED, PERMANENT_FAILED, CANCEL_REQUESTED, CANCELLED, RECONCILIATION_REQUIRED]
     terminal: [SUCCEEDED, PARTIALLY_SUCCEEDED, PERMANENT_FAILED, CANCELLED]
@@ -104,12 +183,274 @@ machines:
       - CLAIMED is not proof of egress. Dispatch exists only after dispatchOrdinal assignment and aggregate dispatchAttemptCount increment commit atomically.
       - A stale fencing token, lower generation or cancelled lease cannot dispatch or append an observation.
       - PROVIDER_ACCEPTED never becomes RETRYABLE_FAILED or CANCELLED without authenticated provider cancellation/non-acceptance proof.
+  payment_method_binding:
+    states: [PENDING_PROVIDER, ACTIVE, FAILED, REVOKED]
+    terminal: [FAILED, REVOKED]
+    edges:
+      - actor: billing-gateway
+        private_billing_operation: private.QueueDonationIntent
+        lifecycle_binding: payment_method_binding.QUEUE_DONATION_INTENT
+        from: NONE
+        to: PENDING_PROVIDER
+        selector: TEST_ONLY fresh exact intent claim
+        guard: request-bound service assertion, durable JTI, requestId idempotency, exact fixture offer and tier, recomputed consent receipt digest and one-time authorization-token handoff all pass before the closed payment owner appends the claim
+        event: NONE
+      - actor: billing-gateway
+        private_billing_operation: private.QueueDonationIntent
+        lifecycle_binding: payment_method_binding.QUEUE_DONATION_INTENT
+        from: PENDING_PROVIDER
+        to: ACTIVE
+        selector: provider billing-key issuance and vault persistence both definitively succeeded
+        guard: exact current intent claim, provider use policy, opaque credential handle, provider receipt digest and first digest-bound DONATION_CHARGE job commit through the closed payment owner
+        event: NONE
+        receipt: DonationIntentQueuedReceiptV1
+      - actor: billing-gateway
+        private_billing_operation: private.QueueDonationIntent
+        lifecycle_binding: payment_method_binding.QUEUE_DONATION_INTENT
+        from: PENDING_PROVIDER
+        to: FAILED
+        selector: definitive local issuance or vault failure
+        guard: exact current intent claim and redacted safe failure code with zero charge job, provider retry, outbox or public effect
+        event: NONE
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_method_binding.EXECUTE_DONATION_CHARGE
+        from: ACTIVE
+        to: ACTIVE
+        selector: RECURRING and PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: same payment-owner transaction appends the terminal charge attempt and ORIGINAL donation fact without consuming the recurring binding
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_method_binding.EXECUTE_DONATION_CHARGE
+        from: ACTIVE
+        to: REVOKED
+        selector: SINGLE_CHARGE and PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: same payment-owner transaction appends the terminal charge attempt, ORIGINAL donation fact and one successor binding revision with reason CONSUMED
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_method_binding.RECEIVE_PAYMENT_WEBHOOK
+        from: ACTIVE
+        to: ACTIVE
+        selector: RECURRING and PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: the fetched observation uses the shared payment-owner apply and appends an ORIGINAL donation fact only when absent without consuming the recurring binding
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_method_binding.RECEIVE_PAYMENT_WEBHOOK
+        from: ACTIVE
+        to: REVOKED
+        selector: SINGLE_CHARGE and PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: the fetched observation uses the shared payment-owner apply and atomically appends the terminal attempt, ORIGINAL fact and one successor binding revision with reason CONSUMED
+        event: donation.fact_recorded.v1
+    invariants:
+      - PENDING_PROVIDER can only become ACTIVE or FAILED; exact replay returns the stored intent result and appends no second revision or job.
+      - ACTIVE to REVOKED is authorized only by fetched SUCCEEDED truth for SINGLE_CHARGE and reason CONSUMED; local rejection, failure, cancellation, reconciliation, refund and replay cannot consume a binding.
+      - RECURRING success keeps the binding ACTIVE, and later jobs are enqueued only through ops.enqueue_due_r6e_donation_charge_jobs_v1 under the same current binding and schedule digest.
+      - Billing key material and replayable provider authorization never enter this machine, its events, receipts, audit, errors or observability.
+    database_final_blockers:
+      - Exact claim, completion, failure, consumption and status-reader owner signatures and result composites are not yet FINAL.
+      - SECURITY DEFINER ownership, sole caller grants, direct DML denial, lock order and binding-plus-job atomicity are not yet FINAL.
+  payment_charge_attempt:
+    states: [REQUESTED, PROVIDER_ACCEPTED, SUCCEEDED, FAILED, RECONCILIATION_REQUIRED, REFUNDED]
+    terminal: [FAILED, REFUNDED]
+    edges:
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: NONE
+        to: REQUESTED
+        selector: fresh current DONATION_CHARGE job claim
+        guard: current job, lease, fencing token, canonical payload, ACTIVE payment binding and logical-charge idempotency all lock and commit before provider I/O
+        event: NONE
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: REQUESTED
+        to: PROVIDER_ACCEPTED
+        selector: definitive provider charge acceptance
+        guard: exact attempt, claim digest, provider payment locator digest and transport receipt are appended before authoritative fetch completion
+        event: NONE
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: REQUESTED
+        to: FAILED
+        selector: definitive local pre-dispatch rejection
+        guard: ops.fail_r6e_donation_charge_v1 owns the terminal transition for the same job and attempt; review task, donation fact, binding consumption, outbox, redispatch and public effect are all zero
+        event: NONE
+        owner_function: ops.fail_r6e_donation_charge_v1
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: REQUESTED|PROVIDER_ACCEPTED
+        to: RECONCILIATION_REQUIRED
+        selector: charge outcome unknown, fetch unavailable, fetched PENDING or fetched PARTIALLY_REFUNDED
+        guard: append only the same-attempt reconciliation evidence under the current job fence and retain the original logical charge and provider idempotency identity without dispatch or terminal synthesis
+        event: NONE
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: PROVIDER_ACCEPTED
+        to: SUCCEEDED
+        selector: PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: the shared payment-owner apply appends one ORIGINAL donation fact and conditionally consumes only an ACTIVE SINGLE_CHARGE binding in the same transaction
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: payment_charge_attempt.EXECUTE_DONATION_CHARGE
+        from: PROVIDER_ACCEPTED
+        to: FAILED
+        selector: PROVIDER_FETCH_CONFIRMED FAILED or CANCELED
+        guard: CANCELED is normalized only after fetch and persisted as FAILED with exactly one existing-authority PAYMENT_REVIEW task and notification request, no donation fact and no entitlement or public effect
+        event: notification.payment_review_requested.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_charge_attempt.RECEIVE_PAYMENT_WEBHOOK
+        from: REQUESTED|PROVIDER_ACCEPTED|RECONCILIATION_REQUIRED
+        to: SUCCEEDED
+        selector: PROVIDER_FETCH_CONFIRMED SUCCEEDED
+        guard: the exact claimed webhook, attempt and fetched observation use the shared payment-owner apply and append one ORIGINAL fact only when absent
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_charge_attempt.RECEIVE_PAYMENT_WEBHOOK
+        from: REQUESTED|PROVIDER_ACCEPTED|RECONCILIATION_REQUIRED
+        to: FAILED
+        selector: PROVIDER_FETCH_CONFIRMED FAILED or CANCELED
+        guard: CANCELED is persisted as FAILED with exactly one existing-authority PAYMENT_REVIEW task and notification request and no donation, economics, entitlement or public effect
+        event: notification.payment_review_requested.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_charge_attempt.RECEIVE_PAYMENT_WEBHOOK
+        from: REQUESTED|PROVIDER_ACCEPTED|RECONCILIATION_REQUIRED
+        to: RECONCILIATION_REQUIRED
+        selector: PROVIDER_FETCH_CONFIRMED PENDING or PARTIALLY_REFUNDED
+        guard: store bounded reconciliation evidence under the same attempt and emit no fact, task, notification, consume or public effect
+        event: NONE
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: payment_charge_attempt.RECEIVE_PAYMENT_WEBHOOK
+        from: SUCCEEDED
+        to: REFUNDED
+        selector: PROVIDER_FETCH_CONFIRMED full REFUNDED
+        guard: append one REVERSAL donation fact against the exact current ORIGINAL or REPLACEMENT fact and retain the succeeded attempt and consumed binding history immutably
+        event: donation.fact_recorded.v1
+    invariants:
+      - CANCELED is provider input only and is never a persisted attempt state; fetched CANCELED is stored as FAILED.
+      - SUCCEEDED remains nonterminal solely so a later full-refund fact may append REFUNDED; FAILED and REFUNDED are immutable terminal states.
+      - PARTIALLY_REFUNDED never becomes REFUNDED and never creates a partial reversal; it remains RECONCILIATION_REQUIRED until authoritative full-refund evidence exists.
+      - No edge redispatches a charge. Ambiguity retains the same attempt, logical charge, provider idempotency identity, job claim and fence.
+      - Local rejection creates no review task. Fetched FAILED or CANCELED creates exactly one review task and notification through the existing task authority and zero donation, economics, entitlement or public effect.
+    database_final_blockers:
+      - Exact owner signatures, authoritative status readers, transition receipt composites and SQLSTATE mapping are not yet FINAL except the source-authorized local-failure owner name.
+      - Exact lock order, SECURITY DEFINER ownership, caller grants, direct DML denial and attempt-plus-job terminal atomicity are not yet FINAL.
+  provider_webhook_receipt:
+    states: [CLAIMED, FETCH_CONFIRMED, RELEASED]
+    terminal: [FETCH_CONFIRMED]
+    edges:
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: provider_webhook_receipt.RECEIVE_PAYMENT_WEBHOOK
+        from: NONE
+        to: CLAIMED
+        selector: fresh authenticated TEST_ONLY provider event identity
+        guard: exact provider, event identity digest, body digest, hint digest, locator digest and provider-specific authentication receipt are bound before fetch; raw bytes and signatures never persist
+        event: NONE
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: provider_webhook_receipt.RECEIVE_PAYMENT_WEBHOOK
+        from: CLAIMED
+        to: FETCH_CONFIRMED
+        selector: authoritative provider fetch returned a closed observation
+        guard: the webhook completion and shared payment-owner apply commit the exact attempt result and any allowed fact, binding consumption or review-task cross-effect before the stored 200 acceptance bytes become replayable
+        event: NONE
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: provider_webhook_receipt.RECEIVE_PAYMENT_WEBHOOK
+        from: CLAIMED
+        to: RELEASED
+        selector: provider fetch or required authentication dependency unavailable
+        guard: release only the exact claim with a redacted safe code and create no terminal receipt, payment observation, fact, task, binding mutation or outbox
+        event: NONE
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: provider_webhook_receipt.RECEIVE_PAYMENT_WEBHOOK
+        from: RELEASED
+        to: CLAIMED
+        selector: identical authenticated hint reclaim
+        guard: provider, event identity, body, hint, locator and authentication digests are all exact-equal; any changed binding is PAYMENT_WEBHOOK_CONFLICT
+        event: NONE
+    invariants:
+      - Webhook fields never assert payment state; verify_webhook authenticates or yields NOT_AVAILABLE_FETCH_REQUIRED and fetch_payment alone supplies truth.
+      - Exact FETCH_CONFIRMED replay returns the stored acceptance with DUPLICATE and performs zero fetch or write; changed bytes under the same event identity are conflict.
+      - RELEASED is nonterminal and reclaimable only by the identical authenticated hint; no new event identity may take over the claim.
+    database_final_blockers:
+      - Exact claim, completion, release and status-reader owner signatures, return composites and recovery disposition are not yet FINAL.
+      - Exact lock order, SECURITY DEFINER ownership, caller grant, direct DML denial and webhook-plus-payment atomicity are not yet FINAL.
+  donation_fact:
+    states: [ORIGINAL, REPLACEMENT, REVERSAL]
+    terminal: [REVERSAL]
+    edges:
+      - actor: billing-gateway
+        private_command: private.ExecuteDonationCharge
+        lifecycle_binding: donation_fact.EXECUTE_DONATION_CHARGE
+        from: NONE
+        to: ORIGINAL
+        selector: PROVIDER_FETCH_CONFIRMED SUCCEEDED and no existing fact
+        guard: exact charge attempt, attempt digest, provider fetch digest, amount and fixture authority are persisted by the shared payment owner; access, entitlement, investigation and publication priority remain false
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: donation_fact.RECEIVE_PAYMENT_WEBHOOK
+        from: NONE
+        to: ORIGINAL
+        selector: PROVIDER_FETCH_CONFIRMED SUCCEEDED and no existing fact
+        guard: exact webhook, charge attempt, attempt digest and provider fetch digest use the same closed payment-owner apply as private.ExecuteDonationCharge
+        event: donation.fact_recorded.v1
+      - actor: billing-gateway
+        private_billing_operation: private.ReceivePaymentWebhook
+        lifecycle_binding: donation_fact.RECEIVE_PAYMENT_WEBHOOK
+        from: ORIGINAL|REPLACEMENT
+        to: REVERSAL
+        selector: PROVIDER_FETCH_CONFIRMED full REFUNDED
+        guard: append one inverse fact against the exact current predecessor and charge attempt without overwriting the original or granting any contract, cash, entitlement, access, investigation or publication effect
+        event: donation.fact_recorded.v1
+    invariants:
+      - R6e has no REPLACEMENT writer; that state exists only so an independently authorized current replacement fact can be reversed without rewriting history.
+      - Only private.ExecuteDonationCharge and private.ReceivePaymentWebhook may produce donation.fact_recorded.v1, and both converge on the same closed payment-owner apply.
+      - Exact replay writes no second fact or event. A partial refund, failure, cancellation, local rejection or reconciliation state writes no donation fact.
+      - Donation facts create only private funding candidates; they confer no contract, invoice, cash application, entitlement, access, investigation priority or publication priority.
+    database_final_blockers:
+      - Exact shared payment-owner signature, current-fact reader and fact transition receipt are not yet FINAL.
+      - Exact lock order, SECURITY DEFINER ownership, caller grant, direct DML denial and fact-plus-outbox atomicity are not yet FINAL.
   task:
     states: [OPEN, IN_PROGRESS, BLOCKED, DONE, CANCELLED]
     terminal: [DONE, CANCELLED]
     edges:
       - {actor: action-execution-worker, private_command: private.CreateTaskFromApprovedAction, from: NONE, to: OPEN, guard: exact-current-TASK-execution-authorization-target-version-assignee-scope-and-effect-idempotency-binding, event: NONE, receipt: TaskExecutionReceiptV1, audit: ACTION_TASK_CREATED, effect_owner: action-execution-worker.task-executor, atomic_transition_group: gurine.private.CreateTaskFromApprovedAction.v1}
-    invariants: [Creation is owned only by the private executor; subsequent task lifecycle remains the typed base task authority, Exact replay returns the stored task receipt and creates no second task]
+    cross_effect_references:
+      payment_review:
+        authority_ref: specs/product/addendum-state-machines.yaml#supervisor_decision_v1.lifecycle_bindings.PAYMENT-TEST-V1.payment_review
+        task_type: PAYMENT_REVIEW
+        required_review_assignee_field: reviewAssigneeUserId
+        review_assignee_binding: exact request, immutable detail and receipt digest
+        topic: PAYMENT_REVIEW_V1
+        due_at: occurredAt plus exactly 24 hours
+        producer_source_map:
+          private.ExecuteEconomicsImport: {source_authority: BANK_RETURN_CONFIRMED, source_kind: SIGNED_COLLECTION_FAILURE}
+          private.ExecuteDonationCharge: {source_authority: PROVIDER_FETCH_CONFIRMED, source_kind: DONATION_PAYMENT_FAILURE}
+          private.ReceivePaymentWebhook: {source_authority: PROVIDER_FETCH_CONFIRMED, source_kind: DONATION_PAYMENT_FAILURE}
+        cardinality: {task: exactly-one, notification_intent: exactly-one, notification_outbox: exactly-one, economics_effect: zero, entitlement_effect: zero, public_effect: zero}
+        forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+        reconciliation_required_effects: {task: zero, notification: zero, automatic_retry: zero}
+        replay: exact source receipt replay writes zero second task, notification intent or event; changed source bytes conflict and caller relabel is forbidden
+        authority_rule: this reference uses the existing typed task authority and does not add or duplicate a payment-specific task lifecycle edge
+    invariants:
+      - The private.CreateTaskFromApprovedAction edge remains the sole TASK-action executor edge; payment review creation is the closed source-receipt cross-effect above and never an R6e payment-machine task edge.
+      - Subsequent task lifecycle remains the typed base task authority.
+      - Exact replay returns the stored task receipt or source-task binding and creates no second task.
   procurement_comparable_candidate:
     states: [CANDIDATE]
     terminal: [CANDIDATE]
@@ -142,7 +483,11 @@ machines:
       - {actor: workflow-worker, private_command: private.MaterializePaidEvidencePacket, from: NONE, to: AWAITING_TERMINAL_BINDING, guard: claimed-source-event-exact-qualification-contract-subject-and-duplicate-free-typed-member-candidate-keys, event: product.paid_evidence_packet_subject_persisted.v1, effect_owner: workflow-worker.paid-evidence-packet-materializer, atomic_transition_group: gurine.private.MaterializePaidEvidencePacket.v1}
       - {actor: paid-terminal-binding-worker, from: AWAITING_TERMINAL_BINDING, to: FINALIZED, guard: exactly-one-definitive-organization-decision-or-applied-delivered-read-terminal-binding-and-complete-final-digest, event: product.paid_terminal_receipt_bound.v1}
       - {actor: paid-terminal-binding-worker, from: AWAITING_TERMINAL_BINDING, to: INVALIDATED, guard: qualification-contract-subject-or-member-candidate-definitively-invalid-before-terminal-binding, event: NONE, receipt: PaidEvidencePacketInvalidationReceiptV1, audit: PAID_EVIDENCE_PACKET_INVALIDATED}
-    invariants: [AI output proposal approval provider acceptance page view invoice and technical action success are never a paid terminal, Final packet digest is derived only after the one-way terminal binding and cannot reverse-reference an outcome fact]
+    invariants: [AI output proposal approval provider acceptance page view invoice and technical action success are never a paid terminal, Final packet digest is derived only after the one-way terminal binding and cannot reverse-reference an outcome fact, This machine remains the immutable 0029 V1 contract and is not a V2 migration backfill or inferred V2 lifecycle]
+    paid_evidence_v2_authority:
+      authority_ref: specs/product/addendum-state-machines.yaml#supervisor_decision_v1.lifecycle_bindings.PAID-EVIDENCE-V2-AUTHORITY
+      implementation_status: OPEN_FAIL_CLOSED
+      activation_rule: a separately identified forward-only V2 lifecycle requires exact schema authority; this V1 machine is never renamed, widened or reinterpreted
   communication_intent:
     states: [CREATED, MATERIALIZED, POLICY_BLOCKED, CANCELLED]
     terminal: [MATERIALIZED, POLICY_BLOCKED, CANCELLED]
@@ -634,7 +979,18 @@ machines:
       - {actor: action-execution-worker, private_command: private.PublishFundingDisclosureRevision, from: NONE, to: FUTURE|CURRENT, guard: exact-current-FUNDING_DISCLOSURE-execution-authorization-snapshot-and-threshold-review, event: governance.funding_disclosure_published.v1, effect_owner: action-execution-worker.funding-disclosure-executor, atomic_transition_group: gurine.private.PublishFundingDisclosureRevision.v1}
       - {actor: disclosure-activation-worker, from: FUTURE, to: CURRENT, guard: effective-at-reached, event: governance.funding_disclosure_published.v1}
       - {actor: action-execution-worker, private_command: private.PublishFundingDisclosureRevision, from: CURRENT|FUTURE, to: SUPERSEDED, guard: same-transaction-newer-approved-revision-effective, event: governance.funding_disclosure_published.v1, effect_owner: action-execution-worker.funding-disclosure-executor, atomic_transition_group: gurine.private.PublishFundingDisclosureRevision.v1}
-    invariants: [Revision and entry set are immutable, source snapshot and review receipts remain traceable, public projection reads only current approved revision]
+    invariants: [Revision and entry set are immutable, source snapshot and review receipts remain traceable, public projection reads only current approved revision, Candidate revision N is at least 1 and equals 1 initially or locked head plus 1 thereafter, Present approval slots number two through four and counted actors are pairwise distinct while VACANT never counts, Publishing uses only workflow-worker through editorial.publish_funding_disclosure_v1 with direct table DML zero, Digest order is entry and set then revisionDigest then receiptDigest then event and response]
+    approved_authority:
+      authority_ref: specs/product/addendum-state-machines.yaml#supervisor_decision_v1.lifecycle_bindings.GFD-AUTHORITY-V1
+      status: APPROVED_AS_RECOMMENDED_IMPLEMENTATION_HELD
+      quorum_ref: specs/product/addendum-approval-policy.yaml#action_kind_policies.FUNDING_DISCLOSURE
+    implementation_hold:
+      affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+      database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+      external_error: {code: INTERNAL_ERROR, http_status: 500}
+      release_rule: every approved authority, ACL, digest, event and test obligation must be implemented and verified before the write edges activate
+    database_final_blockers:
+      - The two private.PublishFundingDisclosureRevision write edges remain source-only until the approved publisher ABI, lock order, authorization matrix, digest/event binding and verification evidence are exact; unapproved physical details are not inferred.
   business_calendar_version:
     states: [FUTURE, CURRENT, REVIEW_EXPIRED, SUPERSEDED]
     terminal: [REVIEW_EXPIRED, SUPERSEDED]
@@ -814,10 +1170,42 @@ private_application_lifecycle_bindings:
     private.DecideCapabilityActivation: [capability_activation.APPEND_DECISION]
     private.CreateBusinessCalendarVersion: [business_calendar_version.APPEND_VERSION]
     private.ApplyCommercialControl: [commercial_control_projection.APPLY]
+    private.ExecuteEconomicsImport: [action_execution.ECONOMICS_IMPORT]
+    private.ExecuteDonationCharge: [payment_method_binding.EXECUTE_DONATION_CHARGE, payment_charge_attempt.EXECUTE_DONATION_CHARGE, donation_fact.EXECUTE_DONATION_CHARGE]
     private.ExecuteProviderControl: [action_execution.PROVIDER_CONTROL]
     private.MaterializePaidEvidencePacket: [paid_evidence_packet.AWAITING_TERMINAL_BINDING]
     ops.execute_due_r6d_entity_retention_job_v1: [entity_retention_execution.QUEUED_TO_COMPLETED]
     ops.execute_privacy_response_party_name_correction_job_v1: [privacy_request.APPROVED_TO_COMPLETED]
+
+private_billing_gateway_lifecycle_bindings:
+  source: specs/product/addendum-command-semantics.yaml#private_billing_gateway_operations
+  validation: query dispositions are exactly the private billing queries; every command binding is set-equal to its edge lifecycle_binding values and every referenced edge carries the exact private_billing_operation
+  query_dispositions:
+    private.GetDonationFixtureOffer: NON_STATE_QUERY
+  current_bindings:
+    private.QueueDonationIntent: [payment_method_binding.QUEUE_DONATION_INTENT]
+    private.ReceivePaymentWebhook: [payment_method_binding.RECEIVE_PAYMENT_WEBHOOK, payment_charge_attempt.RECEIVE_PAYMENT_WEBHOOK, provider_webhook_receipt.RECEIVE_PAYMENT_WEBHOOK, donation_fact.RECEIVE_PAYMENT_WEBHOOK]
+
+payment_review_task_cross_effect_bindings:
+  authority: machines.task.cross_effect_references.payment_review
+  approved_authority_ref: specs/product/addendum-state-machines.yaml#supervisor_decision_v1.lifecycle_bindings.PAYMENT-TEST-V1.payment_review
+  required_review_assignee_field: reviewAssigneeUserId
+  review_assignee_binding: exact request, immutable detail and receipt digest
+  topic: PAYMENT_REVIEW_V1
+  due_at: occurredAt plus exactly 24 hours
+  creation_gate: one active internal subject, one current authorization, exactly one endpoint and evaluator, and a source-bound deployment are all current and exact
+  gate_failure: {sqlstate: "55000", writes: 0}
+  producers_exactly:
+    private.ExecuteEconomicsImport: {source_authority: BANK_RETURN_CONFIRMED, source_kind: SIGNED_COLLECTION_FAILURE}
+    private.ExecuteDonationCharge: {source_authority: PROVIDER_FETCH_CONFIRMED, source_kind: DONATION_PAYMENT_FAILURE}
+    private.ReceivePaymentWebhook: {source_authority: PROVIDER_FETCH_CONFIRMED, source_kind: DONATION_PAYMENT_FAILURE}
+  exact_cardinality: {task: 1, notification_intent: 1, notification_outbox: 1, economics_effect: 0, entitlement_effect: 0, public_effect: 0}
+  forbidden_automatic_effects: [external_dunning, entitlement_change, contract_change, public_access_change]
+  reconciliation_required_effects: {task: 0, notification: 0, automatic_retry: 0}
+  invariants:
+    - Caller-supplied sourceKind cannot relabel a source receipt.
+    - Exact source receipt replay writes zero second task, notification intent or notification.payment_review_requested.v1 event.
+    - These cross-effects reference the existing task authority and are not lifecycle edges in any R6e payment machine.
 
 private_control_lifecycle_bindings:
   source: specs/product/owner-addendum-2026-07-14.yaml#private_control_service_operations
@@ -854,6 +1242,7 @@ expanded_registry_set_equality:
 
 immutable_fact_lifecycles:
   evidence.segment_created.v1: append-only evidence segment identity plus immutable source asset revision and locator/content digests
+  donation.fact_recorded.v1: append-only PROVIDER_FETCH_CONFIRMED donation fact produced only by private.ExecuteDonationCharge or private.ReceivePaymentWebhook through the same closed payment-owner apply and bound to the exact charge attempt and digests; it creates only a private funding snapshot candidate and no entitlement or public projection
   source.page_reconciled.v1: append-only page receipt identity; duplicate ordinal/digest is replay and changed digest is conflict
   operations.sli_window_closed.v1: immutable closed interval fact; corrections append a new identified evaluation fact
   cost.allocation_period_closed.v1: immutable period allocation fact; never overwrite a closed allocation
@@ -867,7 +1256,7 @@ immutable_fact_lifecycles:
   commercial.discount_decided.v1: append-only approved effective interval
   commercial.invoice_reconciled.v1: immutable provider reconciliation fact and line-set digest
   commercial.revenue_fact_recorded.v1: immutable recognition fact linked to contract and invoice
-  governance.funding_snapshot_created.v1: immutable signed funding snapshot batch
+  governance.funding_snapshot_created.v1: immutable funding snapshot batch produced only by the workflow signed-funding import or the funding-projector AUTHENTICATED_DONATION_FACT candidate path through the same typed funding owner; the candidate remains private and has no publication authority
   response.organization_identity_verified.v1: immutable exact response version, content, consent, organization, official-channel and step-up verification fact; raw proof remains in its authorized ledger
   response.excerpt_approved.v2: immutable approval fact bound to the exact response version, excerpt digest, publication form and nullable-by-ANONYMOUS identity receipt
   commercial.sku_readiness_evaluated.v1: immutable evaluation and item-set digest; a new run creates a new evaluation

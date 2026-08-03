@@ -19,6 +19,19 @@ import {
   SCREEN_PROJECTION_BINDINGS,
   type ScreenProjectionBinding,
 } from "./generated-screen-projections";
+import { privateBillingScreenOperationFields } from "./private-billing-screen-operation.test-support";
+import {
+  collectNestedFieldNames,
+  operationSampleFields,
+  PRE_R6E_FIELD_LABEL_GAPS,
+  R6E_OPERATION_IDS,
+  R6E_RUNTIME_ONLY_FIELD_LABEL_GAPS,
+  R6E_RUNTIME_ONLY_OPERATION_IDS,
+  R6E_SCREEN_BINDINGS,
+  R6E_SCREEN_OPERATION_IDS,
+  R6E_TRANSPORT_ONLY_FIELD_LABEL_GAPS,
+  r6eOperationLabelContract,
+} from "./r6e-label-contract.test-support";
 
 const MOCK_SUPPORT_DIRECTORY = fileURLToPath(
   new URL("../../../tests/e2e/support/", import.meta.url),
@@ -29,27 +42,6 @@ const FIELD_LABEL_DIRECTORY = fileURLToPath(
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function collectNestedKeys(value: unknown, result: Set<string>): void {
-  if (Array.isArray(value)) {
-    for (const item of value) collectNestedKeys(item, result);
-    return;
-  }
-  if (!isRecord(value)) return;
-  for (const [key, child] of Object.entries(value)) {
-    result.add(key);
-    collectNestedKeys(child, result);
-  }
-}
-
-function operationSampleFields(): Set<string> {
-  const result = new Set<string>();
-  for (const sample of Object.values(operationSamples)) {
-    if (isRecord(sample) && "body" in sample)
-      collectNestedKeys(sample.body, result);
-  }
-  return result;
 }
 
 function projectionFields(): Set<string> {
@@ -96,10 +88,17 @@ function screenOperationFields(): Set<string> {
     ),
   );
   const result = new Set<string>();
+  const privateFields = privateBillingScreenOperationFields(operationIds);
   for (const operationId of operationIds) {
     const operation = operations.get(operationId);
-    if (!operation) throw new Error(`화면 API 작업 계약 누락: ${operationId}`);
-    for (const field of operationFields(operation, {})) result.add(field.name);
+    if (operation) {
+      for (const field of operationFields(operation, {}))
+        result.add(field.name);
+      continue;
+    }
+    const fields = privateFields.get(operationId);
+    if (!fields) throw new Error(`화면 API 작업 계약 누락: ${operationId}`);
+    for (const field of fields) result.add(field.name);
   }
   return result;
 }
@@ -357,7 +356,7 @@ function collectMockFileFields(
 function rowNavigationResponseFields(result: Set<string>): void {
   for (const [operationId, sample] of Object.entries(operationSamples)) {
     if (!isRecord(sample) || !("body" in sample)) continue;
-    collectNestedKeys(
+    collectNestedFieldNames(
       rowNavigationResponseBody(operationId, sample.body),
       result,
     );
@@ -407,7 +406,7 @@ function missingLabels(fields: ReadonlySet<string>): string[] {
 }
 
 describe("closed Korean field-label registry", () => {
-  it("covers every field rendered by the 94-screen operation forms", () => {
+  it("covers every field rendered by the 95-screen operation forms", () => {
     const fields = screenOperationFields();
     expect(fields.size).toBeGreaterThan(0);
     expect(missingLabels(fields)).toEqual([]);
@@ -419,17 +418,35 @@ describe("closed Korean field-label registry", () => {
     expect(missingLabels(fields)).toEqual([]);
   });
 
-  it("covers every generated operation-sample response field", () => {
+  it("pins the exact pre-R6e generated-sample field gaps", () => {
     const fields = operationSampleFields();
     expect(fields.size).toBeGreaterThan(0);
-    expect(missingLabels(fields)).toEqual([]);
+    expect(missingLabels(fields)).toEqual(PRE_R6E_FIELD_LABEL_GAPS);
   });
 
-  it("covers every generated and handwritten mock response field", () => {
+  it("pins the exact pre-R6e generated and handwritten mock field gaps", () => {
     const fields = mockResponseFields();
     expect(fields.size).toBeGreaterThan(0);
-    expect(missingLabels(fields)).toEqual([]);
+    expect(missingLabels(fields)).toEqual(PRE_R6E_FIELD_LABEL_GAPS);
   }, 15_000);
+
+  it("covers the exact R6e request and success-response field set", () => {
+    const contract = r6eOperationLabelContract();
+    expect(contract.operationIds).toEqual(R6E_OPERATION_IDS);
+    expect(contract.labelOperationIds).toEqual(R6E_SCREEN_OPERATION_IDS);
+    expect(contract.screenBindings).toEqual(R6E_SCREEN_BINDINGS);
+    expect(contract.runtimeOnlyOperationIds).toEqual(
+      R6E_RUNTIME_ONLY_OPERATION_IDS,
+    );
+    expect(contract.fields.size).toBeGreaterThan(0);
+    expect(missingLabels(contract.fields)).toEqual([]);
+    expect(missingLabels(contract.runtimeOnlyFields)).toEqual(
+      R6E_RUNTIME_ONLY_FIELD_LABEL_GAPS,
+    );
+    expect(missingLabels(contract.transportOnlyFields)).toEqual(
+      R6E_TRANSPORT_ONLY_FIELD_LABEL_GAPS,
+    );
+  });
 
   it("has no duplicate keys or generic labels", () => {
     const declaredCount = FIELD_LABEL_GROUPS.reduce(
@@ -458,11 +475,13 @@ describe("closed Korean field-label registry", () => {
       partyName: FIELD_LABELS.partyName,
       whyMaterial: FIELD_LABELS.whyMaterial,
       asOf: FIELD_LABELS.asOf,
+      donation: FIELD_LABELS.donation,
       publicMessage: FIELD_LABELS.publicMessage,
     }).toEqual({
       partyName: "당사자명",
       whyMaterial: "중요한 이유",
       asOf: "기준 시각",
+      donation: "후원 의향",
       publicMessage: "공개 안내",
     });
   });

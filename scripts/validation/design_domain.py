@@ -5,6 +5,10 @@ import json
 
 from .design_lifecycle import LifecycleFacts
 from .design_domain_journeys import validate_journey_domain
+from .design_domain_private_operations import (
+    PrivateOperationClosureValidator,
+    validate_payment_runtime_closure,
+)
 from .design_operations import OperationFacts
 from .design_persistence import PersistenceFacts
 from .design_support import (
@@ -55,6 +59,7 @@ def validate_domain(
         set(alias_by_aggregate) == event_aggregates - set(binding_by),
         "event aggregate aliases are not set-equal to noncanonical event aggregates",
     )
+    validate_payment_runtime_closure(documents, binding_by, alias_by_aggregate)
     for alias in aggregate_aliases:
         result.require(
             alias["canonical_noun"] in binding_by
@@ -98,11 +103,14 @@ def validate_domain(
     known_operation_ids = (
         operations.base_operation_ids
         | operations.owner_operation_ids
+        | operations.private_billing_ids
         | operations.private_control_ids
         | operations.private_application_ids
     )
     known_event_types = lifecycle.base_event_types | lifecycle.event_type_set
-    missing_domain_operations = operations.owner_operation_ids - covered_operations
+    missing_domain_operations = (
+        operations.owner_operation_ids | operations.private_billing_ids
+    ) - covered_operations
     missing_domain_events = lifecycle.event_type_set - covered_events
     missing_domain_relations = persistence.table_set - covered_relations
     result.require(
@@ -146,10 +154,9 @@ def validate_domain(
     state_edge_count = sum(
         len(machine.get("edges", [])) for machine in machine_catalog.values()
     )
-    referenced_private_control_operations: set[str] = set()
-    referenced_private_application_commands: set[str] = set()
-    private_control_machine_targets: dict[str, set[str]] = {}
-    private_application_machine_targets: dict[str, set[str]] = {}
+    private_operation_closure = PrivateOperationClosureValidator(
+        documents, operations
+    )
     registry_contract = state_machines["registry_contract"]
     owner_machine_inventory = addendum["state_machine_inventory"]
     declared_machine_count = registry_contract["machine_count"]
@@ -195,7 +202,6 @@ def validate_domain(
             )
             operation_id = edge.get("operation")
             private_operation_id = edge.get("private_operation")
-            private_command_id = edge.get("private_command")
             actor = edge.get("actor")
             edge_owner_count = sum(
                 value is not None
@@ -210,30 +216,12 @@ def validate_domain(
                     operation_id in known_operation_ids,
                     f"{machine_name}: edge references unknown operation {operation_id}",
                 )
-            elif private_operation_id is not None:
-                referenced_private_control_operations.add(private_operation_id)
-                private_control_machine_targets.setdefault(
-                    private_operation_id, set()
-                ).add(machine_name)
-                result.require(
-                    private_operation_id in operations.private_control_ids,
-                    f"{machine_name}: edge references unknown private control operation {private_operation_id}",
-                )
-            else:
+            elif private_operation_id is None:
                 result.require(
                     nonempty(actor),
                     f"{machine_name}: edge actor is empty",
                 )
-            if private_command_id is not None:
-                referenced_private_application_commands.add(private_command_id)
-                private_application_machine_targets.setdefault(
-                    private_command_id, set()
-                ).add(machine_name)
-                result.require(
-                    private_command_id in operations.private_application_ids
-                    and nonempty(actor),
-                    f"{machine_name}: edge references unknown private application command {private_command_id} or lacks its executor actor",
-                )
+            private_operation_closure.observe_edge(machine_name, edge)
             event_type = edge.get("event")
             result.require(
                 event_type == "NONE" or event_type in known_event_types,
@@ -248,44 +236,7 @@ def validate_domain(
                     nonempty(edge.get("receipt")) and nonempty(edge.get("audit")),
                     f"{machine_name}: eventless mutation lacks a typed receipt or audit kind",
                 )
-    private_control_bindings = state_machines.get(
-        "private_control_lifecycle_bindings", {}
-    ).get("current_bindings", {})
-    result.require(
-        set(private_control_bindings)
-        == operations.private_control_ids
-        == referenced_private_control_operations,
-        "private control operation registry, lifecycle binding and edge set are not exact",
-    )
-    for operation_id, targets in private_control_bindings.items():
-        target_roots = {
-            target.split(".", 1)[0]
-            for target in targets
-            if isinstance(target, str)
-        }
-        result.require(
-            target_roots == private_control_machine_targets.get(operation_id, set()),
-            f"{operation_id}: private control lifecycle binding does not equal its machine-edge targets",
-        )
-    private_application_bindings = state_machines.get(
-        "private_application_lifecycle_bindings", {}
-    ).get("current_bindings", {})
-    result.require(
-        set(private_application_bindings)
-        == operations.private_application_ids
-        == referenced_private_application_commands,
-        "private application command registry, lifecycle binding and edge set are not exact",
-    )
-    for command_id, targets in private_application_bindings.items():
-        target_roots = {
-            target.split(".", 1)[0]
-            for target in targets
-            if isinstance(target, str)
-        }
-        result.require(
-            target_roots == private_application_machine_targets.get(command_id, set()),
-            f"{command_id}: private application lifecycle binding does not equal its machine-edge targets",
-        )
+    private_operation_closure.validate_lifecycles()
     for binding in bindings:
         for key in (
             "noun",
@@ -348,6 +299,9 @@ def validate_domain(
             ],
             "owner_private_callback_operations": len(
                 operations.private_callback_ids
+            ),
+            "owner_private_billing_gateway_operations": len(
+                operations.private_billing_ids
             ),
             "owner_private_application_commands": len(
                 operations.private_application_ids

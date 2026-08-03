@@ -1,0 +1,1 @@
+{"customerId":"stripe-customer-test","paymentMethodId":"stripe-payment-method-test","amount":3000,"currency":"krw","merchantOrderId":"order-stripe-fixture-1","offSession":true,"confirm":true,"merchantScheduled":true}

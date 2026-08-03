@@ -1315,6 +1315,37 @@ export type CaseReproducibilityDownload = {
     generatedAt: string;
 };
 
+export type AddendumProblemDetailsV1 = {
+    code: string;
+    title: string;
+    status: number;
+    requestId: string;
+    detail?: string | null;
+};
+
+export type DownloadTransparencyReportRequestV1 = {
+    reportId: string;
+};
+
+export type TransparencyReportDownloadV1 = {
+    reportId: string;
+    status: 'READY';
+    reportKind: 'FUNDING_DISCLOSURE';
+    revision: number;
+    notice: '이상 징후 기록이며 위법·부패의 확정이 아님';
+    filename: string;
+    mediaType: 'application/json' | 'text/csv';
+    byteLength: number;
+    contentSha256: string;
+    contentBase64: string;
+    format: 'JSON' | 'CSV';
+    rowCount: number;
+    sourceRevisionDigest: string;
+    projectionDigest: string;
+    publicContentDigest: string;
+    generatedAt: string;
+};
+
 export type ListAgenciesData = {
     body?: never;
     headers?: {
@@ -3162,3 +3193,48 @@ export type ListTransparencyReportsResponses = {
 };
 
 export type ListTransparencyReportsResponse = ListTransparencyReportsResponses[keyof ListTransparencyReportsResponses];
+
+export type DownloadTransparencyReportData = {
+    body?: never;
+    path: {
+        reportId: string;
+    };
+    query?: {
+        format?: 'JSON' | 'CSV';
+    };
+    url: '/v1/transparency-reports/{reportId}/download';
+};
+
+export type DownloadTransparencyReportErrors = {
+    /**
+     * Problem response: INVALID_PARAMETER
+     */
+    400: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RESOURCE_NOT_FOUND
+     */
+    404: AddendumProblemDetailsV1;
+    /**
+     * Problem response: PRECONDITION_FAILED
+     */
+    422: AddendumProblemDetailsV1;
+    /**
+     * Problem response: RATE_LIMITED
+     */
+    429: AddendumProblemDetailsV1;
+    /**
+     * Problem response: INTERNAL_ERROR
+     */
+    500: AddendumProblemDetailsV1;
+};
+
+export type DownloadTransparencyReportError = DownloadTransparencyReportErrors[keyof DownloadTransparencyReportErrors];
+
+export type DownloadTransparencyReportResponses = {
+    /**
+     * Successful response
+     */
+    200: TransparencyReportDownloadV1;
+};
+
+export type DownloadTransparencyReportResponse = DownloadTransparencyReportResponses[keyof DownloadTransparencyReportResponses];

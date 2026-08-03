@@ -39,6 +39,17 @@ FEATURE_EXECUTION = {
     ),
 }
 
+R6E_PREREQUISITE_SCENARIO_IDS = tuple(
+    f"AC-BUSINESS_MODEL-{ordinal:03d}" for ordinal in range(42, 49)
+)
+R6E_PREREQUISITE_SCRIPT = "scripts/test-r6e-monetization-runtime.sh"
+
+
+def prerequisite_argv_for_scenario(scenario_id: str) -> list[str] | None:
+    if scenario_id not in R6E_PREREQUISITE_SCENARIO_IDS:
+        return None
+    return ["bash", R6E_PREREQUISITE_SCRIPT, "--lease", scenario_id]
+
 
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
@@ -85,20 +96,22 @@ def build_mapping(root: Path = ROOT) -> dict[str, object]:
     for contract in contracts:
         target, profile_id = FEATURE_EXECUTION[contract.feature_file]
         test_id = contract.scenario_id.lower().replace("-", "_")
-        rows.append(
-            {
-                "scenario_id": contract.scenario_id,
-                "feature_file": contract.feature_file,
-                "scenario_title": contract.scenario_title,
-                "scenario_contract_sha256": contract.scenario_contract_sha256,
-                "skip_policy": "FORBIDDEN",
-                "runner_kind": "RUST_NEXTEST",
-                "implementation_test_path": f"tests/integration/acceptance/{target}.rs",
-                "implementation_test_id": test_id,
-                "test_target": target,
-                "runtime_profile_id": profile_id,
-            }
-        )
+        row: dict[str, object] = {
+            "scenario_id": contract.scenario_id,
+            "feature_file": contract.feature_file,
+            "scenario_title": contract.scenario_title,
+            "scenario_contract_sha256": contract.scenario_contract_sha256,
+            "skip_policy": "FORBIDDEN",
+            "runner_kind": "RUST_NEXTEST",
+            "implementation_test_path": f"tests/integration/acceptance/{target}.rs",
+            "implementation_test_id": test_id,
+            "test_target": target,
+            "runtime_profile_id": profile_id,
+        }
+        prerequisite_argv = prerequisite_argv_for_scenario(contract.scenario_id)
+        if prerequisite_argv is not None:
+            row["prerequisite_argv"] = prerequisite_argv
+        rows.append(row)
     features = []
     for relative in supplemental_paths:
         feature_contracts = [row for row in contracts if row.feature_file == relative]

@@ -15,15 +15,18 @@ cargo_members:
 - crates/normalization
 - crates/object-store
 - crates/observability
+- crates/payment-providers
 - crates/persistence-postgres
 - crates/publication-policy
 - crates/source-connectors
 - crates/test-support
 - services/analysis-worker
+- services/billing-gateway
 - services/control-api
 - services/document-extractor
 - services/egress-gateway
 - services/ingest-worker
+- services/identity-api
 - services/migrator
 - services/notification-worker
 - services/oidc-test-provider
@@ -38,6 +41,7 @@ bun_workspaces:
 - apps/response-portal
 - apps/review-console
 - packages/api-client-control
+- packages/api-client-identity-internal
 - packages/api-client-public
 - packages/api-client-submission
 - packages/config

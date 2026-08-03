@@ -112,20 +112,37 @@ struct R6dPersonRetentionResult<'a> {
 
 async fn handle_workflow_job(
     pool: &PgPool,
+    economics_pool: Option<&PgPool>,
     store: &Store,
     scanner: &ClamAvScanner,
     field_keys: &EnvelopeKeyRing,
+    worker_id: &str,
     job: &ClaimedJob,
-) -> Result<Value, Failure> {
+) -> Result<WorkflowJobCompletion, Failure> {
     match workflow_job_route(&job.job_type)? {
         WorkflowJobRoute::EventDelivery => {
-            handle_event(pool, store, scanner, field_keys, job).await
+            handle_event(
+                pool,
+                economics_pool,
+                store,
+                scanner,
+                field_keys,
+                worker_id,
+                job,
+            )
+            .await
         }
         WorkflowJobRoute::PrivacyResponsePartyNameCorrection => {
-            execute_privacy_response_party_name_correction(pool, field_keys, job).await
+            execute_privacy_response_party_name_correction(pool, field_keys, job)
+                .await
+                .map(WorkflowJobCompletion::WorkerOwned)
         }
-        WorkflowJobRoute::R6dEntityRetention => execute_r6d_entity_retention(pool, job).await,
-        WorkflowJobRoute::R6dPersonRetention => execute_r6d_person_retention(pool, job).await,
+        WorkflowJobRoute::R6dEntityRetention => execute_r6d_entity_retention(pool, job)
+            .await
+            .map(WorkflowJobCompletion::WorkerOwned),
+        WorkflowJobRoute::R6dPersonRetention => execute_r6d_person_retention(pool, job)
+            .await
+            .map(WorkflowJobCompletion::WorkerOwned),
     }
 }
 
@@ -499,101 +516,7 @@ fn retention_digest<'a>(
         .ok_or_else(|| retention_contract_failure(code, field))
 }
 
-fn retention_positive_integer(
-    object: &serde_json::Map<String, Value>,
-    field: &str,
-    code: &'static str,
-) -> Result<i64, Failure> {
-    object
-        .get(field)
-        .and_then(Value::as_i64)
-        .filter(|value| *value > 0)
-        .ok_or_else(|| retention_contract_failure(code, field))
-}
-
-fn retention_nonnegative_integer(
-    object: &serde_json::Map<String, Value>,
-    field: &str,
-    code: &'static str,
-) -> Result<i64, Failure> {
-    object
-        .get(field)
-        .and_then(Value::as_i64)
-        .filter(|value| *value >= 0)
-        .ok_or_else(|| retention_contract_failure(code, field))
-}
-
-fn retention_datetime(
-    object: &serde_json::Map<String, Value>,
-    field: &str,
-    code: &'static str,
-) -> Result<time::OffsetDateTime, Failure> {
-    time::OffsetDateTime::parse(
-        retention_string(object, field, code)?,
-        &time::format_description::well_known::Rfc3339,
-    )
-    .map_err(|_| retention_contract_failure(code, field))
-}
-
-fn retention_boolean(
-    object: &serde_json::Map<String, Value>,
-    field: &str,
-    code: &'static str,
-) -> Result<bool, Failure> {
-    object
-        .get(field)
-        .and_then(Value::as_bool)
-        .ok_or_else(|| retention_contract_failure(code, field))
-}
-
-fn retention_json_digest(
-    value: &Value,
-    code: &'static str,
-    field: &str,
-) -> Result<String, Failure> {
-    gurine_auth::assertion::canonical::canonical_json(value)
-        .map(|canonical| sha256(&canonical))
-        .map_err(|_| retention_contract_failure(code, field))
-}
-
-fn require_retention_binding(matches: bool, field: &str) -> Result<(), Failure> {
-    if !matches {
-        return Err(Failure::Terminal(
-            "R6D_PERSON_RETENTION_BINDING_MISMATCH",
-            field.to_owned(),
-        ));
-    }
-    Ok(())
-}
-
-fn retention_contract_failure(code: &'static str, field: &str) -> Failure {
-    Failure::Terminal(code, field.to_owned())
-}
-
-fn retention_owner_database_failure(error: sqlx::Error) -> Failure {
-    let sqlstate = match &error {
-        sqlx::Error::Database(database) => database.code().map(|value| value.into_owned()),
-        _ => None,
-    };
-    match sqlstate.as_deref() {
-        Some("22023") => Failure::Terminal(
-            "R6D_PERSON_RETENTION_OWNER_REJECTED",
-            "redacted:sqlstate=22023".to_owned(),
-        ),
-        Some("40001") => Failure::Retryable(
-            "R6D_PERSON_RETENTION_OWNER_CONFLICT",
-            "redacted:sqlstate=40001".to_owned(),
-        ),
-        Some("55000") => Failure::Retryable(
-            "R6D_PERSON_RETENTION_OWNER_NOT_READY",
-            "redacted:sqlstate=55000".to_owned(),
-        ),
-        _ => Failure::Retryable(
-            "R6D_PERSON_RETENTION_OWNER_UNAVAILABLE",
-            "redacted:database_error".to_owned(),
-        ),
-    }
-}
+include!("workflow_retention_job_support.rs");
 
 #[cfg(test)]
 include!("workflow_retention_job_tests.rs");

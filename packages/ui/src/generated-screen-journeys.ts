@@ -74,6 +74,7 @@ export const SCREEN_JOURNEY_REGISTRY: Readonly<Record<string, JourneyId>> =
     "PUB-032": "J-01",
     "PUB-033": "J-01",
     "PUB-034": "J-01",
+    "PUB-035": "J-01",
     "REV-001": "J-07",
     "REV-002": "J-07",
     "REV-003": "J-07",

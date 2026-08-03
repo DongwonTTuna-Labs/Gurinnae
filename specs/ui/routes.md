@@ -2,9 +2,9 @@
 
 상태: **FINAL**
 
-총 94개 화면을 한 번의 최종 구현에서 모두 제공한다.
+총 95개 화면을 한 번의 최종 구현에서 모두 제공한다.
 
-## Public Web — 34개
+## Public Web — 35개
 
 | ID | Route | 화면 | Access | Archetype |
 |---|---|---|---|---|
@@ -42,6 +42,7 @@
 | `PUB-032` | `/terms` | 이용약관 | `anonymous` | `POLICY` |
 | `PUB-033` | `/accessibility` | 접근성 안내 | `anonymous` | `POLICY` |
 | `PUB-034` | `/{systemPath}` | 오류·시스템 상태 | `anonymous` | `AUTH_SYSTEM` |
+| `PUB-035` | `/donate` | 후원 | `anonymous` | `GUIDED_FORM` |
 
 PUB-028과 PUB-030의 일회용 token은 exchange 요청 입력으로만 사용한다. 교환 성공과 실패 모두 위 token-free canonical URL로 이동하며 URL에 token을 남기지 않는다.
 

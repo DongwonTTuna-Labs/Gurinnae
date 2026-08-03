@@ -21,6 +21,8 @@ class OwnerOperationFacts:
 @dataclass(frozen=True)
 class PrivateOperationFacts:
     private_callback_ids: set[str]
+    private_billing_ids: set[str]
+    private_billing_command_ids: set[str]
+    private_billing_query_ids: set[str]
     private_control_ids: set[str]
     private_application_ids: set[str]
-

@@ -37,6 +37,8 @@ def validate(root: Path, result: Validation) -> None:
     terminal=set(consumer_doc.get('terminal_observability_events',[]))
     retired=set(consumer_doc.get('retired_event_types',[]))
     event_addendum=load_yaml(root/'specs/product/addendum-event-contracts.yaml')
+    additive_event_by=event_addendum['events']
+    owner_event_ids=set(load_yaml(root/'specs/product/owner-addendum-2026-07-14.yaml')['event_delta']['event_types'])
     response_submission_overlay=event_addendum['response_submission_v2_overlay']
     retired_authority=set(response_submission_overlay['retired_events'])
     command_ids={o['operation_id'] for o in operations if o['operation_kind']=='COMMAND'}
@@ -46,6 +48,27 @@ def validate(root: Path, result: Validation) -> None:
     result.require(set(cmd_by)==command_ids,f'command semantics mismatch: missing={sorted(command_ids-set(cmd_by))[:5]} extra={sorted(set(cmd_by)-command_ids)[:5]}')
     result.require(set(per_by)==set(op_by),'persistence mapping is incomplete')
     result.require(len(event_by)==99,'expected 99 events')
+    result.require(
+        len(additive_event_by)==104
+        and set(additive_event_by)==owner_event_ids,
+        'additive event catalog must be the source-derived 104-event owner delta',
+    )
+    result.require(
+        not (set(event_by) & set(additive_event_by)),
+        f'base/additive event catalogs collide: {sorted(set(event_by) & set(additive_event_by))[:5]}',
+    )
+    result.require(
+        len(set(event_by) | set(additive_event_by))==203,
+        'effective base plus additive event catalog must contain 203 events',
+    )
+    for event_type,event in additive_event_by.items():
+        result.require(bool(EVENT_RE.fullmatch(event_type)),f'invalid additive event type {event_type}')
+        payload_schema={'$defs':event_addendum['$defs'],**event['payload_schema']}
+        Draft202012Validator.check_schema(payload_schema)
+        result.require(
+            event.get('payload_required')==event['payload_schema'].get('required',[]),
+            f'{event_type}: additive payload required-field inventory differs',
+        )
     accepted={e for c in consumer_doc['consumers'] for e in c['accepted_event_types']}
     runtime_consumers={
         event_type:{
@@ -218,4 +241,4 @@ def validate(root: Path, result: Validation) -> None:
         if event:
             pv=Draft202012Validator(load_json(root/'specs/events'/event['payload_schema'])); pe=list(pv.iter_errors(sample['payload']))
             result.require(not pe,f'{sample_path.name}: payload invalid: {pe[0].message if pe else ""}')
-    result.stats.update({'optimistic_concurrency_contracts':len(concurrency_by),'command_semantics':len(commands),'persistence_mappings':len(persistence),'events':len(events),'integration_events':len(integration),'event_consumers':len(consumer_doc['consumers']),'event_fixture_samples':len(samples)})
+    result.stats.update({'optimistic_concurrency_contracts':len(concurrency_by),'command_semantics':len(commands),'persistence_mappings':len(persistence),'events':len(events),'base_events':len(events),'additive_events':len(additive_event_by),'effective_events':len(set(event_by)|set(additive_event_by)),'integration_events':len(integration),'event_consumers':len(consumer_doc['consumers']),'event_fixture_samples':len(samples)})

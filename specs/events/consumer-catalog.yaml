@@ -27,6 +27,8 @@ consumers:
   - action.execution_authorized.v1
   - action.execution_completed.v1
   - editorial.response_materialized.v2
+  - governance.funding_disclosure_published.v1
+  - governance.funding_snapshot_created.v1
   - response.submitted.v2
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
@@ -34,6 +36,13 @@ consumers:
 - id: document-extractor
   accepted_event_types:
   - source.document_stored.v1
+  deduplication: ops.inbox primary key (consumer,event_id)
+  failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
+  ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
+- id: funding-projector
+  accepted_event_types:
+  - donation.fact_recorded.v1
+  - governance.funding_snapshot_created.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: aggregate_version monotonic per aggregate; gaps trigger reconciliation
@@ -50,6 +59,7 @@ consumers:
   - intake.contact_received.v1
   - notification.correction_received.v1
   - notification.correction_resolved.v1
+  - notification.payment_review_requested.v1
   - notification.publication_created.v1
   - notification.response_extension_requested.v1
   - notification.response_request_delivery_requested.v1
@@ -80,6 +90,7 @@ consumers:
 - id: public-projection-worker
   accepted_event_types:
   - entity.retention_anonymized.v1
+  - governance.funding_disclosure_published.v1
   deduplication: ops.inbox primary key (consumer,event_id)
   failure: bounded retry with jitter, then ops.jobs DEAD_LETTER and job.dead_lettered.v1
   ordering: exact immutable execution receipt aggregate version; changed event identity fails closed

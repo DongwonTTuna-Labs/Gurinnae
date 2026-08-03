@@ -2,23 +2,33 @@ schema_version: 3
 specification_version: 13.0.0
 status: FINAL
 counts:
-  screens: 94
-  operations: 217
-  query_operations: 110
-  command_operations: 107
-  http_write_operations: 104
+  screens: 95
+  operations: 268
+  query_operations: 123
+  command_operations: 145
+  http_write_operations: 142
+  all_scope_http_operations: 271
+  all_scope_http_query_operations: 123
+  all_scope_http_command_operations: 148
+  all_scope_http_write_operations: 145
   database_tables: 107
   database_migrations: 24
   roles: 15
   capabilities: 31
   events: 99
   acceptance_scenarios: 271
-  public_operations: 43
-  submission_operations: 34
-  control_operations: 134
+  public_operations: 44
+  submission_operations: 42
+  control_operations: 176
   identity_operations: 6
-  commands: 107
-  queries: 110
+  commands: 145
+  queries: 123
+private_identity_api_registry:
+  scope: PRIVATE_IDENTITY_API
+  private_identity_api_operation_ids:
+  - recordSupplierIdentityResolution
+  - recordSupplierRelationshipAssertion
+  - decideSupplierRelationshipAssertion
 screens:
 - screen_id: PUB-001
   surface: public
@@ -438,6 +448,21 @@ screens:
   command_operations: []
   e2e_test: tests/e2e/screens/pub-034.spec.ts
   visual_test: tests/visual/pub-034.spec.ts
+- screen_id: PUB-035
+  surface: public
+  route: /donate
+  page_file: apps/public-web/src/routes/donate/+page.svelte
+  server_file: apps/public-web/src/routes/donate/+page.server.ts
+  view_model: apps/public-web/src/lib/view-models/pub-035.ts
+  query_operations:
+  - private.GetDonationFixtureOffer
+  command_operations:
+  - private.QueueDonationIntent
+  server_only_private_dependencies:
+  - private.GetDonationFixtureOffer
+  - private.QueueDonationIntent
+  e2e_test: tests/e2e/screens/pub-035.spec.ts
+  visual_test: tests/visual/pub-035.spec.ts
 - screen_id: RSP-001
   surface: response
   route: /respond/{token}
@@ -3926,6 +3951,42 @@ operations:
     conditions: []
     step_up_possible: false
   assurance_level: ACTIVE_SESSION
+- operation_id: downloadTransparencyReport
+  trace_scope: ADDITIVE_EXTERNAL
+  api: public-api
+  method: GET
+  path: /v1/transparency-reports/{reportId}/download
+  kind: QUERY
+  capability: none
+  request_schema: DownloadTransparencyReportRequestV1
+  response_schema: TransparencyReportDownloadV1
+  success_status: 200
+  consuming_screens:
+  - PUB-023
+  handler: services/public-api/src/service/mod.rs
+  application: services/public-api/src/service/public_funding.rs
+  integration_test: services/public-api/src/service/public_funding_download_tests.rs
+  generated_client: packages/api-client-public/src/generated/
+  contract_test: services/public-api/src/service/public_funding_download_tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.downloadTransparencyReport
+  repository_methods:
+  - services/public-api/src/service/public_funding.rs::download_funding_report
+  statements:
+  - VALIDATE reportId and the closed JSON or CSV format selector [exactly-one result]
+  - SELECT the exact report_kind=FUNDING_DISCLOSURE public projection row by reportId [exactly-one or RESOURCE_NOT_FOUND]
+  - VERIFY source revision, source revision digest, report schema version, projection digest and immutable public report shape are complete [exactly-one or PRECONDITION_FAILED]
+  - SERIALIZE deterministic response bytes solely from the selected public report revision and verify checksumSha256 before return [exactly-one]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+  auth: anonymous
+  assurance_policy:
+    mode: STATIC
+    default: NONE
+    conditions: []
+    step_up_possible: false
+  assurance_level: NONE
 - operation_id: estimateBackfill
   api: control-api
   method: GET
@@ -10973,6 +11034,1346 @@ operations:
     conditions: []
     step_up_possible: false
   assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: listActionApprovalQueue
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/action-proposals
+  kind: QUERY
+  capability: actions.read
+  request_schema: ListActionApprovalQueueRequestV1
+  response_schema: ActionApprovalQueuePageV1
+  success_status: 200
+  consuming_screens: [INT-002, INT-004]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/agents/queries.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.listActionApprovalQueue
+  repository_methods:
+  - services/control-api/src/service/domains/agents/queries.rs::list_action_approval_queue
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - RESOLVE exact V2 queue projection and cursor authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE with zero rows synthesized]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: createActionProposal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals
+  kind: COMMAND
+  capability: actions.propose
+  request_schema: CreateActionProposalRequestV1
+  response_schema: ActionProposalReceiptV1
+  success_status: 201
+  consuming_screens: [ADM-002, CAS-002, CAS-006, CAS-007, CAS-009, CAS-011, CAS-015, OPS-005, OPS-006, REV-003, RULE-004]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/economics_import.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.createActionProposal
+  domain_events: [action.proposal_created.v1]
+  integration_events: []
+  audit_action: command.createActionProposal
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: getActionProposal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/action-proposals/{proposalId}
+  kind: QUERY
+  capability: actions.read
+  request_schema: GetActionProposalRequestV1
+  response_schema: ActionProposalDetailV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/query_action_proposal.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getActionProposal
+  repository_methods:
+  - services/control-api/src/service/domains/agents/queries.rs::get_action_proposal
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: updateActionDraft
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: PATCH
+  path: /v1/internal/action-proposals/{proposalId}/draft
+  kind: COMMAND
+  capability: actions.propose
+  request_schema: UpdateActionDraftRequestV1
+  response_schema: ActionProposalReceiptV1
+  success_status: 200
+  consuming_screens: [ADM-002, CAS-002, CAS-006, CAS-007, CAS-009, CAS-011, CAS-015, OPS-005, OPS-006, REV-003, RULE-004]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/economics_import.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.updateActionDraft
+  domain_events: [action.proposal_updated.v1]
+  integration_events: []
+  audit_action: command.updateActionDraft
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: previewActionDraft
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}:preview
+  kind: COMMAND
+  capability: actions.propose
+  request_schema: PreviewActionDraftRequestV1
+  response_schema: ActionPreviewReceiptV1
+  success_status: 201
+  consuming_screens: [ADM-002, CAS-002, CAS-006, CAS-007, CAS-009, CAS-011, CAS-015, OPS-005, OPS-006, REV-003, RULE-004]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.previewActionDraft
+  domain_events: [action.proposal_updated.v1]
+  integration_events: []
+  audit_action: command.previewActionDraft
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: submitActionForReview
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}:submit-review
+  kind: COMMAND
+  capability: actions.propose
+  request_schema: SubmitActionForReviewRequestV1
+  response_schema: ActionReviewRequestedReceiptV1
+  success_status: 200
+  consuming_screens: [ADM-002, CAS-002, CAS-006, CAS-007, CAS-009, CAS-011, CAS-015, OPS-005, OPS-006, REV-003, RULE-004]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.submitActionForReview
+  domain_events: [action.review_requested.v1]
+  integration_events: []
+  audit_action: command.submitActionForReview
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: claimActionReview
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}:claim-review
+  kind: COMMAND
+  capability: actions.review
+  request_schema: ClaimActionReviewRequestV1
+  response_schema: ActionReviewClaimedReceiptV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.claimActionReview
+  domain_events: [action.review_claimed.v1]
+  integration_events: []
+  audit_action: command.claimActionReview
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: submitActionDecision
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}:decide
+  kind: COMMAND
+  capability: actions.review
+  request_schema: SubmitActionDecisionRequestV1
+  response_schema: ActionDecisionReceiptV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.submitActionDecision
+  domain_events: [action.decision_recorded.v1, action.execution_authorized.v1, operations.effect_policy_blocked.v1]
+  integration_events: []
+  audit_action: command.submitActionDecision
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: conditional-by-action-and-decision, step_up_possible: true}
+  assurance_level: conditional-by-action-and-decision
+  step_up_required: false
+- operation_id: getActionExecutionReceipt
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/action-executions/{executionId}/receipt
+  kind: QUERY
+  capability: actions.read
+  request_schema: GetActionExecutionReceiptRequestV1
+  response_schema: ActionExecutionReceiptChainV1
+  success_status: 200
+  consuming_screens: [AUD-001, INT-002, OPS-003]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getActionExecutionReceipt
+  repository_methods:
+  - services/control-api/src/service/domains/agents/queries.rs::get_action_execution_receipt
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: cancelActionExecution
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-executions/{executionId}:cancel
+  kind: COMMAND
+  capability: actions.operate
+  request_schema: CancelActionExecutionRequestV1
+  response_schema: ActionExecutionMutationReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-003]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.cancelActionExecution
+  domain_events: [action.execution_cancel_requested.v1]
+  integration_events: []
+  audit_action: command.cancelActionExecution
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: retryActionExecution
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-executions/{executionId}:retry
+  kind: COMMAND
+  capability: actions.operate
+  request_schema: RetryActionExecutionRequestV1
+  response_schema: ActionExecutionMutationReceiptV1
+  success_status: 202
+  consuming_screens: [OPS-003]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.retryActionExecution
+  domain_events: [action.execution_retry_requested.v1]
+  integration_events: []
+  audit_action: command.retryActionExecution
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: conditional-by-action-kind, step_up_possible: true}
+  assurance_level: conditional-by-action-kind
+  step_up_required: false
+- operation_id: releaseLegalHold
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/release-legal-hold
+  kind: COMMAND
+  capability: review.legal
+  request_schema: ReleaseLegalHoldRequestV1
+  response_schema: LegalHoldReleaseReceiptV1
+  success_status: 200
+  consuming_screens: [REV-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.releaseLegalHold
+  domain_events: [legal.hold_released.v1]
+  integration_events: []
+  audit_action: command.releaseLegalHold
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: createResponseAppeal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/response-receipt/appeals
+  kind: COMMAND
+  capability: null
+  request_schema: CreateResponseAppealRequestV1
+  response_schema: ResponseAppealReceiptV1
+  success_status: 201
+  consuming_screens: [RSP-006]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/addendum.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.createResponseAppeal
+  domain_events: [response.appeal_created.v1]
+  integration_events: []
+  audit_action: command.createResponseAppeal
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: getResponseAppeal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: GET
+  path: /v1/response-receipt/appeals/{appealId}
+  kind: QUERY
+  capability: null
+  request_schema: GetResponseAppealRequestV1
+  response_schema: ResponseAppealPublicStatusV1
+  success_status: 200
+  consuming_screens: [RSP-006]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getResponseAppeal
+  repository_methods:
+  - services/submission-api/src/service/addendum.rs::execute
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: getCommunicationDeliveryReceipt
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/communication-deliveries/{deliveryId}/receipt
+  kind: QUERY
+  capability: communications.read
+  request_schema: GetCommunicationDeliveryReceiptRequestV1
+  response_schema: CommunicationDeliveryReceiptViewV1
+  success_status: 200
+  consuming_screens: [CAS-008, CAS-009, OPS-005]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getCommunicationDeliveryReceipt
+  repository_methods:
+  - services/control-api/src/service/domains/editorial/queries.rs::get_communication_delivery_receipt
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: reconcileCommunicationDelivery
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/communication-deliveries/{deliveryId}:reconcile
+  kind: COMMAND
+  capability: communications.operate
+  request_schema: ReconcileCommunicationDeliveryRequestV1
+  response_schema: CommunicationDeliveryMutationReceiptV1
+  success_status: 200
+  consuming_screens: [CAS-008, OPS-005]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.reconcileCommunicationDelivery
+  domain_events: [communication.delivery_receipt_recorded.v1]
+  integration_events: []
+  audit_action: command.reconcileCommunicationDelivery
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: cancelCommunicationDelivery
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/communication-deliveries/{deliveryId}:cancel
+  kind: COMMAND
+  capability: communications.operate
+  request_schema: CancelCommunicationDeliveryRequestV1
+  response_schema: CommunicationDeliveryMutationReceiptV1
+  success_status: 200
+  consuming_screens: [CAS-008, OPS-005]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.cancelCommunicationDelivery
+  domain_events: [communication.delivery_receipt_recorded.v1]
+  integration_events: []
+  audit_action: command.cancelCommunicationDelivery
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: getIncident
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/incidents/{incidentId}
+  kind: QUERY
+  capability: incidents.read
+  request_schema: GetIncidentRequestV1
+  response_schema: IncidentDetailV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getIncident
+  repository_methods:
+  - services/control-api/src/service/domains/resilience_cost.rs::get_incident
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: triageIncident
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/incidents/{incidentId}:triage
+  kind: COMMAND
+  capability: incidents.manage
+  request_schema: TriageIncidentRequestV1
+  response_schema: IncidentTransitionReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.triageIncident
+  domain_events: [incident.state_changed.v1]
+  integration_events: []
+  audit_action: command.triageIncident
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: containIncident
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/incidents/{incidentId}:contain
+  kind: COMMAND
+  capability: incidents.manage
+  request_schema: ContainIncidentRequestV1
+  response_schema: IncidentTransitionReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.containIncident
+  domain_events: [incident.state_changed.v1]
+  integration_events: []
+  audit_action: command.containIncident
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: startIncidentRecovery
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/incidents/{incidentId}:start-recovery
+  kind: COMMAND
+  capability: incidents.manage
+  request_schema: StartIncidentRecoveryRequestV1
+  response_schema: IncidentTransitionReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.startIncidentRecovery
+  domain_events: [incident.state_changed.v1]
+  integration_events: []
+  audit_action: command.startIncidentRecovery
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: resolveIncident
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/incidents/{incidentId}:resolve
+  kind: COMMAND
+  capability: incidents.manage
+  request_schema: ResolveIncidentRequestV1
+  response_schema: IncidentTransitionReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.resolveIncident
+  domain_events: [incident.state_changed.v1]
+  integration_events: []
+  audit_action: command.resolveIncident
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: RECENT_SESSION, step_up_possible: false}
+  assurance_level: RECENT_SESSION
+  step_up_required: false
+- operation_id: closeIncidentPostmortem
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/incidents/{incidentId}:close-postmortem
+  kind: COMMAND
+  capability: incidents.manage
+  request_schema: CloseIncidentPostmortemRequestV1
+  response_schema: IncidentTransitionReceiptV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/resilience_cost.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.closeIncidentPostmortem
+  domain_events: [incident.state_changed.v1]
+  integration_events: []
+  audit_action: command.closeIncidentPostmortem
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: RECENT_SESSION, step_up_possible: false}
+  assurance_level: RECENT_SESSION
+  step_up_required: false
+- operation_id: listResponseAppeals
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/list-response-appeals
+  kind: QUERY
+  capability: responses.review
+  request_schema: ListResponseAppealsRequestV1
+  response_schema: ResponseAppealQueuePageV1
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/editorial/queries.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.listResponseAppeals
+  repository_methods:
+  - services/control-api/src/service/domains/editorial/queries.rs::list_response_appeals
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: getResponseAppealWorkspace
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/get-response-appeal-workspace
+  kind: QUERY
+  capability: responses.review
+  request_schema: GetResponseAppealWorkspaceRequestV1
+  response_schema: ResponseAppealWorkspaceV1
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getResponseAppealWorkspace
+  repository_methods:
+  - services/control-api/src/service/domains/editorial/queries.rs::get_response_appeal_workspace
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: transitionResponseAppeal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/transition-response-appeal
+  kind: COMMAND
+  capability: responses.review
+  request_schema: TransitionResponseAppealRequestV1
+  response_schema: ResponseAppealDecisionReceiptV1
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.transitionResponseAppeal
+  domain_events: [response.appeal_decision_recorded.v1]
+  integration_events: []
+  audit_action: command.transitionResponseAppeal
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: decideResponseExtension
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/decide-response-extension
+  kind: COMMAND
+  capability: responses.policy.manage
+  request_schema: DecideResponseExtensionRequestV1
+  response_schema: ResponseExtensionDecisionReceiptV1
+  success_status: 200
+  consuming_screens: [CAS-008]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.decideResponseExtension
+  domain_events: [response.extension_decided.v1]
+  integration_events: []
+  audit_action: command.decideResponseExtension
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: classifyEntityPersonhood
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/classify-entity-personhood
+  kind: COMMAND
+  capability: users.manage
+  request_schema: ClassifyEntityPersonhoodRequestV1
+  response_schema: ClassifyEntityPersonhoodReceiptV1
+  success_status: 201
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_authority_replay.rs
+  integration_test: services/control-api/src/service/command_runtime_tests.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.classifyEntityPersonhood
+  domain_events: [entity.personhood_classified.v1]
+  integration_events: []
+  audit_action: command.classifyEntityPersonhood
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: attestEntityMaterialUseClosure
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/attest-entity-material-use-closure
+  kind: COMMAND
+  capability: users.manage
+  request_schema: AttestEntityMaterialUseClosureRequestV1
+  response_schema: AttestEntityMaterialUseClosureReceiptV1
+  success_status: 201
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_authority_replay.rs
+  integration_test: services/control-api/src/service/command_runtime_tests.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.attestEntityMaterialUseClosure
+  domain_events: [entity.material_use_closed.v1]
+  integration_events: []
+  audit_action: command.attestEntityMaterialUseClosure
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: attestOrganizationOfficialChannel
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/attest-organization-official-channel
+  kind: COMMAND
+  capability: responses.review
+  request_schema: AttestOrganizationOfficialChannelRequestV1
+  response_schema: AttestOrganizationOfficialChannelReceiptV1
+  success_status: 201
+  consuming_screens: [CAS-008]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/routing.rs
+  integration_test: services/control-api/src/service/command_runtime_tests.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.attestOrganizationOfficialChannel
+  domain_events: [organization.official_channel_attested.v1]
+  integration_events: []
+  audit_action: command.attestOrganizationOfficialChannel
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: revokeOrganizationOfficialChannel
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/revoke-organization-official-channel
+  kind: COMMAND
+  capability: responses.review
+  request_schema: RevokeOrganizationOfficialChannelRequestV1
+  response_schema: RevokeOrganizationOfficialChannelReceiptV1
+  success_status: 200
+  consuming_screens: [CAS-008]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_authority_replay.rs
+  integration_test: services/control-api/src/service/command_runtime_tests.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.revokeOrganizationOfficialChannel
+  domain_events: [organization.official_channel_revoked.v1]
+  integration_events: []
+  audit_action: command.revokeOrganizationOfficialChannel
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: verifyResponseOrganizationIdentity
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/verify-response-organization-identity
+  kind: COMMAND
+  capability: responses.review
+  request_schema: VerifyResponseOrganizationIdentityRequestV1
+  response_schema: VerifyResponseOrganizationIdentityReceiptV1
+  success_status: 200
+  consuming_screens: [CAS-008]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_runtime.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.verifyResponseOrganizationIdentity
+  domain_events: [response.organization_identity_verified.v1]
+  integration_events: []
+  audit_action: command.verifyResponseOrganizationIdentity
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: listRetentionRequests
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/list-retention-requests
+  kind: QUERY
+  capability: privacy.requests.manage
+  request_schema: ListRetentionRequestsRequestV1
+  response_schema: RetentionRequestQueuePageV1
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/audit_retention.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.listRetentionRequests
+  repository_methods:
+  - services/control-api/src/service/domains/audit_retention_privacy_query.rs::list
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - RESOLVE exact V2 queue projection and cursor authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE with zero rows synthesized]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: getRetentionRequest
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/get-retention-request
+  kind: QUERY
+  capability: privacy.requests.manage
+  request_schema: GetRetentionRequestRequestV1
+  response_schema: RetentionRequestWorkspaceV1
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getRetentionRequest
+  repository_methods:
+  - services/control-api/src/service/domains/audit_retention_privacy_query.rs::get
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - RESOLVE exact V2 workspace and immutable receipt-graph authority [exactly-one contract; unavailable or ambiguous authority is DEPENDENCY_UNAVAILABLE and historical V1 JSON is not a fallback]
+  - 'RESOLVE conditional RESPONSE partyName ACCESS projection [zero-or-one] :': ACCESS and CORRECTION over the exact scope item use ops.read_privacy_response_party_name_access_v1 and return the same 17-key authority projection; raw partyName is capability-gated to this internal query only
+  - 'RESOLVE completion tuple [all-or-none] :': completionReceiptId, completionReceiptDigest, completedResponseVersion and completedValueDigest are nonnull only for a completed exact RESPONSE /partyName correction and match the current projection version/value digest
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: createPrivacyCorrectionPlan
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/create-privacy-correction-plan
+  kind: COMMAND
+  capability: privacy.requests.manage
+  request_schema: CreatePrivacyCorrectionPlanRequestV1
+  response_schema: PrivacyCorrectionPlanReceiptV1
+  success_status: 201
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_addendum.rs
+  integration_test: services/control-api/src/service/command_addendum_error_tests.rs
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.createPrivacyCorrectionPlan
+  domain_events: []
+  integration_events: []
+  audit_action: command.createPrivacyCorrectionPlan
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: transitionRetentionRequest
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/transition-retention-request
+  kind: COMMAND
+  capability: privacy.requests.manage
+  request_schema: TransitionRetentionRequestRequestV2
+  response_schema: RetentionRequestDecisionReceiptV2
+  success_status: 200
+  consuming_screens: [COR-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_retention_replay.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.transitionRetentionRequest
+  domain_events: [privacy.request_identity_verified.v1, privacy.request_decision_recorded.v1, privacy.request_extension_notified.v1, privacy.request_refusal_notified.v1]
+  integration_events: []
+  audit_action: command.transitionRetentionRequest
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: STEP_UP, step_up_possible: true}
+  assurance_level: STEP_UP
+  step_up_required: true
+- operation_id: listRecordClassSchedules
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: GET
+  path: /v1/internal/queries/list-record-class-schedules
+  kind: QUERY
+  capability: retention.policy.manage
+  request_schema: ListRecordClassSchedulesRequestV1
+  response_schema: RecordClassSchedulePageV1
+  success_status: 200
+  consuming_screens: [OPS-001]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/audit_retention.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.listRecordClassSchedules
+  repository_methods:
+  - services/control-api/src/service/domains/audit_retention.rs::record_class_schedule_query
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - VALIDATE closed filters/sort/limit/authenticated cursor [exactly-one result]
+  - SELECT typed projection/join [declared cardinality]
+  - MAP stored rows to closed response without synthesized values [declared cardinality]
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: requestCommunicationEndpointLink
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/communication-profile-session/endpoints:link
+  kind: COMMAND
+  capability: null
+  request_schema: RequestCommunicationEndpointLinkRequestV1
+  response_schema: CommunicationEndpointLinkRequestedReceiptV1
+  success_status: 202
+  consuming_screens: [PUB-030]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/addendum.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.requestCommunicationEndpointLink
+  domain_events: [communication.authorization_changed.v1]
+  integration_events: []
+  audit_action: command.requestCommunicationEndpointLink
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: verifyCommunicationEndpointLink
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/submission-session/communication-endpoint-link:verify
+  kind: COMMAND
+  capability: null
+  request_schema: VerifyCommunicationEndpointLinkRequestV1
+  response_schema: CommunicationEndpointVerifiedReceiptV1
+  success_status: 200
+  consuming_screens: [PUB-030]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/addendum.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.verifyCommunicationEndpointLink
+  domain_events: [communication.authorization_changed.v1]
+  integration_events: []
+  audit_action: command.verifyCommunicationEndpointLink
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: unlinkCommunicationEndpoint
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/communication-profile-session/endpoints/{endpointId}:unlink
+  kind: COMMAND
+  capability: null
+  request_schema: UnlinkCommunicationEndpointRequestV1
+  response_schema: CommunicationEndpointUnlinkedReceiptV1
+  success_status: 200
+  consuming_screens: [PUB-030]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/addendum.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.unlinkCommunicationEndpoint
+  domain_events: [communication.authorization_changed.v1]
+  integration_events: []
+  audit_action: command.unlinkCommunicationEndpoint
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: createPrivacyRequest
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/privacy-requests
+  kind: COMMAND
+  capability: null
+  request_schema: CreatePrivacyRequestRequestV1
+  response_schema: PrivacyRequestReceiptV1
+  success_status: 201
+  consuming_screens: [PUB-031]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/privacy.rs
+  integration_test: services/submission-api/src/service/privacy_dto_tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.createPrivacyRequest
+  domain_events: [privacy.request_created.v2]
+  integration_events: []
+  audit_action: command.createPrivacyRequest
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ANONYMOUS_PROOF, step_up_possible: false}
+  assurance_level: ANONYMOUS_PROOF
+  step_up_required: false
+- operation_id: exchangePrivacyRequestReceiptToken
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: POST
+  path: /v1/submission-session/privacy-request-receipt:exchange
+  kind: COMMAND
+  capability: null
+  request_schema: ExchangePrivacyRequestReceiptTokenRequestV1
+  response_schema: PrivacyRequestSessionReceiptV1
+  success_status: 200
+  consuming_screens: [PUB-031]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/privacy.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.exchangePrivacyRequestReceiptToken
+  domain_events: [identity.session_created.v1]
+  integration_events: []
+  audit_action: command.exchangePrivacyRequestReceiptToken
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ONE_TIME_PROOF, step_up_possible: false}
+  assurance_level: ONE_TIME_PROOF
+  step_up_required: false
+- operation_id: getPrivacyRequest
+  trace_scope: ADDITIVE_EXTERNAL
+  api: submission-api
+  method: GET
+  path: /v1/privacy-request-receipt
+  kind: QUERY
+  capability: null
+  request_schema: GetPrivacyRequestRequestV1
+  response_schema: PrivacyRequestPublicStatusV2
+  success_status: 200
+  consuming_screens: [PUB-031]
+  handler: services/submission-api/src/service/mod.rs
+  application: services/submission-api/src/service/privacy.rs
+  integration_test: services/submission-api/src/routes/tests.rs
+  generated_client: packages/api-client-submission/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.query_persistence.getPrivacyRequest
+  repository_methods:
+  - crates/persistence-postgres/src/privacy.rs::PostgresPrivacyRequestRepository::get_owner
+  statements:
+  - AUTHORIZE closed actor/session and object scope [exactly-one decision]
+  - 'INVOKE ops.get_privacy_request_v2 [exactly-one result] :': lock-free request-scoped projection from immutable V2 request, transition, identity, extension, refusal and notice receipts
+  - 'VALIDATE receipt pairs and terminal closure [exactly-one pass] :': IDs and digests are paired, notice arrays are order/cardinality equal, and terminal states have their required receipts
+  - 'DERIVE closed nextActionCodes [exactly-one item] :': PENDING_VERIFICATION=VERIFY_IDENTITY; RECEIVED+VERIFIED=AWAIT_REVIEW; REVIEW=AWAIT_DECISION; APPROVED=AWAIT_EXECUTION; REJECTED=REVIEW_REFUSAL_NOTICE; COMPLETED=COMPLETE
+  - 'MAP PrivacyRequestPublicStatusV2 [exactly-one result] :': reason code and immutable receipt references only; no raw decision, notice, appeal, identity or contact text
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: READ_COMMITTED}
+  auth: bff-service-assertion-and-scoped-or-proof-session
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: SCOPED_TOKEN, step_up_possible: false}
+  assurance_level: SCOPED_TOKEN
+  step_up_required: false
+- operation_id: declareConflict
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/conflict-declarations
+  kind: COMMAND
+  capability: conflicts.declare
+  request_schema: DeclareConflictRequestV1
+  response_schema: ConflictDeclarationReceiptV1
+  success_status: 201
+  consuming_screens: [ADM-002, REV-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.declareConflict
+  domain_events: [governance.conflict_declared.v1]
+  integration_events: []
+  audit_action: command.declareConflict
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: withdrawConflict
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/conflict-declarations/{declarationId}:withdraw
+  kind: COMMAND
+  capability: conflicts.declare
+  request_schema: WithdrawConflictRequestV1
+  response_schema: ConflictDeclarationReceiptV1
+  success_status: 200
+  consuming_screens: [ADM-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.withdrawConflict
+  domain_events: [governance.conflict_withdrawn.v1]
+  integration_events: []
+  audit_action: command.withdrawConflict
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: conditional-self-or-oversight, step_up_possible: true}
+  assurance_level: conditional-self-or-oversight
+  step_up_required: false
+- operation_id: withdrawActionProposal
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}:withdraw
+  kind: COMMAND
+  capability: actions.propose
+  request_schema: WithdrawActionProposalRequestV1
+  response_schema: ActionProposalReceiptV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.withdrawActionProposal
+  domain_events: [action.proposal_withdrawn.v1]
+  integration_events: []
+  audit_action: command.withdrawActionProposal
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: withdrawActionDecision
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/action-proposals/{proposalId}/decisions/{decisionId}:withdraw
+  kind: COMMAND
+  capability: actions.review
+  request_schema: WithdrawActionDecisionRequestV1
+  response_schema: ActionDecisionReceiptV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.withdrawActionDecision
+  domain_events: [action.decision_withdrawn.v1]
+  integration_events: []
+  audit_action: command.withdrawActionDecision
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: conditional-original-decision-assurance, step_up_possible: true}
+  assurance_level: conditional-original-decision-assurance
+  step_up_required: false
+- operation_id: promoteResearchArtifactToEvidence
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/commands/promote-research-artifact-to-evidence
+  kind: COMMAND
+  capability: cases.evidence.manage
+  request_schema: PromoteResearchArtifactRequestV1
+  response_schema: PromoteResearchArtifactReceiptV1
+  success_status: 201
+  consuming_screens: [CAS-011]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/domains/claims_evidence.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.promoteResearchArtifactToEvidence
+  domain_events: [research.artifact_promoted.v1, evidence.segment_created.v1]
+  integration_events: []
+  audit_action: command.promoteResearchArtifactToEvidence
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: cancelAgentRun
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/agent-runs/{runId}:cancel
+  kind: COMMAND
+  capability: cases.investigate
+  request_schema: CancelAgentRunRequestV2
+  response_schema: AgentRunControlReceiptV2
+  success_status: 200
+  consuming_screens: [CAS-010, CAS-011]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/response_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.cancelAgentRun
+  domain_events: [agent.run_control_changed.v2]
+  integration_events: []
+  audit_action: command.cancelAgentRun
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: ACTIVE_SESSION, step_up_possible: false}
+  assurance_level: ACTIVE_SESSION
+  step_up_required: false
+- operation_id: decideJourneyHandoff
+  trace_scope: ADDITIVE_EXTERNAL
+  api: control-api
+  method: POST
+  path: /v1/internal/journey-handoffs/{handoffId}:decide
+  kind: COMMAND
+  capability: journeys.handoff.decide
+  request_schema: DecideJourneyHandoffRequestV1
+  response_schema: JourneyHandoffDecisionReceiptV1
+  success_status: 200
+  consuming_screens: [INT-002]
+  handler: services/control-api/src/service/mod.rs
+  application: services/control-api/src/service/command_addendum.rs
+  integration_test: tests/integration/control-flow.py
+  generated_client: packages/api-client-control/src/generated/
+  contract_test: crates/api-contracts/src/addendum/tests.rs
+  persistence_contract: specs/product/addendum-persistence-contracts.yaml#exact_persistence_registry.external_command_persistence.decideJourneyHandoff
+  domain_events: [journey.handoff_decided.v1, journey.handoff_requested.v1]
+  integration_events: []
+  audit_action: command.decideJourneyHandoff
+  concurrency: {mode: ADDITIVE_PERSISTENCE_CONTRACT, isolation: SERIALIZABLE}
+  auth: actor-assertion-and-capability
+  assurance_policy: {mode: ADDITIVE_CONTRACT, default: conditional-by-persisted-handoff-binding-with-minimum-ACTIVE_SESSION, step_up_possible: true}
+  assurance_level: conditional-by-persisted-handoff-binding-with-minimum-ACTIVE_SESSION
   step_up_required: false
 capabilities:
 - capability: public.read

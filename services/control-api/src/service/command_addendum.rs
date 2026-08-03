@@ -189,63 +189,7 @@ fn seal_privacy_request_transition(
     Ok(payload)
 }
 
-fn map_addendum_owner_error(operation: &str, error: sqlx::Error) -> ServiceError {
-    let sqlstate = error
-        .as_database_error()
-        .and_then(sqlx::error::DatabaseError::code)
-        .map(|code| code.into_owned());
-    let message = error
-        .as_database_error()
-        .map(|database_error| database_error.message().to_owned());
-    tracing::error!(
-        operation,
-        sql_state = sqlstate.as_deref().unwrap_or("NON_DATABASE"),
-        "addendum owner command failed"
-    );
-    match privacy_owner_error(operation, sqlstate.as_deref(), message.as_deref()) {
-        Some(error) => error,
-        None => db(error),
-    }
-}
-
-fn privacy_owner_error(
-    operation: &str,
-    sqlstate: Option<&str>,
-    message: Option<&str>,
-) -> Option<ServiceError> {
-    if !matches!(
-        operation,
-        "createPrivacyCorrectionPlan" | "transitionRetentionRequest"
-    ) {
-        return None;
-    }
-    match sqlstate {
-        Some("PVT06") => Some(ServiceError::IdentityProofInvalid),
-        Some("PVT07") => Some(ServiceError::PrivacyScopeInvalid),
-        Some("PVT08") => Some(ServiceError::RetentionVersionConflict),
-        Some("PVT09") => Some(ServiceError::RetentionStateInvalid),
-        Some("0A000")
-            if operation == "createPrivacyCorrectionPlan"
-                && message == Some("PRIVACY_CORRECTION_TARGET_UNSUPPORTED") =>
-        {
-            Some(ServiceError::PrivacyCorrectionTargetUnsupported)
-        }
-        Some("23514")
-            if operation == "transitionRetentionRequest"
-                && message == Some("BUSINESS_CALENDAR_STALE") =>
-        {
-            Some(ServiceError::BusinessCalendarStale)
-        }
-        Some("55000")
-            if operation == "transitionRetentionRequest"
-                && message == Some("privacy_correction_legal_hold_active") =>
-        {
-            Some(ServiceError::LegalHoldActive)
-        }
-        Some("55000") => Some(ServiceError::DependencyUnavailable),
-        _ => None,
-    }
-}
+include!("command_addendum_errors.rs");
 
 fn bind_actor_assertion_fields(
     operation: &OperationSpec,
@@ -440,6 +384,54 @@ mod actor_binding_tests {
     }
 
     #[test]
+    fn action_decision_overwrites_all_owner_required_actor_assertion_bindings() {
+        let operation = OperationSpec {
+            id: "submitActionDecision",
+            api: "control-api",
+            method: "POST",
+            path: "/v1/internal/action-proposals/{proposalId}:decide",
+            auth: "actor-assertion-and-capability",
+            capability: "actions.review",
+            idempotency_required: true,
+            assurance_level: "conditional-by-action-and-decision",
+            step_up_required: false,
+            operation_kind: "COMMAND",
+            success_status: 200,
+            media_type: "application/json",
+            response_json: "{}",
+        };
+        let key = CommandKey {
+            scope: "control:test:submitActionDecision".to_owned(),
+            key_hash: "f".repeat(64),
+            request_hash: "0".repeat(64),
+        };
+        let mut payload = json!({
+            "_actorAssertionJti": "caller-spoof",
+            "_actorAssuranceLevel": "ACTIVE_SESSION",
+            "_actorActionDigest": null,
+            "_actorStepUpAuthorizationId": null,
+            "_actorIdempotencyKeySha256": "0".repeat(64),
+            "_actorRequestKeySha256": "0".repeat(64),
+        });
+
+        bind_actor_assertion_fields(&operation, &step_up_claims(), &key, &mut payload);
+
+        for (field, expected) in [
+            ("_actorAssertionJti", "00000000-0000-4000-8000-000000000004"),
+            ("_actorAssuranceLevel", "STEP_UP"),
+            ("_actorActionDigest", &"a".repeat(64)),
+            (
+                "_actorStepUpAuthorizationId",
+                "00000000-0000-4000-8000-000000000003",
+            ),
+            ("_actorIdempotencyKeySha256", &"f".repeat(64)),
+            ("_actorRequestKeySha256", &"f".repeat(64)),
+        ] {
+            assert_eq!(payload.get(field).and_then(Value::as_str), Some(expected));
+        }
+    }
+
+    #[test]
     fn retention_transition_seals_free_text_before_database_owner_call() {
         let keys = EnvelopeKeyRing {
             current: EnvelopeKey::new([7_u8; 32]),
@@ -535,9 +527,19 @@ mod actor_binding_tests {
 #[cfg(test)]
 #[path = "command_addendum_error_tests.rs"]
 mod command_addendum_error_tests;
+#[cfg(test)]
+#[path = "command_addendum_normalization_tests.rs"]
+mod command_addendum_normalization_tests;
 
 fn normalize_owner_payload(operation: &str, mut payload: Value) -> Value {
-    if operation == "createActionProposal"
+    let is_economics_import = payload
+        .get("draft")
+        .and_then(Value::as_object)
+        .and_then(|draft| draft.get("kind"))
+        .and_then(Value::as_str)
+        == Some(ECONOMICS_IMPORT_ACTION_KIND);
+    if matches!(operation, "createActionProposal" | "updateActionDraft")
+        && !is_economics_import
         && let Some(target) = payload
             .get_mut("draft")
             .and_then(Value::as_object_mut)

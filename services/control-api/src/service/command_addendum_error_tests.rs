@@ -1,6 +1,56 @@
 use super::*;
 
 #[test]
+fn funding_authority_unavailable_maps_to_redacted_internal_error_on_exact_action_surfaces() {
+    for operation in [
+        "createActionProposal",
+        "updateActionDraft",
+        "previewActionDraft",
+        "submitActionForReview",
+        "claimActionReview",
+        "submitActionDecision",
+    ] {
+        assert!(matches!(
+            funding_disclosure_owner_error(
+                operation,
+                Some("55000"),
+                Some("FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE"),
+            ),
+            Some(ServiceError::Persistence)
+        ));
+    }
+}
+
+#[test]
+fn funding_authority_error_near_misses_keep_the_existing_database_classifier() {
+    for (operation, sqlstate, message) in [
+        (
+            "getActionProposal",
+            Some("55000"),
+            Some("FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE"),
+        ),
+        (
+            "createActionProposal",
+            Some("23514"),
+            Some("FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE"),
+        ),
+        (
+            "createActionProposal",
+            Some("55000"),
+            Some("funding_disclosure_authority_unavailable"),
+        ),
+        (
+            "createActionProposal",
+            Some("55000"),
+            Some("FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE: changed"),
+        ),
+        ("createActionProposal", Some("55000"), None),
+    ] {
+        assert!(funding_disclosure_owner_error(operation, sqlstate, message).is_none());
+    }
+}
+
+#[test]
 fn privacy_sqlstates_map_only_on_the_owned_privacy_surfaces() {
     for (sqlstate, expected) in [
         ("PVT06", ServiceError::IdentityProofInvalid),

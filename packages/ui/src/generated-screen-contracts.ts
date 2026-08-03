@@ -1616,6 +1616,43 @@ export const ROUTE_SCREEN_CONTRACTS = {
       },
     ],
   },
+  "PUB-035": {
+    route: "/donate",
+    objectLabel: "후원",
+    persona: "공개 독자·연구자",
+    primaryActionId: "queue-donation",
+    primaryActionLabel: "후원 의향 접수",
+    sections: [
+      {
+        id: "mode",
+        region: "mode",
+        testId: "pub_035__section__mode",
+        component: "StatusAndRevisionHeader",
+        fields: ["mode", "status"],
+      },
+      {
+        id: "independence",
+        region: "independence",
+        testId: "pub_035__section__independence",
+        component: "KnownUnknownResponse",
+        fields: ["independence", "status"],
+      },
+      {
+        id: "donation",
+        region: "donation",
+        testId: "pub_035__section__donation",
+        component: "GuidedFormSection",
+        fields: ["donation", "status"],
+      },
+      {
+        id: "receipt",
+        region: "receipt",
+        testId: "pub_035__section__receipt",
+        component: "DecisionReceipt",
+        fields: ["receipt", "status", "receiptDigest"],
+      },
+    ],
+  },
   "RSP-001": {
     route: "/respond/access",
     objectLabel: "소명 요청 확인",

@@ -347,6 +347,84 @@ Feature: Evidence Workspace 비즈니스 모델과 운영 퍼널
   Scenario: additive review feature는 실행 mapping 없이는 release gate가 아니다
     Given 이 feature는 @additive-review이고 contract status는 REVIEW_REQUIRED이다
     When supplemental acceptance registry를 검증한다
-    Then 41개 scenario ID 각각 tests/acceptance/supplemental-executable-mapping.yaml에 정확히 한 번 있어야 한다
+    Then 48개 scenario ID 각각 tests/acceptance/supplemental-executable-mapping.yaml에 정확히 한 번 있어야 한다
     And 각 mapping은 skip_policy FORBIDDEN과 실제 implementation path와 executing command를 가져야 한다
     And invoice membership SLA revenue overlap unattributed CAC API runtime blocker가 하나라도 OPEN이면 final release tag 또는 LGTM으로 승격하지 않아야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-042
+  Scenario: economics cash tax import는 typed 승인 executor와 최소 DB 권한만 사용한다
+    Given ECONOMICS_IMPORT action과 private.ExecuteEconomicsImport executor에 11개 closed operation이 선언되어 있다
+    And executor database role은 gurine_economics_importer이고 payment runtime role은 gurine_billing_gateway이다
+    When 제안과 독립 검토와 STEP_UP execution authorization을 거쳐 typed import를 실행한다
+    Then economics 24개 relation과 R6e 신규 7개 relation에 대한 모든 runtime role의 direct INSERT UPDATE DELETE 권한은 없어야 한다
+    And ops.action_approval_economics_import_details ops.cash_application_facts ops.tax_invoice_issuance_receipts ops.payment_method_bindings ops.payment_charge_attempts ops.provider_webhook_receipts ops.donation_facts만 exact owner boundary로 기록되어야 한다
+    And cash application과 tax invoice receipt는 exact invoice digest와 predecessor fence와 source evidence digest에 결속되어야 한다
+    And fresh success는 immutable receipt audit outbox를 하나씩 만들고 exact replay는 추가 effect를 만들지 않아야 한다
+    But generic relation name untyped JSON dummy digest UNKNOWN usage 또는 승인 전 owner 호출은 모두 zero-write로 거부되어야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-043
+  Scenario: 첫 tariff는 승인된 원가 close 뒤에서만 6000 또는 7000 margin gate를 통과한다
+    Given production authority가 아닌 TEST_FIXTURE_ONLY 원가 import evidence로 첫 cost allocation close를 검증한다
+    When current PERIOD close와 line-set digest와 capture direct total coverage evidence가 없거나 불일치한다
+    Then tariff version은 생성되지 않고 tariff receipt audit outbox도 증가하지 않아야 한다
+    When PILOT tariff의 공식 projected variable gross margin이 6000 basis points 미만이거나 GA가 7000 basis points 미만이다
+    Then 기존 tariff_required_margin_ck tariff_cost_evidence_threshold_ck tariff_margin_formula_ck tariff_margin_exception_ck가 이를 거부해야 한다
+    And PILOT exception을 GA에 재사용하거나 caller가 계산값을 바꾸어 CHECK를 우회하지 않아야 한다
+    But exact close evidence와 공식 half-even 계산을 만족한 경계값은 동일 typed owner 경로에서만 기록되어야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-044
+  Scenario: donation test fixture는 production 결제나 entitlement 권위가 아니다
+    Given 승인된 production donation offer와 merchant key와 durable billing-key vault와 provider activation evidence가 없다
+    And test adapter offer의 authority는 TEST_FIXTURE_ONLY_NO_PRODUCTION_AUTHORITY이고 production_readiness_effect는 NONE이다
+    When production donation availability와 public access와 investigation priority를 평가한다
+    Then production donation action은 UNAVAILABLE이어야 하고 test fixture 금액 또는 billing key를 production authority로 사용하지 않아야 한다
+    And 후원은 접근권이 아니며 조사 면제가 아니라는 고지를 유지해야 한다
+    And donation payment status는 contract capability detection publication correction response 또는 공개 접근을 변경하지 않아야 한다
+    But 공개 사실 근거 정정 응답권 기본 구독과 합리적 공개 API는 결제 상태와 무관하게 무료여야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-045
+  Scenario: webhook은 검증과 unique claim 뒤 provider 재조회로만 확정된다
+    Given TossPayments KakaoPay Stripe adapter는 merchant-scheduled이고 authenticated fetch를 payment truth로 선언한다
+    When provider가 지원하는 webhook signature를 검증하고 provider event identity를 unique claim한 뒤 fetch_payment를 호출한다
+    Then webhook hint와 fetch 결과가 다르면 fetch 결과만 charge와 donation truth가 되어야 한다
+    And signature 미지원은 VERIFIED로 기록하지 않되 authenticated fetch를 생략하지 않아야 한다
+    And 동일 provider event identity와 body digest replay는 stored receipt를 반환하고 provider fetch charge donation을 중복하지 않아야 한다
+    And 동일 provider event identity의 다른 body digest는 typed conflict로 zero-write 처리되어야 한다
+    But invalid signature unknown fetch 또는 reconciliation-required 결과는 donation fact를 만들지 않아야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-046
+  Scenario: payment failure는 review task만 만들고 계약이나 공개 접근을 자동 변경하지 않는다
+    Given authenticated provider fetch 또는 signed collection evidence가 payment failure를 확정한다
+    When billing-gateway 또는 approved economics executor가 failure receipt를 기록한다
+    Then immutable failure attempt와 payment review task와 notification.payment_review_requested.v1 event만 한 번 생성되어야 한다
+    And current commercial contract period offer capability activation decision과 public projection digest는 바뀌지 않아야 한다
+    And replay는 task audit outbox를 중복하지 않고 changed replay는 conflict여야 한다
+    But suspension은 별도 human proposal independent review STEP_UP 승인 뒤 REPLACEMENT contract period로만 가능해야 한다
+    And failure 또는 suspension 뒤에도 anonymous public facts와 PUB-023와 public API 접근은 동일하게 유지되어야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-047
+  Scenario: donation은 candidate와 독립 disclosure 승인 뒤에만 PUB-023에 공개된다
+    Given authenticated fetch와 successful charge에 결속된 immutable donation fact가 있다
+    When donation.fact_recorded.v1을 projection-worker가 exact source digest로 소비한다
+    Then private funding snapshot candidate만 하나 만들고 editorial revision 또는 public transparency report를 직접 만들지 않아야 한다
+    When FUNDING_DISCLOSURE proposal과 independent review와 publication execution이 exact snapshot digest를 승인한다
+    Then governance.funding_disclosure_published.v1 뒤 최신 signed disclosure만 PUB-023에 나타나야 한다
+    And downloadTransparencyReport GET /v1/transparency-reports/{reportId}/download는 JSON 또는 CSV bytes와 source revision digest를 결속해야 한다
+    And raw donor identity billing key provider payload private amount와 internal actor ID는 공개 report에 없어야 한다
+    But signed disclosure가 없으면 값을 발명하지 않고 UNKNOWN과 다운로드 unavailable을 보여야 한다
+    And denominator evidence가 없으면 독립 승인된 signed UNKNOWN revision과 report를 다운로드 가능하게 유지하되 concentration 값을 발명하지 않아야 한다
+
+  # scenario-id: AC-BUSINESS_MODEL-048
+  Scenario Outline: R6e의 두 신규 event payload는 닫힌 source-bound oracle이다
+    Given R6e event type이 <event_type>이고 producer set은 <producers>이며 operation set은 <producer_operations>이고 consumer set은 <consumers>이다
+    When canonical addendum event payload schema와 producer consumer binding을 구조적으로 검증한다
+    Then required와 property field set은 모두 <required_fields>와 정확히 같고 additionalProperties는 false여야 한다
+    And 각 field의 type format ref enum minimum은 canonical schema와 정확히 같아야 한다
+    And producer sourceKind binding set은 <producer_bindings>와 정확히 같아야 한다
+    And raw credential webhook body donor identity customer identity와 caller-authored effect digest는 포함하지 않아야 한다
+    And <effect_boundary>를 강제하고 exact replay는 effect를 중복하지 않아야 한다
+
+    Examples:
+      | event_type                               | producers                                                   | producer_operations                                                | consumers           | producer_bindings                                                                                                              | required_fields                                                                                                                        | effect_boundary                                                                                     |
+      | donation.fact_recorded.v1                | billing-gateway                                             | private.ExecuteDonationCharge,private.ReceivePaymentWebhook         | funding-projector   | NONE                                                                                                                           | donationFactId,donationFactDigest,chargeAttemptId,chargeAttemptDigest,providerFetchDigest,occurredAt                                  | exact donation and charge source lookup 뒤 private funding snapshot candidate만 생성한다            |
+      | notification.payment_review_requested.v1 | billing-gateway,workflow-worker.economics-import-executor   | private.ReceivePaymentWebhook,private.ExecuteEconomicsImport       | notification-worker | billing-gateway:DONATION_PAYMENT_FAILURE,workflow-worker.economics-import-executor:SIGNED_COLLECTION_FAILURE                   | reviewTaskId,reviewTaskVersion,reviewTaskDigest,sourceKind,sourceReceiptId,sourceReceiptDigest,occurredAt                              | DONATION_PAYMENT_FAILURE 또는 SIGNED_COLLECTION_FAILURE review task만 notification-worker에 전달한다 |

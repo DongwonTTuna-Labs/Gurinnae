@@ -2,6 +2,13 @@ schema_version: 3
 specification_version: 13.0.0
 status: FINAL
 naming: lowercase dotted past-tense event names ending in .vN
+authority_decisions:
+- id: PAYMENT-TEST-V1
+  provenance: 감독자 결정 v1
+  change_control: May be revised only by legal and finance owners before a production deployment.
+- id: GFD-AUTHORITY-V1
+  provenance: 감독자 결정 v1
+  change_control: May be revised only by legal and finance owners before a production deployment.
 rules:
 - Domain events may have zero in-process consumers.
 - Every integration event has at least one explicit consumer unless it is a terminal observability event.

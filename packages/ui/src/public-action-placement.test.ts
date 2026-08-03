@@ -24,10 +24,10 @@ function publicCatalogScreens(): readonly CatalogScreen[] {
 }
 
 describe("public action placement", () => {
-  it("classifies every action on all 34 public screens exactly once", () => {
+  it("classifies every action on all 35 public screens exactly once", () => {
     const screens = publicCatalogScreens();
-    expect(screens).toHaveLength(34);
-    expect(PUBLIC_ACTION_PLACEMENT_SCREEN_IDS).toHaveLength(34);
+    expect(screens).toHaveLength(35);
+    expect(PUBLIC_ACTION_PLACEMENT_SCREEN_IDS).toHaveLength(35);
     expect(new Set(PUBLIC_ACTION_PLACEMENT_SCREEN_IDS)).toEqual(
       new Set(screens.map((screen) => screen.id)),
     );
@@ -50,9 +50,20 @@ describe("public action placement", () => {
         actions: [...screen.actions, screen.actions[0] ?? { id: "search" }],
       }),
     ).toThrow("action 중복");
-    expect(() => publicActionPlacement({ id: "PUB-035", actions: [] })).toThrow(
+    expect(() => publicActionPlacement({ id: "PUB-036", actions: [] })).toThrow(
       "미분류 공개 화면",
     );
+  });
+
+  it("keeps the donation command in its form and contact in the header", () => {
+    const donation = publicCatalogScreens().find(
+      (screen) => screen.id === "PUB-035",
+    );
+    if (!donation) throw new Error("후원 화면 계약이 없습니다.");
+    expect(publicActionPlacement(donation)).toMatchObject({
+      headerActionIds: ["contact"],
+      componentActionIds: ["queue-donation"],
+    });
   });
 
   it("keeps server forms and attachments in their owning sections", () => {

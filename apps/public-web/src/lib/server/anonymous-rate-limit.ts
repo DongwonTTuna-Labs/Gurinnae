@@ -5,6 +5,7 @@ const ANONYMOUS_OPERATIONS = new Set([
   "createCorrectionRequestDraft",
   "createDatasetExport",
   "createSubscription",
+  "private.QueueDonationIntent",
 ]);
 
 type Bucket = {

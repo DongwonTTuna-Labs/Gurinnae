@@ -43,6 +43,64 @@ pub enum WorkerError {
 enum Failure {
     Terminal(&'static str, String),
     Retryable(&'static str, String),
+    OwnerTerminalizedContractInvalid(&'static str, String),
+    OwnerOutcomeUnknown(&'static str, String),
+}
+
+enum WorkflowJobCompletion {
+    WorkerOwned(Value),
+    OwnerTerminalized,
+}
+
+enum WorkflowJobResolution {
+    Complete(Value),
+    Fail {
+        code: &'static str,
+        detail: String,
+        retryable: bool,
+    },
+    SkipOwnerTerminalized,
+    StopOnOwnerContract {
+        code: &'static str,
+        detail_digest: String,
+    },
+    StopOnOwnerOutcomeUnknown {
+        phase: &'static str,
+        detail_digest: String,
+    },
+}
+
+fn workflow_job_resolution(
+    result: Result<WorkflowJobCompletion, Failure>,
+) -> WorkflowJobResolution {
+    match result {
+        Ok(WorkflowJobCompletion::WorkerOwned(metrics)) => WorkflowJobResolution::Complete(metrics),
+        Ok(WorkflowJobCompletion::OwnerTerminalized) => {
+            WorkflowJobResolution::SkipOwnerTerminalized
+        }
+        Err(Failure::Terminal(code, detail)) => WorkflowJobResolution::Fail {
+            code,
+            detail,
+            retryable: false,
+        },
+        Err(Failure::Retryable(code, detail)) => WorkflowJobResolution::Fail {
+            code,
+            detail,
+            retryable: true,
+        },
+        Err(Failure::OwnerTerminalizedContractInvalid(code, detail_digest)) => {
+            WorkflowJobResolution::StopOnOwnerContract {
+                code,
+                detail_digest,
+            }
+        }
+        Err(Failure::OwnerOutcomeUnknown(phase, detail_digest)) => {
+            WorkflowJobResolution::StopOnOwnerOutcomeUnknown {
+                phase,
+                detail_digest,
+            }
+        }
+    }
 }
 
 fn required<T>(value: Option<T>) -> Result<T, sqlx::Error> {
@@ -57,6 +115,7 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
     })
     .await
     .map_err(|_| WorkerError::Initialization)?;
+    let economics_pool = open_economics_pool(config.economics_database_url.as_deref()).await?;
     let store = open_store(&config.object_store).await?;
     let scanner = ClamAvScanner::new(config.clamav_host.clone(), config.clamav_port);
     let field_keys = EnvelopeKeyRing {
@@ -70,7 +129,17 @@ pub async fn run(config: Config) -> Result<(), WorkerError> {
     )
     .map_err(WorkerError::Job)?;
     loop {
-        let processed = if process_event_one(&pool, &store, &scanner, &field_keys, &worker).await? {
+        let processed = if process_event_one(
+            &pool,
+            economics_pool.as_ref(),
+            &store,
+            &scanner,
+            &field_keys,
+            &config.worker_id,
+            &worker,
+        )
+        .await?
+        {
             true
         } else {
             process_pending_scan(&pool, &store, &scanner).await?
@@ -103,30 +172,55 @@ async fn open_store(config: &ObjectStoreConfig) -> Result<Store, WorkerError> {
 
 async fn process_event_one(
     pool: &PgPool,
+    economics_pool: Option<&PgPool>,
     store: &Store,
     scanner: &ClamAvScanner,
     field_keys: &EnvelopeKeyRing,
+    worker_id: &str,
     worker: &Worker,
 ) -> Result<bool, WorkerError> {
     let Some(job) = worker.claim(pool).await.map_err(WorkerError::Job)? else {
         return Ok(false);
     };
-    match handle_workflow_job(pool, store, scanner, field_keys, &job).await {
-        Ok(metrics) => worker
+    let result = handle_workflow_job(
+        pool,
+        economics_pool,
+        store,
+        scanner,
+        field_keys,
+        worker_id,
+        &job,
+    )
+    .await;
+    match workflow_job_resolution(result) {
+        WorkflowJobResolution::Complete(metrics) => worker
             .complete(pool, &job, metrics)
             .await
             .map_err(WorkerError::Job)?,
-        Err(Failure::Terminal(code, detail)) => {
+        WorkflowJobResolution::Fail {
+            code,
+            detail,
+            retryable,
+        } => {
             worker
-                .fail(pool, &job, code, &detail, false, json!({}))
+                .fail(pool, &job, code, &detail, retryable, json!({}))
                 .await
                 .map_err(WorkerError::Job)?;
         }
-        Err(Failure::Retryable(code, detail)) => {
-            worker
-                .fail(pool, &job, code, &detail, true, json!({}))
-                .await
-                .map_err(WorkerError::Job)?;
+        WorkflowJobResolution::SkipOwnerTerminalized => {}
+        WorkflowJobResolution::StopOnOwnerContract {
+            code,
+            detail_digest,
+        } => {
+            tracing::error!(code, %detail_digest, "economics owner terminal contract invalid");
+            return Err(WorkerError::Database);
+        }
+        WorkflowJobResolution::StopOnOwnerOutcomeUnknown {
+            phase,
+            detail_digest,
+        } => {
+            tracing::error!(phase, %detail_digest, "economics owner outcome unknown");
+            return Err(WorkerError::Database);
         }
     }
     Ok(true)
@@ -134,6 +228,8 @@ async fn process_event_one(
 
 include!("workflow_events.rs");
 include!("workflow_action_execution.rs");
+include!("workflow_funding_disclosure.rs");
+include!("workflow_economics_import.rs");
 include!("workflow_hypothesis_execution.rs");
 include!("workflow_exports.rs");
 include!("workflow_response_materialization.rs");

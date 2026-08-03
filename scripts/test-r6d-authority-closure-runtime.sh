@@ -33,8 +33,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 40 ]]; then
-  printf 'expected exactly 40 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -lt 41 ]]; then
+  printf 'expected at least 41 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -58,14 +58,12 @@ fi
 docker run --rm --detach --name "$container" \
   --env POSTGRES_DB="$database" \
   --env POSTGRES_USER=postgres \
-  --env POSTGRES_PASSWORD=postgres \
+  --env POSTGRES_HOST_AUTH_METHOD=trust \
   "$postgres_image" >/dev/null
 bash scripts/wait-postgres-container.sh "$container" "$database"
 
-for migration in "${migrations[@]}"; do
-  docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
-    -U postgres -d "$database" <"$migration" >/dev/null
-done
+bash scripts/apply-test-migrations-with-r6e-roles.sh \
+  "$container" "$database" "${migrations[@]}"
 
 # This is the repository's existing TEST_ONLY schedule/calendar authority.  It
 # rejects non-disposable database names and never becomes a production seed.

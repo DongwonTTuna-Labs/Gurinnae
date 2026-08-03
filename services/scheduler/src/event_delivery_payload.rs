@@ -6,7 +6,7 @@ pub(crate) fn event_occurred_at(value: OffsetDateTime) -> Result<String, Format>
 
 #[cfg(test)]
 mod tests {
-    use time::{OffsetDateTime, format_description::well_known::Rfc3339};
+    use time::{Duration, OffsetDateTime, format_description::well_known::Rfc3339};
 
     use super::event_occurred_at;
 
@@ -25,5 +25,24 @@ mod tests {
             OffsetDateTime::parse(&encoded, &Rfc3339).expect("RFC 3339 timestamp"),
             occurred_at
         );
+    }
+
+    #[test]
+    fn event_occurred_at_formats_fractional_seconds_canonically() {
+        let occurred_at = OffsetDateTime::parse("2026-08-02T12:34:56Z", &Rfc3339)
+            .expect("test timestamp must parse");
+        let cases = [
+            (0, "2026-08-02T12:34:56Z"),
+            (375_127, "2026-08-02T12:34:56.375127Z"),
+            (100_000, "2026-08-02T12:34:56.1Z"),
+            (1, "2026-08-02T12:34:56.000001Z"),
+        ];
+
+        for (microseconds, expected) in cases {
+            let encoded = event_occurred_at(occurred_at + Duration::microseconds(microseconds))
+                .expect("test timestamp must format");
+
+            assert_eq!(encoded, expected);
+        }
     }
 }

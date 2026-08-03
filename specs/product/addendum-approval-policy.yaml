@@ -3,6 +3,117 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 base_authority_zip_sha256: 960687b445edee3b8fbf7186152cc9a53d835ca8ba55eb49dd957424142802e5
 
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  canonical_contract: specs/product/business-model-contract.yaml#supervisor_decision_v1
+  canonical_contract_status: REVIEW_REQUIRED
+  canonical_delta_status: APPROVED_POLICY_WITH_OPEN_CANONICAL_DELTAS
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  approved_packages_ordered_exactly:
+    - {ordinal: 1, package_id: ECO-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 2, package_id: PAID-EVIDENCE-V2-AUTHORITY, approval: APPROVED_AS_RECOMMENDED}
+    - {ordinal: 3, package_id: PAYMENT-TEST-V1, approval: APPROVED_AS_RECOMMENDED, review_due_hours: 24}
+    - {ordinal: 4, package_id: GFD-AUTHORITY-V1, approval: APPROVED_AS_RECOMMENDED}
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision preserving this decision as provenance; silent reinterpretation, partial package substitution and in-place weakening are forbidden
+  binding_rule: Every approved package value and narrowing directive is set-equal to specs/product/business-model-contract.yaml#supervisor_decision_v1; its unresolved_canonical_delta_gates remain fail-closed and may not be inferred from an older addendum, migration, fixture or runtime implementation.
+
+approved_r6e_authority_bindings:
+  economics_import:
+    action_kind: ECONOMICS_IMPORT
+    target_expected_version: null
+    approval_binding_target_version: null
+    sentinel_one_forbidden: true
+    all_other_action_kinds: target.expectedVersion and ApprovalBindingV1.targetVersion remain positive int64 values
+    commercial_contract_offer_parent_schema_version: {value: 1, json_type: number}
+    first_tariff_bootstrap:
+      cardinality: one-shot
+      stage: PILOT
+      required_margin_basis_points: 6000
+      guards_ordered_exactly:
+        - same deployment and SKU have zero tariff and commercial-contract history
+        - current GENERAL_AVAILABILITY READY count is zero
+        - one approved complete current cost close is locked and digest-equal
+        - the approved detail binds the intended first contract and qualification tuple and both validity intervals
+      later_contract_fence: the later commercial-contract import must be exact-equal to the approved bootstrap tuple or fail with write zero
+    low_margin:
+      applies_to: [tariff, discount]
+      oversight_exception_authority: UNAVAILABLE
+      database_error: {sqlstate: "55000", writes: 0}
+    approved_child_identity_rule: Every new usage successor receipt/fact ID and every invoice header/line/membership, revenue, cash, tax-invoice and accounting-correction child ID is present in the immutable approved operation bytes; PostgreSQL synthesis of a hidden random identity is forbidden.
+    invoice_adjustment_rule: An adjustment references only an earlier non-adjustment line in the same approved invoice array; cross-invoice, adjustment-to-adjustment, cyclic, forward and missing references are rejected with write zero.
+    digest_abi:
+      name: GURINE_LENGTH_PREFIXED_UTF8_V1
+      framing: unsigned u64 big-endian byte length frames domain, schema version, type tag and value separately
+      scalar_rules: [explicit NULL, fixed-six decimal, lowercase UUID, lowercase SHA-256, UTC timestamp with exactly six fractional digits]
+      array_rule: explicit member count followed by members in declared order
+      preimage_rule: preserve declared field order and include every immutable business column except the self digest and created_at or updated_at
+      per_digest_registry_status: OPEN_CANONICAL_DELTA
+      positive_runtime_rule: No digest-dependent positive branch is available until the exact domain, schema-version, type-tag, field-order and nullable/array preimage registry is additionally approved.
+      verification: PostgreSQL and Rust golden vectors plus one-byte mutation rejection
+      funding_use: FORBIDDEN
+  paid_evidence_v2:
+    mode: FORWARD_ONLY
+    v1_bytes_and_relations: IMMUTABLE_UNCHANGED
+    migration_fence: any existing paid packet, member or paid-bound outcome row aborts before schema effect; backfill is forbidden
+    member_digest_order: V2 leaves excluding global memberSetDigest -> global member-set digest in ordinal order
+    category_local_field: categoryDigest
+    review_snapshot_missing_field_count: 12
+    review_snapshot_presence: ZERO_OR_ALL
+    review_snapshot_exact_field_registry: OPEN_CANONICAL_DELTA
+    outcome_packet_foreign_keys: MATCH FULL DEFERRABLE INITIALLY DEFERRED in both directions
+    terminal_binding: exact four ordered VerifiedWorkflowProofV1 milestones plus terminal receipt, policy digest, formula digest, accounting timezone and effective-until
+    subject_hmac: {domain: PAID_OUTCOME_SUBJECT_HMAC_V2, key_versions: [CURRENT, PREVIOUS], injection: TEST_FIXTURE_ONLY, other_key_reuse_or_derivation: FORBIDDEN}
+  payment_test:
+    runtime_modes: {default: DISABLED, production: DISABLED, only_non_disabled: TEST_ONLY, source_live_credentials: 0}
+    keyrings_ordered_exactly:
+      - {key_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT, version_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_CURRENT_VERSION, role: ISSUE_AND_VERIFY}
+      - {key_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS, version_env: PAYMENT_FIXTURE_IDENTITY_HMAC_KEY_PREVIOUS_VERSION, role: VERIFY_ONLY}
+      - {key_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT, version_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_CURRENT_VERSION, role: ISSUE_AND_VERIFY}
+      - {key_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS, version_env: PAYMENT_FIXTURE_BILLING_KEY_VAULT_HMAC_KEY_PREVIOUS_VERSION, role: VERIFY_ONLY}
+    key_rule: Current alone issues new values and a persisted opaque version selects current or previous; webhook assertion, public-web and every other key may not be reused or used as derivation input.
+    post_restart_missing_billing_material: fail closed with zero automatic recovery, replacement, recharge or resubmission
+    recurring_schedule_policy_b:
+      anchor: first_charge_at UTC monthly anchor with non-drifting month-end clamp
+      eligible_window: current UTC month only
+      catch_up_or_backcharge: FORBIDDEN
+      occurrence_identity: [schedule_id, schedule_version, scheduledFor]
+      occurrence_uniqueness: PERMANENT
+      later_month_blockers: [PENDING, ACCEPTED, RECONCILIATION_REQUIRED]
+      next_month_release_authorities: [DEFINITIVE_PRE_DISPATCH_REJECTION, FETCH_CONFIRMED_SUCCESS, FETCH_CONFIRMED_REFUND, FETCH_CONFIRMED_FAILURE]
+      same_occurrence_resubmission_writes: 0
+      scheduler_effect_exactly: insert one DONATION_CHARGE job
+      scheduler_direct_effects_forbidden: [payment, contract, entitlement, public_access]
+    review_assignment: {field: reviewAssigneeUserId, request_bound: true, digest_bindings: [request, immutable_detail, receipt], due_at: occurredAt plus exactly 24 hours}
+    review_routing: {topic: PAYMENT_REVIEW_V1, source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE], required_current_bindings: [one active internal subject, current authorization, exactly one endpoint, exactly one evaluator, source-bound deployment]}
+    review_communication_authority_abi: OPEN_CANONICAL_DELTA
+    review_positive_runtime_rule: Task and notification materialization remain unavailable until the exact communication subject, authorization, endpoint/evaluator candidate keys, source-deployment binding, owner function and receipt ABI are additionally approved.
+    mismatch: {sqlstate: "55000", writes: 0}
+    reconciliation_required: {task_writes: 0, notification_writes: 0, automatic_retry_writes: 0}
+    automatic_effects_forbidden: [external_dunning, entitlement_change, contract_change, public_access_change]
+  funding_disclosure:
+    target_revision: candidate revision N; first is 1 and every successor is locked head plus 1; zero sentinel is forbidden
+    counted_actor_rule: actors are pairwise distinct across slots and VACANT never counts
+    related_case_prerequisite: one current existing PUBLICATION.independent_editorial APPROVE per distinct case with review.editorial, EDITOR or PUBLISHER, actions.review and STEP_UP
+    publisher: {service: workflow-worker, database_principal: gurine_workflow_worker, function: editorial.publish_funding_disclosure_v1, function_owner: gurine_migrator, direct_table_dml: 0}
+    digest_abi: closed Gurine Canonical JSON V1; funding never uses GURINE_LENGTH_PREFIXED_UTF8_V1
+    digest_order: entry and set digests -> revisionDigest -> receiptDigest -> event and response digests
+    counted_decision_tuple_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+    implementation_hold:
+      affected_operations_exactly: [createActionProposal, updateActionDraft, previewActionDraft, submitActionForReview, claimActionReview, submitActionDecision]
+      database_error: {sqlstate: "55000", message: FUNDING_DISCLOSURE_AUTHORITY_UNAVAILABLE, writes: 0}
+      external_error: {code: INTERNAL_ERROR, http_status: 500}
+      release_rule: The hold remains until every authority, ACL, digest, event and test obligation is implemented and verified.
+
 rules:
   - An Actor Assertion carries exactly one asserted_required_capability; assignment and target capabilities are authoritative persisted predicates, never concatenated strings.
   - A service, agent, proposal creator, last editor, target subject, recipient, executor, conflicted actor or recused actor cannot satisfy an independent human quorum slot.
@@ -17,7 +128,7 @@ digest_contracts:
   contentDigest:
     schema: ActionPayloadV1
     canonicalization: RFC8785_JCS
-    ordered_arrays: [evidenceSegmentIds, recipients, attachmentIds, affectedIds, releaseScopeAtoms, evidenceReceiptIds]
+    ordered_arrays: [evidenceSegmentIds, sourceEvidenceDigests, recipients, attachmentIds, affectedIds, releaseScopeAtoms, evidenceReceiptIds]
     free_text: UTF8_SHA256_FIELDS
   approvalDigest:
     schema: ApprovalBindingV1
@@ -28,6 +139,8 @@ digest_contracts:
       - actionKind equals actionDetailKind and selects exactly one closed ActionApprovalDetailV1 branch.
       - actionDetailDigest is SHA256 of Gurine Canonical JSON v1 bytes for {actionDetailKind,actionDetail}.
       - No communication, rendering, recipient, provider, cost, rights, consent or suppression sentinel is permitted outside the branch that owns it.
+      - ECONOMICS_IMPORT binds the complete selected row-valued operation branch, exact expected head fences and named immutable evidence candidate keys; digest-only placeholders and generic TASK or POLICY_VERSION detail fallbacks are forbidden.
+      - ECONOMICS_IMPORT resolves ActionRationaleV1.evidenceSegmentIds to immutable ID and digest pairs, sorts and persists the parallel arrays, and requires the digest set to be set-equal to sourceEvidenceDigests; branch-specific named receipt anchors are additional equality checks and never replacement wire fields.
   decisionReceiptDigest:
     schema: ActionDecisionReceiptBindingV1
     canonicalization: GURINE_CANONICAL_JSON_V1
@@ -40,6 +153,20 @@ digest_contracts:
     schema: ExecutionBindingV1
     canonicalization: GURINE_CANONICAL_JSON_V1
     includes: [executionId, generation, approvalDigest, countedDecisionReceiptDigests, executorId, targetRequestSha256, providerIdempotencyKeySha256, budgetReservationDigest, cancellationGeneration, expiresAt]
+
+economics_import_effect_disposition_contract:
+  canonical_registry: specs/product/addendum-operation-contracts.yaml#economics_import_effect_disposition_registry
+  key: operationId
+  mirrored_fields: [target_relations, atomic_cardinality, allowed_result_effects]
+  approval_binding:
+    from_state: {aggregate: ECONOMICS_IMPORT, state: UNRECORDED, authority: TRANSPORT_ONLY_PRE_EFFECT_SENTINEL}
+    to_state: exact selected allowed_result_effect
+    effect_class: INTERNAL_MATERIALIZATION
+    external_side_effect: false
+  invariants:
+    - The proposal detail, reviewer view, preview and ApprovalBindingV1 carry the same byte-identical closed operation object, sourceEvidenceSetDigest, importPolicyDigest, asOf and targetRelation and select the identical allowed result-effect set; no prose projection replaces typed source values or expected head fences.
+    - Approval rejects an operation/effect pair absent from the exact eleven-row canonical registry before any decision can count.
+    - UNRECORDED is not a lifecycle state and this contract creates no economics state machine; ActionProposal, ActionDecision and ExecutionAuthorization remain the only lifecycle authority.
 
 closed_binding_schemas:
   ApprovalBindingV1:
@@ -56,7 +183,7 @@ closed_binding_schemas:
       rationaleDigest: sha256
       targetType: ActionTargetTypeV1
       targetId: string[1..500]
-      targetVersion: int64[1..max]
+      targetVersion: nullable<int64[1..max]>
       targetDigest: sha256
       objectScopeDigest: sha256
       operationId: string[1..128]
@@ -81,9 +208,13 @@ closed_binding_schemas:
       actionDetailDigest: sha256
     invariants:
       - targetType, targetId and targetVersion equal the selected ActionPayloadV1 target and its persisted immutable version.
+      - ECONOMICS_IMPORT requires targetType ECONOMICS_IMPORT and targetVersion exactly null in both ActionPayloadV1.target.expectedVersion and ApprovalBindingV1; the integer sentinel 1 is forbidden for this branch.
+      - Every action kind other than ECONOMICS_IMPORT requires a positive target.expectedVersion and the same positive ApprovalBindingV1.targetVersion; null does not widen any other action kind.
+      - FUNDING_DISCLOSURE targetVersion is the positive candidate revision N: 1 for the first publication and the locked current head plus 1 thereafter; zero is forbidden.
       - contentDigest equals SHA256 of RFC8785 ActionPayloadV1 bytes and targetRequestDigest binds the closed executor request.
       - actionKind equals actionDetailKind; actionDetail is the exact selected branch and actionDetailDigest is recomputed from canonical branch bytes.
       - approvalSubjectDigest binds the exact readable ActionApprovalSubjectViewV1 branch shown to the reviewer.
+      - ECONOMICS_IMPORT uses explicit ECONOMICS_IMPORT detail, view and preview branches with the same byte-identical closed operation object, typed source values, expected head fences and evidence bindings.
       - Empty typed evidence sets may use their canonical empty-set digest; inapplicable domain fields never use sentinel values because they are absent from other branches.
   ActionDecisionReceiptBindingV1:
     additional_properties: false
@@ -271,9 +402,31 @@ quorum_policies:
         - {slot_id: legal_owner, capability: retention.policy.manage, allowed_roles: [LEGAL_REVIEWER]}
     FUNDING_DISCLOSURE:
       proposer_capability: funding.manage
+      assurance: STEP_UP
+      common_required_capability: actions.review
       slots:
-        - {slot_id: funding_preparer, capability: funding.manage, allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER]}
-        - {slot_id: funding_publisher, capability: funding.publish, allowed_roles: [EXECUTIVE_APPROVER]}
+        - {ordinal: 1, slot_id: funding_preparer, capability: funding.manage, required_capabilities: [actions.review, funding.manage], allowed_roles: [EXECUTIVE_APPROVER, OPERATIONS], assurance: STEP_UP, conditional: false}
+        - {ordinal: 2, slot_id: funding_publisher, capability: funding.publish, required_capabilities: [actions.review, funding.publish], allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional: false}
+        - {ordinal: 3, slot_id: oversight_reviewer, capability: review.legal, required_capabilities: [actions.review, review.legal], allowed_roles: [LEGAL_REVIEWER], assurance: STEP_UP, conditional_on: requires_oversight_review}
+        - {ordinal: 4, slot_id: board_approver, capability: funding.publish, required_capabilities: [actions.review, funding.publish], allowed_roles: [EXECUTIVE_APPROVER], assurance: STEP_UP, conditional_on: requires_board_approval}
+      conditional_slot_rule: oversight_reviewer exists exactly when requires_oversight_review is true and board_approver exists exactly when requires_board_approval is true; a false condition creates no assignment.
+      vacancy_rule: An unstaffed required slot persists as VACANT and never satisfies or closes quorum.
+      distinctness_rule: Every counted slot actor is pairwise distinct across all present FUNDING_DISCLOSURE slots.
+      related_case_prerequisite:
+        cardinality: exactly one current existing decision per distinct related case
+        action_kind: PUBLICATION
+        slot_id: independent_editorial
+        decision_kind: APPROVE
+        required_capabilities: [actions.review, review.editorial]
+        allowed_roles: [EDITOR, PUBLISHER]
+        assurance: STEP_UP
+        binding: exact case ID, current publication proposal/version, decision ID, decision receipt digest and actor ID
+    ECONOMICS_IMPORT:
+      proposer_capability: actions.propose
+      proposer_required_capabilities: [actions.propose, budgets.manage]
+      assurance: STEP_UP
+      slots:
+        - {slot_id: economics_reviewer, capability: actions.review, required_capabilities: [actions.review, budgets.manage], allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER], separation_of_duty: proposal_creator_is_ineligible}
     CAPABILITY_ACTIVATION:
       proposer_capability: providers.manage
       slots:
@@ -335,7 +488,19 @@ executor_catalog:
   COMMUNICATION_AUTHORIZATION: {executor_id: private.RecordCommunicationAuthorizationDecision, transport: PRIVATE_APPLICATION_COMMAND, capability: communications.authorization.manage, assurance: STEP_UP, transaction: serializable_decision, repository: communication_authorization}
   ASSET_RIGHTS_DECISION: {executor_id: private.ReviseAssetRightsDecision, transport: PRIVATE_APPLICATION_COMMAND, capability: rights.decide, assurance: STEP_UP, transaction: serializable_decision, repository: asset_rights}
   RETENTION_SCHEDULE: {executor_id: private.CreateRecordClassScheduleRevision, transport: PRIVATE_APPLICATION_COMMAND, capability: retention.policy.manage, assurance: STEP_UP, transaction: serializable_decision, repository: retention}
-  FUNDING_DISCLOSURE: {executor_id: private.PublishFundingDisclosureRevision, transport: PRIVATE_APPLICATION_COMMAND, capability: funding.publish, assurance: STEP_UP, transaction: serializable_decision, repository: funding}
+  FUNDING_DISCLOSURE:
+    executor_id: private.PublishFundingDisclosureRevision
+    transport: PRIVATE_APPLICATION_COMMAND
+    caller: workflow-worker
+    database_role: gurine_workflow_worker
+    capability: funding.publish
+    assurance: STEP_UP
+    transaction: serializable_decision
+    repository: funding
+    owner_function: editorial.publish_funding_disclosure_v1
+    owner_function_role: gurine_migrator
+    runtime_direct_table_dml: 0
+  ECONOMICS_IMPORT: {executor_id: private.ExecuteEconomicsImport, transport: PRIVATE_APPLICATION_COMMAND, caller: workflow-worker.economics-import-executor, effect_owner: workflow-worker.economics-import-executor, database_role: gurine_economics_importer, capability: economics.import, assurance: STEP_UP, transaction: serializable_decision, repository: economics_import}
   CAPABILITY_ACTIVATION: {executor_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, capability: providers.activate, assurance: STEP_UP, transaction: serializable_decision, repository: capability_activation}
   RESPONSE_POLICY_CALENDAR: {executor_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, capability: responses.policy.manage, assurance: STEP_UP, transaction: serializable_decision, repository: response_clock}
   COMMERCIAL_CONTROL: {executor_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, capability: commercial.controls.review, assurance: STEP_UP, transaction: external_effect_request, repository: commercial_control}
@@ -426,6 +591,24 @@ private_application_command_authorization:
     required_proof: exact current COMMERCIAL_CONTROL ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, commercial trigger snapshot, product fence receipt, external import receipt and distinct acknowledgement receipt
     assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
     forbidden: [metric-only auto-effect, inferred acknowledgement, elapsed-time resume, import receipt reused as acknowledgement, commercial stage mutation, paid-value inference]
+  private.PublishFundingDisclosureRevision:
+    caller: workflow-worker
+    database_role: gurine_workflow_worker
+    owner_function: editorial.publish_funding_disclosure_v1
+    owner_function_role: gurine_migrator
+    required_proof: exact current FUNDING_DISCLOSURE ExecutionAuthorization, positive candidate revision, approvalDigest, the present four-slot quorum with pairwise-distinct actors, exact related-case independent-editorial review tuples, immutable snapshot and policy/conflict/concentration/conditional-gate bindings, and unexpired STEP_UP receipts
+    counted_decision_order: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+    assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
+    runtime_direct_table_dml: 0
+    forbidden: [VACANT counted as approval, absent conditional slot when its boolean is true, present conditional slot when its boolean is false, actor reuse across slots, independently sorted decision ID and digest arrays, direct funding table DML, GURINE_LENGTH_PREFIXED_UTF8_V1 funding digest, zero target version, second effect for one proposal version]
+  private.ExecuteEconomicsImport:
+    caller: workflow-worker.economics-import-executor
+    database_role: gurine_economics_importer
+    required_proof: exact current ECONOMICS_IMPORT ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, closed row-valued operation branch, expected head fences, sorted persisted evidence bindings, economics.import capability and unexpired STEP_UP authorization
+    assurance: BOUND_STEP_UP_EXECUTION_AUTHORIZATION
+    terminal_contract: {owner_dispositions: [SUCCEEDED, OPERATION_REJECTED, PERMANENT_FAILED], generic_action_execution_state: {SUCCEEDED: SUCCEEDED, OPERATION_REJECTED: PERMANENT_FAILED, PERMANENT_FAILED: PERMANENT_FAILED}, worker_job_success_only: SUCCEEDED}
+    commit_ack_ambiguity: SQLSTATE class 08 or equivalent uncertainty is non-terminal; same-claim recall returns committed replay or executes only an uncommitted transaction and creates no reconciliation receipt.
+    forbidden: [billing-gateway caller, gurine_billing_gateway database role, generic JSON, digest-only source authority, dummy hash, unresolved evidence ID, missing expected head fence, inferred cash, elapsed-time dunning, second effect for one proposal version, RECONCILIATION_REQUIRED economics receipt, external send, automatic resubmission, new idempotency identity]
   private.ExecuteProviderControl:
     caller: analysis-worker.provider-control-executor
     required_proof: exact current PROVIDER_CONTROL ExecutionAuthorization, executionDigest, approvalDigest, complete counted decision receipt set, providerOperationId, providerId, expectedVersion and targetRequestDigest; providerOperationId selects the exact capability and assurance policy and is equality-checked against the immutable approval detail

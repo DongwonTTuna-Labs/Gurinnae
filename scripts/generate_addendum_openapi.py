@@ -22,6 +22,9 @@ import yaml
 ROOT = Path(__file__).resolve().parents[1]
 ADDENDUM = ROOT / "specs/product/addendum-operation-contracts.yaml"
 RESOURCES = ROOT / "specs/product/addendum-resource-error-contracts.yaml"
+COMMAND_SEMANTICS = ROOT / "specs/product/addendum-command-semantics.yaml"
+OWNER_ADDENDUM = ROOT / "specs/product/owner-addendum-2026-07-14.yaml"
+BASE_OPERATIONS = ROOT / "specs/api/operation-contracts.yaml"
 HANDWRITTEN_RESOURCES = ROOT / "specs/api/resource-schemas.yaml"
 BASE_ERROR_CATALOG = ROOT / "specs/api/error-code-catalog.yaml"
 PROVIDER_CONTROL_OPERATION_IDS = (
@@ -39,6 +42,835 @@ PUBLIC_BASE_SCHEMA_IMPORTS = (
     "CaseReproducibilityDownloadAppliedFilters",
     "CaseReproducibilityDownload",
 )
+
+ADDITIVE_EXTERNAL_APIS = frozenset(
+    {"public-api", "control-api", "submission-api"}
+)
+RESOURCE_OPERATION_PARTITIONS = {
+    "additive_external_operation_ids": "ADDITIVE_EXTERNAL",
+    "private_identity_api_operation_ids": "PRIVATE_IDENTITY_API",
+    "private_communication_operation_ids": "PRIVATE_COMMUNICATION",
+    "private_control_service_operation_ids": "PRIVATE_CONTROL",
+}
+RESOURCE_PRIVATE_OPERATION_PARTITIONS = {
+    "private_application_command_ids": (
+        "private_application_commands",
+        "private_application_command_bindings",
+        "private_application_request_schemas",
+        "private_application_error_sets",
+    ),
+    "private_billing_gateway_operation_ids": (
+        "private_billing_gateway_operations",
+        "private_billing_gateway_operation_bindings",
+        "private_billing_gateway_request_schemas",
+        "private_billing_gateway_error_sets",
+    ),
+}
+DONATION_CHARGE_OPERATION_ID = "private.ExecuteDonationCharge"
+DONATION_QUEUE_OPERATION_ID = "private.QueueDonationIntent"
+DONATION_FACT_PRODUCER_OPERATIONS = (
+    DONATION_CHARGE_OPERATION_ID,
+    "private.ReceivePaymentWebhook",
+)
+DONATION_CHARGE_PAYLOAD_FIELDS = (
+    "schemaVersion",
+    "donationScheduleId",
+    "donationScheduleVersion",
+    "donationScheduleDigest",
+    "paymentMethodBindingId",
+    "paymentMethodBindingDigest",
+    "offerVersionId",
+    "offerDigest",
+    "tierId",
+    "consentReceiptDigest",
+    "logicalChargeId",
+    "chargeIdempotencyKeySha256",
+    "scheduledFor",
+)
+DONATION_CHARGE_ERROR_CODES = (
+    "INVALID_REQUEST",
+    "IDEMPOTENCY_CONFLICT",
+    "PAYMENT_RUNTIME_UNAVAILABLE",
+    "RECONCILIATION_REQUIRED",
+    "INTERNAL_ERROR",
+)
+DONATION_CHARGE_RESOURCE_BINDING = {
+    "scope": "PRIVATE_APPLICATION",
+    "request_schema": "DonationChargeJobPayloadV1",
+    "success_schema": "DonationChargeExecutionResultV1",
+    "caller": "billing-gateway.donation-charge-executor",
+    "effect_owner": "payment-owner-function-boundary",
+    "database_role": "gurine_billing_gateway",
+}
+DONATION_CHARGE_RESULT_VARIANTS = {
+    "CONFIRMED": {
+        "additional_properties": False,
+        "fields": {
+            "disposition": "const<CONFIRMED>",
+            "attemptId": "uuid",
+            "receiptDigest": "sha256",
+            "effects": "const<NONE>",
+        },
+    },
+    "REPLAY": {
+        "additional_properties": False,
+        "fields": {
+            "disposition": "const<REPLAY>",
+            "attemptId": "uuid",
+            "receiptDigest": "sha256",
+            "effects": "const<NONE>",
+        },
+    },
+    "RECONCILIATION_REQUIRED": {
+        "additional_properties": False,
+        "fields": {
+            "disposition": "const<RECONCILIATION_REQUIRED>",
+            "attemptId": "uuid",
+        },
+    },
+}
+DONATION_CHARGE_LIFECYCLE_KEYS = (
+    "core_target_relations",
+    "auxiliary_relations",
+    "success_binding_transitions",
+    "success_atomicity",
+    "recurring_scheduler_owner",
+    "local_reject_terminal_owner",
+    "failure_outcomes",
+    "non_success_rule",
+    "authority_effects",
+)
+DONATION_CHARGE_CORE_TARGET_RELATIONS = (
+    "ops.payment_method_bindings",
+    "ops.payment_charge_attempts",
+    "ops.donation_facts",
+)
+DONATION_CHARGE_AUXILIARY_RELATIONS = (
+    "ops.tasks",
+    "ops.audit_events",
+    "ops.outbox",
+)
+DONATION_CHARGE_SUCCESS_BINDING_TRANSITIONS = {
+    "SINGLE_CHARGE": {
+        "from": "ACTIVE",
+        "to": "REVOKED",
+        "terminal_disposition": "CONSUMED",
+    },
+    "RECURRING": {
+        "from": "ACTIVE",
+        "to": "ACTIVE",
+        "terminal_disposition": "RETAINED",
+    },
+}
+DONATION_CHARGE_FAILURE_OUTCOMES = {
+    "LOCAL_REJECT": {
+        "attempt_transition": "REQUESTED_TO_FAILED",
+        "review_tasks": "ZERO",
+        "donation_facts": "ZERO",
+        "binding_consumptions": "ZERO",
+    },
+    "FETCHED_FAILED": {
+        "attempt_transition": "PROVIDER_ACCEPTED_TO_FAILED",
+        "review_tasks": "EXACTLY_ONE",
+        "donation_facts": "ZERO",
+        "binding_consumptions": "ZERO",
+    },
+    "FETCHED_CANCELED": {
+        "attempt_transition": "PROVIDER_ACCEPTED_TO_FAILED",
+        "review_tasks": "EXACTLY_ONE",
+        "donation_facts": "ZERO",
+        "binding_consumptions": "ZERO",
+    },
+}
+DONATION_QUEUE_REQUEST_FIELDS = (
+    "schemaVersion",
+    "requestId",
+    "offerVersionId",
+    "offerDigest",
+    "tierId",
+    "cadence",
+    "provider",
+    "consentReceiptDigest",
+    "paymentAuthorizationToken",
+)
+DONATION_QUEUE_RESPONSE_FIELDS = (
+    "schemaVersion",
+    "requestId",
+    "jobId",
+    "status",
+    "receiptDigest",
+)
+DONATION_QUEUE_ERROR_CODES = (
+    "INVALID_REQUEST",
+    "SERVICE_ASSERTION_INVALID",
+    "IDEMPOTENCY_CONFLICT",
+    "DEPENDENCY_UNAVAILABLE",
+    "INTERNAL_ERROR",
+)
+DONATION_QUEUE_TYPED_REQUEST_FIELDS = {
+    "schemaVersion": {"type": "string", "const": "donation-intent-request.v1"},
+    "requestId": {"type": "string", "format": "uuid"},
+    "offerVersionId": {"type": "string", "format": "uuid"},
+    "offerDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "tierId": {"type": "string", "format": "uuid"},
+    "cadence": {"type": "string", "enum": ["ONE_TIME", "RECURRING"]},
+    "provider": {
+        "type": "string",
+        "enum": ["TOSS_PAYMENTS", "KAKAO_PAY", "STRIPE"],
+    },
+    "consentReceiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "paymentAuthorizationToken": {"type": "string", "minLength": 1},
+}
+DONATION_QUEUE_TYPED_RESPONSE_FIELDS = {
+    "schemaVersion": {"type": "string", "const": "donation-intent-queued.v1"},
+    "requestId": {"type": "string", "format": "uuid"},
+    "jobId": {"type": "string", "format": "uuid"},
+    "status": {"type": "string", "const": "QUEUED"},
+    "receiptDigest": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+}
+FUNDING_REPORT_QUERY_ERROR_OVERLAYS = {
+    "getFundingContent": {
+        "preserved_base_statuses": ("404", "429", "500"),
+        "canonical_statuses": ("404", "422", "429", "500"),
+        "domain_errors": ("RESOURCE_NOT_FOUND", "PRECONDITION_FAILED"),
+        "effective_errors": (
+            "RATE_LIMITED",
+            "RESOURCE_NOT_FOUND",
+            "PRECONDITION_FAILED",
+            "INTERNAL_ERROR",
+        ),
+        "http_error_mapping": {
+            "404": ("RESOURCE_NOT_FOUND",),
+            "422": ("PRECONDITION_FAILED",),
+            "429": ("RATE_LIMITED",),
+            "500": ("INTERNAL_ERROR",),
+        },
+    },
+    "listTransparencyReports": {
+        "preserved_base_statuses": ("400", "429", "500"),
+        "canonical_statuses": ("400", "422", "429", "500"),
+        "domain_errors": ("PRECONDITION_FAILED",),
+        "effective_errors": (
+            "INVALID_PARAMETER",
+            "INVALID_CURSOR",
+            "RATE_LIMITED",
+            "PRECONDITION_FAILED",
+            "INTERNAL_ERROR",
+        ),
+        "http_error_mapping": {
+            "400": ("INVALID_PARAMETER", "INVALID_CURSOR"),
+            "422": ("PRECONDITION_FAILED",),
+            "429": ("RATE_LIMITED",),
+            "500": ("INTERNAL_ERROR",),
+        },
+    },
+}
+ECONOMICS_IMPORT_VARIANTS = (
+    "recordCommercialQualification",
+    "importCostAllocationClose",
+    "createTariffVersion",
+    "recordCommercialContractPeriod",
+    "recordUsageWindow",
+    "recordInvoice",
+    "recordRevenue",
+    "recordAccountingCorrection",
+    "recordCashApplication",
+    "recordTaxInvoiceIssuance",
+    "recordCollectionFailure",
+)
+
+
+def operation_index(rows: list[dict], label: str) -> dict[str, dict]:
+    indexed: dict[str, dict] = {}
+    for row in rows:
+        operation_id = row.get("operation_id")
+        if not isinstance(operation_id, str) or not operation_id:
+            raise ValueError(f"{label} contains an invalid operation_id")
+        if operation_id in indexed:
+            raise ValueError(f"{label} contains duplicate operation_id: {operation_id}")
+        indexed[operation_id] = row
+    return indexed
+
+
+def require_set_equal(label: str, actual: set[str], expected: set[str]) -> None:
+    missing = sorted(expected - actual)
+    extra = sorted(actual - expected)
+    if missing or extra:
+        raise ValueError(
+            f"{label} is not set-equal; missing={missing}, extra={extra}"
+        )
+
+
+def validate_base_operation_counts(base_doc: dict, base_rows: list[dict]) -> None:
+    counts = base_doc.get("counts", {})
+    derived = {
+        "total": len(base_rows),
+        "query": sum(row.get("operation_kind") == "QUERY" for row in base_rows),
+        "command": sum(
+            row.get("operation_kind") == "COMMAND" for row in base_rows
+        ),
+        "httpNonGet": sum(row.get("method") != "GET" for row in base_rows),
+        "public": sum(row.get("api") == "public-api" for row in base_rows),
+        "submission": sum(
+            row.get("api") == "submission-api" for row in base_rows
+        ),
+        "control": sum(row.get("api") == "control-api" for row in base_rows),
+        "identity": sum(
+            row.get("api") == "identity-provider" for row in base_rows
+        ),
+    }
+    if counts != derived:
+        raise ValueError(
+            "base operation counts do not match source rows: "
+            f"declared={counts}, derived={derived}"
+        )
+
+
+def validate_resource_partitions(
+    resource_doc: dict, expected: dict[str, set[str]]
+) -> None:
+    declared = resource_doc.get("set_equality", {})
+    bindings = resource_doc.get("operation_bindings", {})
+    partition_union: set[str] = set()
+    for registry_key, scope in RESOURCE_OPERATION_PARTITIONS.items():
+        declared_ids = set(declared.get(registry_key, []))
+        require_set_equal(registry_key, declared_ids, expected[registry_key])
+        overlap = partition_union & declared_ids
+        if overlap:
+            raise ValueError(
+                f"resource operation partitions overlap: {sorted(overlap)}"
+            )
+        partition_union.update(declared_ids)
+        bound_ids = {
+            operation_id
+            for operation_id, binding in bindings.items()
+            if binding.get("scope") == scope
+        }
+        require_set_equal(f"operation_bindings scope={scope}", bound_ids, declared_ids)
+
+    require_set_equal("operation_bindings", set(bindings), partition_union)
+    require_set_equal(
+        "request_schemas_by_operation",
+        set(resource_doc.get("request_schemas_by_operation", {})),
+        partition_union,
+    )
+    require_set_equal(
+        "operation_error_sets",
+        set(resource_doc.get("operation_error_sets", {})),
+        partition_union,
+    )
+
+
+def private_operation_ids(addendum_doc: dict, resource_doc: dict) -> set[str]:
+    declared = resource_doc.get("set_equality", {})
+    private_union: set[str] = set()
+    for registry_key, registry_names in RESOURCE_PRIVATE_OPERATION_PARTITIONS.items():
+        source_name, binding_name, request_name, error_name = registry_names
+        source_ids = set(addendum_doc.get(source_name, {}))
+        declared_ids = set(declared.get(registry_key, []))
+        require_set_equal(registry_key, declared_ids, source_ids)
+        for name in (binding_name, request_name, error_name):
+            require_set_equal(name, set(resource_doc.get(name, {})), source_ids)
+        overlap = private_union & source_ids
+        if overlap:
+            raise ValueError(
+                f"private operation partitions overlap: {sorted(overlap)}"
+            )
+        private_union.update(source_ids)
+    return private_union
+
+
+def validate_donation_charge_operation(addendum_doc: dict) -> dict:
+    charge_operation = addendum_doc.get("private_application_commands", {}).get(
+        DONATION_CHARGE_OPERATION_ID
+    )
+    if not isinstance(charge_operation, dict):
+        raise ValueError("private.ExecuteDonationCharge command is missing")
+    operation_request = charge_operation.get("request_schema", {})
+    if (
+        tuple(operation_request.get("fields", {})) != DONATION_CHARGE_PAYLOAD_FIELDS
+        or tuple(operation_request.get("required", []))
+        != DONATION_CHARGE_PAYLOAD_FIELDS
+    ):
+        raise ValueError("private.ExecuteDonationCharge operation payload is not exact")
+    if tuple(charge_operation.get("errors", [])) != DONATION_CHARGE_ERROR_CODES:
+        raise ValueError("private.ExecuteDonationCharge operation errors are not exact")
+    return charge_operation
+
+
+def validate_donation_charge_resource(resource_doc: dict) -> dict:
+    resource_request = resource_doc.get("private_application_request_schemas", {}).get(
+        DONATION_CHARGE_OPERATION_ID, {}
+    )
+    if resource_request.get("name") != "DonationChargeJobPayloadV1" or tuple(
+        resource_request.get("fields", {})
+    ) != DONATION_CHARGE_PAYLOAD_FIELDS:
+        raise ValueError("private.ExecuteDonationCharge resource payload is not exact")
+    resource_binding = resource_doc.get("private_application_command_bindings", {}).get(
+        DONATION_CHARGE_OPERATION_ID, {}
+    )
+    if any(
+        resource_binding.get(key) != value
+        for key, value in DONATION_CHARGE_RESOURCE_BINDING.items()
+    ):
+        raise ValueError("private.ExecuteDonationCharge resource binding is not exact")
+    resource_errors = resource_doc.get("private_application_error_sets", {}).get(
+        DONATION_CHARGE_OPERATION_ID, []
+    )
+    if tuple(resource_errors) != DONATION_CHARGE_ERROR_CODES:
+        raise ValueError("private.ExecuteDonationCharge resource errors are not exact")
+    result_schema = resource_doc.get("schemas", {}).get(
+        "DonationChargeExecutionResultV1", {}
+    )
+    if (
+        result_schema.get("kind") != "discriminated_union"
+        or result_schema.get("discriminator") != "disposition"
+        or result_schema.get("variants") != DONATION_CHARGE_RESULT_VARIANTS
+    ):
+        raise ValueError("DonationChargeExecutionResultV1 is not exact")
+    return resource_binding
+
+
+def validate_donation_charge_semantics(command_doc: dict) -> dict:
+    command = command_doc.get("private_application_commands", {}).get(
+        DONATION_CHARGE_OPERATION_ID, {}
+    )
+    if (
+        command.get("caller") != "billing-gateway.donation-charge-executor"
+        or command.get("effect_owner") != "payment-owner-function-boundary"
+        or command.get("database_role") != "gurine_billing_gateway"
+        or command.get("direct_dml") != "FORBIDDEN"
+        or tuple(command.get("errors", [])) != DONATION_CHARGE_ERROR_CODES
+    ):
+        raise ValueError("private.ExecuteDonationCharge command semantics are not exact")
+    return command
+
+
+def validate_donation_charge_lifecycle(
+    operation: dict, resource_binding: dict, command: dict
+) -> None:
+    contracts = (
+        operation.get("lifecycle_contract", {}),
+        resource_binding.get("lifecycle_contract", {}),
+        command.get("lifecycle_contract", {}),
+    )
+    if contracts[0] != contracts[1] or contracts[0] != contracts[2]:
+        raise ValueError("private.ExecuteDonationCharge lifecycle contracts differ")
+    lifecycle = contracts[0]
+    if tuple(lifecycle) != DONATION_CHARGE_LIFECYCLE_KEYS:
+        raise ValueError("private.ExecuteDonationCharge lifecycle keys are not exact")
+    if (
+        tuple(lifecycle.get("core_target_relations", []))
+        != DONATION_CHARGE_CORE_TARGET_RELATIONS
+        or tuple(lifecycle.get("auxiliary_relations", []))
+        != DONATION_CHARGE_AUXILIARY_RELATIONS
+        or lifecycle.get("success_binding_transitions")
+        != DONATION_CHARGE_SUCCESS_BINDING_TRANSITIONS
+        or lifecycle.get("recurring_scheduler_owner")
+        != "ops.enqueue_due_r6e_donation_charge_jobs_v1"
+        or lifecycle.get("local_reject_terminal_owner")
+        != "ops.fail_r6e_donation_charge_v1"
+        or lifecycle.get("failure_outcomes") != DONATION_CHARGE_FAILURE_OUTCOMES
+    ):
+        raise ValueError("private.ExecuteDonationCharge lifecycle is not exact")
+    if (
+        tuple(command.get("target_relations", []))
+        != DONATION_CHARGE_CORE_TARGET_RELATIONS
+        or tuple(command.get("auxiliary_relations", []))
+        != DONATION_CHARGE_AUXILIARY_RELATIONS
+    ):
+        raise ValueError("private.ExecuteDonationCharge relation classes are not exact")
+
+
+def normalize_private_billing_operation_contract(
+    operation_id: str, addendum_doc: dict, resource_doc: dict
+) -> dict:
+    operation = addendum_doc.get("private_billing_gateway_operations", {}).get(
+        operation_id, {}
+    )
+    binding = resource_doc.get("private_billing_gateway_operation_bindings", {}).get(
+        operation_id, {}
+    )
+    request = resource_doc.get("private_billing_gateway_request_schemas", {}).get(
+        operation_id, {}
+    )
+    response_name = binding.get("success_schema")
+    response = resource_doc.get("schemas", {}).get(response_name, {})
+    entrypoint = operation.get("entrypoint", {})
+    if not all(
+        isinstance(value, dict)
+        for value in (operation, binding, request, response, entrypoint)
+    ):
+        raise ValueError(f"{operation_id} private billing source is incomplete")
+    request_fields = request.get("fields", {})
+    response_fields = response.get("fields", {})
+    return {
+        "operation_id": operation_id,
+        "scope": binding.get("scope"),
+        "operation_kind": operation.get("operation_kind"),
+        "transport": operation.get("transport"),
+        "method": entrypoint.get("method"),
+        "path": entrypoint.get("path"),
+        "success_status": binding.get("success_status"),
+        "request_schema": binding.get("request_schema"),
+        "response_schema": response_name,
+        "request_fields": {
+            name: contract_property(str(expression), resource_doc, {})
+            for name, expression in request_fields.items()
+        },
+        "response_fields": {
+            name: contract_property(str(expression), resource_doc, {})
+            for name, expression in response_fields.items()
+        },
+        "errors": tuple(
+            resource_doc.get("private_billing_gateway_error_sets", {}).get(
+                operation_id, []
+            )
+        ),
+    }
+
+
+def validate_donation_queue_contract(
+    addendum_doc: dict, resource_doc: dict, command_doc: dict
+) -> None:
+    operation = addendum_doc.get("private_billing_gateway_operations", {}).get(
+        DONATION_QUEUE_OPERATION_ID, {}
+    )
+    binding = resource_doc.get("private_billing_gateway_operation_bindings", {}).get(
+        DONATION_QUEUE_OPERATION_ID, {}
+    )
+    request = resource_doc.get("private_billing_gateway_request_schemas", {}).get(
+        DONATION_QUEUE_OPERATION_ID, {}
+    )
+    response = resource_doc.get("schemas", {}).get(
+        "DonationIntentQueuedReceiptV1", {}
+    )
+    command = command_doc.get("private_billing_gateway_operations", {}).get(
+        DONATION_QUEUE_OPERATION_ID, {}
+    )
+    if (
+        operation.get("operation_kind") != "COMMAND"
+        or operation.get("transport") != "PRIVATE_BILLING_GATEWAY_HTTP"
+        or operation.get("entrypoint")
+        != {
+            "method": "POST",
+            "path": "/internal/v1/donation-intents",
+            "success_status": 202,
+        }
+        or operation.get("caller") != "public-web SvelteKit server action"
+        or operation.get("effect_owner") != "billing-gateway"
+        or operation.get("required_headers")
+        != {
+            "Idempotency-Key": "secret-string[8..200]",
+            "X-Gurine-Service-Assertion": "request-bound-service-assertion",
+        }
+        or operation.get("request_schema") != "DonationIntentQueueRequestV1"
+        or operation.get("response_schema") != "DonationIntentQueuedReceiptV1"
+        or tuple(operation.get("errors", [])) != DONATION_QUEUE_ERROR_CODES
+    ):
+        raise ValueError("private.QueueDonationIntent operation contract is not exact")
+    expected_binding = {
+        "scope": "PRIVATE_BILLING_GATEWAY",
+        "operation_kind": "COMMAND",
+        "request_schema": "DonationIntentQueueRequestV1",
+        "success_status": 202,
+        "success_schema": "DonationIntentQueuedReceiptV1",
+        "caller": "public-web",
+        "issuer": "public-web",
+        "audience": "billing-gateway",
+        "effect_owner": "billing-gateway",
+        "required_header": "Idempotency-Key",
+    }
+    if any(binding.get(key) != value for key, value in expected_binding.items()):
+        raise ValueError("private.QueueDonationIntent resource binding is not exact")
+    if (
+        request.get("name") != "DonationIntentQueueRequestV1"
+        or request.get("additional_properties") is not False
+        or tuple(request.get("fields", {})) != DONATION_QUEUE_REQUEST_FIELDS
+        or response.get("kind") != "object"
+        or response.get("additional_properties") is not False
+        or tuple(response.get("required", [])) != DONATION_QUEUE_RESPONSE_FIELDS
+        or tuple(response.get("fields", {})) != DONATION_QUEUE_RESPONSE_FIELDS
+        or tuple(
+            resource_doc.get("private_billing_gateway_error_sets", {}).get(
+                DONATION_QUEUE_OPERATION_ID, []
+            )
+        )
+        != DONATION_QUEUE_ERROR_CODES
+    ):
+        raise ValueError("private.QueueDonationIntent resource schemas are not exact")
+    if (
+        command.get("operation_id") != DONATION_QUEUE_OPERATION_ID
+        or command.get("operation_kind") != "COMMAND"
+        or command.get("transport") != "PRIVATE_BILLING_GATEWAY_HTTP"
+        or command.get("entrypoint") != "POST /internal/v1/donation-intents"
+        or command.get("success_status") != 202
+        or command.get("caller") != "public-web SvelteKit server action"
+        or command.get("effect_owner") != "billing-gateway"
+        or command.get("receipt") != "DonationIntentQueuedReceiptV1"
+        or tuple(command.get("errors", [])) != DONATION_QUEUE_ERROR_CODES
+    ):
+        raise ValueError("private.QueueDonationIntent command semantics are not exact")
+    normalized = normalize_private_billing_operation_contract(
+        DONATION_QUEUE_OPERATION_ID, addendum_doc, resource_doc
+    )
+    if (
+        normalized["scope"] != "PRIVATE_BILLING_GATEWAY"
+        or normalized["operation_kind"] != "COMMAND"
+        or normalized["transport"] != "PRIVATE_BILLING_GATEWAY_HTTP"
+        or normalized["method"] != "POST"
+        or normalized["path"] != "/internal/v1/donation-intents"
+        or normalized["success_status"] != 202
+        or normalized["request_schema"] != "DonationIntentQueueRequestV1"
+        or normalized["response_schema"] != "DonationIntentQueuedReceiptV1"
+        or normalized["request_fields"] != DONATION_QUEUE_TYPED_REQUEST_FIELDS
+        or normalized["response_fields"] != DONATION_QUEUE_TYPED_RESPONSE_FIELDS
+        or normalized["errors"] != DONATION_QUEUE_ERROR_CODES
+    ):
+        raise ValueError("private.QueueDonationIntent typed normalization is not exact")
+
+
+def validate_donation_fact_producers(
+    addendum_doc: dict,
+    resource_doc: dict,
+    command_doc: dict,
+    command: dict,
+) -> None:
+    producer_contracts = (
+        ("operation", addendum_doc.get("donation_fact_producer_contract", {})),
+        ("resource", resource_doc.get("donation_fact_producer_contract", {})),
+        ("command", command.get("producer_contract", {})),
+    )
+    for label, producer_contract in producer_contracts:
+        observed = tuple(producer_contract.get("producer_operations_exactly", []))
+        if observed != DONATION_FACT_PRODUCER_OPERATIONS:
+            raise ValueError(f"{label} donation.fact_recorded.v1 producers are not exact")
+    webhook_id = DONATION_FACT_PRODUCER_OPERATIONS[1]
+    producer_effect_owners = (
+        addendum_doc.get("private_billing_gateway_operations", {})
+        .get(webhook_id, {})
+        .get("effect_owner"),
+        resource_doc.get("private_billing_gateway_operation_bindings", {})
+        .get(webhook_id, {})
+        .get("effect_owner"),
+        command_doc.get("private_billing_gateway_operations", {})
+        .get(webhook_id, {})
+        .get("effect_owner"),
+    )
+    expected_owner = "payment-owner-function-boundary"
+    if producer_effect_owners != (expected_owner, expected_owner, expected_owner):
+        raise ValueError("donation fact producers do not share the payment owner")
+
+
+def validate_funding_report_query_error_overlays(
+    addendum_doc: dict, resource_doc: dict, base_doc: dict
+) -> None:
+    source = addendum_doc.get("funding_report_query_error_overlays", {})
+    source_operations = source.get("operations", {})
+    resource_operations = resource_doc.get(
+        "funding_report_query_error_overlays", {}
+    )
+    resource_ids = {
+        operation_id
+        for operation_id in resource_operations
+        if operation_id != "invariants"
+    }
+    expected_ids = set(FUNDING_REPORT_QUERY_ERROR_OVERLAYS)
+    require_set_equal("funding report source error overlays", set(source_operations), expected_ids)
+    require_set_equal("funding report resource error overlays", resource_ids, expected_ids)
+    base = operation_index(base_doc.get("operations", []), "base operation registry")
+    for operation_id, expected in FUNDING_REPORT_QUERY_ERROR_OVERLAYS.items():
+        operation = base.get(operation_id, {})
+        source_contract = source_operations.get(operation_id, {})
+        resource_errors = tuple(resource_operations.get(operation_id, []))
+        raw_mapping = operation.get("http_error_mapping", {})
+        operation_mapping = (
+            {
+                str(status): tuple(codes)
+                for status, codes in raw_mapping.items()
+                if isinstance(codes, list)
+            }
+            if isinstance(raw_mapping, dict)
+            else {}
+        )
+        if (
+            tuple(str(status) for status in operation.get("errors", []))
+            != expected["canonical_statuses"]
+            or tuple(operation.get("domain_errors", []))
+            != expected["domain_errors"]
+            or tuple(
+                str(status) for status in source_contract.get(
+                    "preserved_base_statuses", []
+                )
+            )
+            != expected["preserved_base_statuses"]
+            or tuple(
+                str(status) for status in source_contract.get(
+                    "canonical_statuses", []
+                )
+            )
+            != expected["canonical_statuses"]
+            or tuple(source_contract.get("effective_errors", []))
+            != expected["effective_errors"]
+            or tuple(operation.get("error_codes", []))
+            != expected["effective_errors"]
+            or operation_mapping != expected["http_error_mapping"]
+            or resource_errors != expected["effective_errors"]
+        ):
+            raise ValueError(f"{operation_id} funding report error overlay is not exact")
+    precondition = error_responses(["PRECONDITION_FAILED"], resource_doc)
+    if tuple(precondition) != ("422",):
+        raise ValueError("funding report PRECONDITION_FAILED must map only to 422")
+
+
+def validate_private_operation_partitions(
+    addendum_doc: dict,
+    resource_doc: dict,
+    command_doc: dict,
+    http_operation_ids: set[str],
+) -> None:
+    private_union = private_operation_ids(addendum_doc, resource_doc)
+
+    http_overlap = private_union & http_operation_ids
+    if http_overlap:
+        raise ValueError(
+            "private operations must not enter the external/all-scope HTTP set: "
+            f"{sorted(http_overlap)}"
+        )
+    charge_operation = validate_donation_charge_operation(addendum_doc)
+    charge_binding = validate_donation_charge_resource(resource_doc)
+    command = validate_donation_charge_semantics(command_doc)
+    validate_donation_charge_lifecycle(charge_operation, charge_binding, command)
+    validate_donation_fact_producers(addendum_doc, resource_doc, command_doc, command)
+    validate_donation_queue_contract(addendum_doc, resource_doc, command_doc)
+
+
+def operation_partition_summary(
+    base_rows: list[dict],
+    additive_rows: list[dict],
+    additive_external_ids: set[str],
+    private_identity_ids: set[str],
+) -> dict[str, int]:
+    additive_external = [
+        row for row in additive_rows if row["operation_id"] in additive_external_ids
+    ]
+    private_identity = [
+        row for row in additive_rows if row["operation_id"] in private_identity_ids
+    ]
+    return {
+        "additive_external": len(additive_external),
+        "private_identity_api": len(private_identity),
+        "final_external": len(base_rows) + len(additive_external),
+        "all_scope_http": len(base_rows) + len(additive_rows),
+        "final_query": sum(
+            row.get("operation_kind") == "QUERY" for row in base_rows
+        )
+        + sum(row.get("kind") == "QUERY" for row in additive_external),
+        "all_scope_query": sum(
+            row.get("operation_kind") == "QUERY" for row in base_rows
+        )
+        + sum(row.get("kind") == "QUERY" for row in additive_rows),
+        "final_command": sum(
+            row.get("operation_kind") == "COMMAND" for row in base_rows
+        )
+        + sum(row.get("kind") == "COMMAND" for row in additive_external),
+        "all_scope_command": sum(
+            row.get("operation_kind") == "COMMAND" for row in base_rows
+        )
+        + sum(row.get("kind") == "COMMAND" for row in additive_rows),
+        "final_non_get": sum(row.get("method") != "GET" for row in base_rows)
+        + sum(row.get("method") != "GET" for row in additive_external),
+        "all_scope_non_get": sum(row.get("method") != "GET" for row in base_rows)
+        + sum(row.get("method") != "GET" for row in additive_rows),
+    }
+
+
+def validate_operation_partition(
+    operations: list[dict], resource_doc: dict, owner_doc: dict, base_doc: dict
+) -> dict[str, int]:
+    additive = operation_index(operations, "addendum operation contract")
+    owner_additive = operation_index(
+        owner_doc.get("additive_operations", []), "owner additive operation registry"
+    )
+    require_set_equal(
+        "addendum operations", set(additive), set(owner_additive)
+    )
+    for operation_id, operation in additive.items():
+        owner_operation = owner_additive[operation_id]
+        for field in ("api", "method", "path", "kind"):
+            if operation.get(field) != owner_operation.get(field):
+                raise ValueError(
+                    f"{operation_id} {field} differs from owner additive registry"
+                )
+
+    owner_counts = owner_doc.get("operation_counts", {})
+    private_identity_ids = set(
+        owner_counts.get("private_identity_api_operation_ids", [])
+    )
+    observed_identity_ids = {
+        operation_id
+        for operation_id, operation in additive.items()
+        if operation.get("api") == "identity-api"
+    }
+    require_set_equal(
+        "PRIVATE_IDENTITY_API operations",
+        observed_identity_ids,
+        private_identity_ids,
+    )
+    additive_external_ids = set(additive) - private_identity_ids
+    invalid_external_apis = {
+        operation.get("api")
+        for operation_id, operation in additive.items()
+        if operation_id in additive_external_ids
+        and operation.get("api") not in ADDITIVE_EXTERNAL_APIS
+    }
+    if invalid_external_apis:
+        raise ValueError(
+            "unsupported additive external APIs: "
+            f"{sorted(invalid_external_apis, key=str)}"
+        )
+
+    private_communication_ids = set(
+        operation_index(
+            owner_doc.get("private_communication_gateway_operations", []),
+            "owner private communication registry",
+        )
+    )
+    private_control_ids = set(
+        operation_index(
+            owner_doc.get("private_control_service_operations", []),
+            "owner private control registry",
+        )
+    )
+    validate_resource_partitions(
+        resource_doc,
+        {
+            "additive_external_operation_ids": additive_external_ids,
+            "private_identity_api_operation_ids": private_identity_ids,
+            "private_communication_operation_ids": private_communication_ids,
+            "private_control_service_operation_ids": private_control_ids,
+        },
+    )
+
+    base_rows = base_doc.get("operations", [])
+    base = operation_index(base_rows, "base external operation registry")
+    overlap = set(base) & set(additive)
+    if overlap:
+        raise ValueError(
+            f"base and additive HTTP operations overlap: {sorted(overlap)}"
+        )
+    validate_base_operation_counts(base_doc, base_rows)
+    summary = operation_partition_summary(
+        base_rows, operations, additive_external_ids, private_identity_ids
+    )
+    if summary["final_query"] + summary["final_command"] != summary["final_external"]:
+        raise ValueError("final external query/command partition is incomplete")
+    if (
+        summary["all_scope_query"] + summary["all_scope_command"]
+        != summary["all_scope_http"]
+    ):
+        raise ValueError("all-scope HTTP query/command partition is incomplete")
+    return summary
 
 
 def direct_contract_expression(expression: str) -> str:
@@ -122,6 +954,41 @@ def integer_schema(expression: str) -> dict | None:
     if default is not None:
         schema["default"] = int(default)
     return schema
+
+
+def decimal_schema(expression: str) -> dict | None:
+    bounded = re.fullmatch(
+        r"(?:decimal|numeric)\((\d+),(\d+)\)",
+        expression,
+        re.IGNORECASE,
+    )
+    if bounded is not None:
+        precision = int(bounded.group(1))
+        scale = int(bounded.group(2))
+        integer_digits = precision - scale
+        if precision <= 0 or scale < 0 or integer_digits <= 0:
+            raise ValueError(f"invalid decimal precision/scale: {expression}")
+        fractional = (
+            rf"(?:\.[0-9]{{0,{scale - 1}}}[1-9])?" if scale > 0 else ""
+        )
+        return {
+            "type": "string",
+            "pattern": (
+                rf"^(?!-0$)-?(?:0|[1-9][0-9]{{0,{integer_digits - 1}}})"
+                rf"{fractional}$"
+            ),
+            "maxLength": precision + 2,
+            "x-canonical-decimal": True,
+            "x-precision": precision,
+            "x-scale": scale,
+        }
+    if expression.lower() == "decimal":
+        return {
+            "type": "string",
+            "pattern": r"^(?!-0$)-?(?:0|[1-9][0-9]*)(?:\.[0-9]*[1-9])?$",
+            "x-canonical-decimal": True,
+        }
+    return None
 
 
 def enum_schema(expression: str) -> dict | None:
@@ -219,6 +1086,9 @@ def primitive(expression: str) -> dict:
     integer = integer_schema(direct_expression)
     if integer is not None:
         return integer
+    decimal = decimal_schema(direct_expression)
+    if decimal is not None:
+        return decimal
     enum = enum_schema(direct_expression)
     if enum is not None:
         return enum
@@ -236,7 +1106,7 @@ def primitive(expression: str) -> dict:
             "HYPOTHESIS", "CLAIM", "TASK", "COMPARABLE", "COMMUNICATION", "PUBLICATION",
             "RETRACTION", "RULE_ACTIVATION", "ROLE_GRANT", "KILL_SWITCH",
             "COMMUNICATION_AUTHORIZATION", "ASSET_RIGHTS_DECISION", "RETENTION_SCHEDULE",
-            "FUNDING_DISCLOSURE", "CAPABILITY_ACTIVATION", "RESPONSE_POLICY_CALENDAR",
+            "FUNDING_DISCLOSURE", "ECONOMICS_IMPORT", "CAPABILITY_ACTIVATION", "RESPONSE_POLICY_CALENDAR",
             "COMMERCIAL_CONTROL", "PROVIDER_CONTROL",
         ]}
     optional_value = generic_argument(direct_expression, "optional")
@@ -256,7 +1126,7 @@ def primitive(expression: str) -> dict:
         )
     if "boolean" in normalized_expression:
         return {"type": "boolean"}
-    if "int" in normalized_expression or "decimal" in normalized_expression:
+    if "int" in normalized_expression:
         return {"type": "integer", "format": "int64"}
     if "datetime" in normalized_expression:
         return {"type": "string", "format": "date-time"}
@@ -285,6 +1155,72 @@ def referenced_names(expression: str, known: set[str]) -> set[str]:
     return {name for name in known if name in expression}
 
 
+def variant_fields(
+    definition: dict, resource_doc: dict, schema_name: str, variant: str
+) -> dict:
+    direct_fields = dict(definition.get("fields", {}))
+    source_name = definition.get("fields_from")
+    if source_name is None:
+        return direct_fields
+    if (
+        schema_name != "EconomicsImportOperationV1"
+        or variant not in ECONOMICS_IMPORT_VARIANTS
+    ):
+        raise ValueError(
+            "fields_from is allowed only on exact EconomicsImportOperationV1 variants"
+        )
+    if not isinstance(source_name, str) or not source_name:
+        raise ValueError(f"{schema_name}.{variant} has invalid fields_from")
+    source = resource_doc.get("schemas", {}).get(source_name)
+    if not isinstance(source, dict):
+        raise ValueError(
+            f"{schema_name}.{variant} fields_from schema is missing: {source_name}"
+        )
+    if source.get("kind", "object") != "object" or source.get(
+        "additional_properties", False
+    ) or "fields_from" in source:
+        raise ValueError(
+            f"{schema_name}.{variant} fields_from must name a closed object"
+        )
+    inherited_fields = source.get("fields")
+    if not isinstance(inherited_fields, dict) or not inherited_fields:
+        raise ValueError(
+            f"{schema_name}.{variant} fields_from has no closed fields: {source_name}"
+        )
+    collisions = set(direct_fields) & set(inherited_fields)
+    if collisions:
+        raise ValueError(
+            f"{schema_name}.{variant} fields_from collisions: {sorted(collisions)}"
+        )
+    if direct_fields != {"operationId": f"const<{variant}>"}:
+        raise ValueError(
+            f"{schema_name}.{variant} may declare only its operationId discriminator"
+        )
+    forbidden_source_types = [
+        field
+        for field, expression in inherited_fields.items()
+        if direct_contract_expression(str(expression)).lower()
+        in {"json", "object", "map"}
+        or direct_contract_expression(str(expression)).lower().startswith("map<")
+        or source_name in str(expression)
+    ]
+    if forbidden_source_types:
+        raise ValueError(
+            f"{schema_name}.{variant} fields_from is recursive or map-valued: "
+            f"{sorted(forbidden_source_types)}"
+        )
+    flattened = dict(direct_fields)
+    flattened.update(inherited_fields)
+    if "required" in definition:
+        selected_required = set(definition["required"])
+        expected_required = set(required_contract_fields(flattened))
+        if selected_required != expected_required:
+            raise ValueError(
+                f"{schema_name}.{variant} required differs from flattened fields"
+            )
+    return flattened
+
+
 def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[str]) -> None:
     if name in seen or name not in resource_doc.get("schemas", {}):
         return
@@ -307,11 +1243,32 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
                 ),
             }
             return
+        variants = contract.get("variants", {})
+        if any("fields_from" in definition for definition in variants.values()):
+            if (
+                name != "EconomicsImportOperationV1"
+                or tuple(variants) != ECONOMICS_IMPORT_VARIANTS
+            ):
+                raise ValueError(
+                    "fields_from requires the exact ordered economics import variants"
+                )
+            if discriminator != "operationId" or common:
+                raise ValueError(
+                    "EconomicsImportOperationV1 composition requires only operationId"
+                )
+            if not all(
+                "fields_from" in definition for definition in variants.values()
+            ):
+                raise ValueError(
+                    "every economics import variant requires exactly one fields_from"
+                )
         branches = []
-        for variant, definition in contract.get("variants", {}).items():
-            variant_fields = definition.get("fields", {})
+        for variant, definition in variants.items():
+            selected_fields = variant_fields(
+                definition, resource_doc, name, variant
+            )
             fields = dict(common)
-            fields.update(variant_fields)
+            fields.update(selected_fields)
             properties = {
                 field: contract_property(str(value), resource_doc, schemas)
                 for field, value in fields.items()
@@ -319,7 +1276,7 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
             properties[discriminator] = {"type": "string", "const": variant}
             selected_required = definition.get("required")
             if selected_required is None:
-                selected_required = required_contract_fields(variant_fields)
+                selected_required = required_contract_fields(selected_fields)
             required = list(
                 dict.fromkeys(
                     [*required_contract_fields(common), *selected_required]
@@ -337,8 +1294,14 @@ def add_contract_schema(name: str, resource_doc: dict, schemas: dict, seen: set[
         for value in common.values():
             for child in referenced_names(str(value), known):
                 add_contract_schema(child, resource_doc, schemas, seen)
-        for definition in contract.get("variants", {}).values():
-            for value in definition.get("fields", {}).values():
+        for variant, definition in variants.items():
+            source_name = definition.get("fields_from")
+            if source_name is not None:
+                add_contract_schema(source_name, resource_doc, schemas, seen)
+            selected_fields = variant_fields(
+                definition, resource_doc, name, variant
+            )
+            for value in selected_fields.values():
                 for child in referenced_names(str(value), known):
                     add_contract_schema(child, resource_doc, schemas, seen)
         return
@@ -417,12 +1380,43 @@ def error_responses(codes: list[str], resource_doc: dict) -> dict:
     }
 
 
+def apply_funding_report_query_error_overlays(
+    document: dict, resource_doc: dict
+) -> None:
+    base_doc = yaml.safe_load(BASE_OPERATIONS.read_text())
+    base = operation_index(base_doc.get("operations", []), "base operation registry")
+    overlays = resource_doc.get("funding_report_query_error_overlays", {})
+    precondition_response = error_responses(["PRECONDITION_FAILED"], resource_doc)[
+        "422"
+    ]
+    for operation_id in FUNDING_REPORT_QUERY_ERROR_OVERLAYS:
+        operation = base[operation_id]
+        node = (
+            document.get("paths", {})
+            .get(operation["path"], {})
+            .get(operation["method"].lower())
+        )
+        if not isinstance(node, dict) or node.get("operationId") != operation_id:
+            raise ValueError(f"{operation_id} generated base operation is missing")
+        responses = node.setdefault("responses", {})
+        responses["422"] = copy.deepcopy(precondition_response)
+        node["responses"] = {
+            status: responses[status]
+            for status in sorted(responses, key=lambda value: int(value))
+        }
+        node["x-error-codes"] = list(overlays[operation_id])
+
+
 def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: dict, control: bool) -> dict:
     request = operation.get("request", {})
     fields = request.get("fields", {})
     required = list(request.get("required", []))
     request_name = binding["request_schema"]
     response_name = binding["success_schema"]
+    query_envelope = (
+        operation["kind"] == "QUERY"
+        and operation["operation_id"] != "downloadTransparencyReport"
+    )
     schemas[request_name] = {
         "type": "object",
         "additionalProperties": False,
@@ -490,7 +1484,7 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     # The registered query boundary adds the operation identifier to every
     # query envelope so receipts and readbacks remain self-describing. Keep that field in the
     # additive response contract instead of returning a schema-invalid extra.
-    if operation["kind"] == "QUERY":
+    if query_envelope:
         schemas[response_name]["properties"]["operationId"] = {"type": "string"}
         schemas[response_name]["required"].append("operationId")
         # Query adapters use the same navigable link envelope as the legacy
@@ -505,7 +1499,7 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     # add_contract_schema materialises nested references and may replace the
     # top-level response object; reapply the transport envelope fields after
     # that expansion so query adapters remain schema-closed.
-    if operation["kind"] == "QUERY":
+    if query_envelope:
         schemas[response_name]["properties"]["operationId"] = {"type": "string"}
         schemas[response_name]["properties"].setdefault(
             "links", {"type": "array", "items": {"$ref": "#/components/schemas/Link"}}
@@ -526,7 +1520,19 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
         "x-capability": operation.get("capability", "none"),
         "x-assurance-level": operation.get("assurance", "ACTIVE_SESSION"),
         "x-error-codes": list(operation.get("errors", [])),
-        "security": ([{"ActorAssertion": []}] if control else ([{"BffServiceAssertion": [], "ScopedSubmissionSession": []}] if "scoped" in binding["transport_profile"].lower() else [{"BffServiceAssertion": []}])),
+        "security": (
+            [{"ActorAssertion": []}]
+            if control
+            else (
+                []
+                if binding["transport_profile"].upper().startswith("PUBLIC_")
+                else (
+                    [{"BffServiceAssertion": [], "ScopedSubmissionSession": []}]
+                    if "scoped" in binding["transport_profile"].lower()
+                    else [{"BffServiceAssertion": []}]
+                )
+            )
+        ),
         "responses": {
             str(binding["success_status"]): {
                 "description": "Successful response",
@@ -547,7 +1553,7 @@ def operation_node(operation: dict, binding: dict, schemas: dict, resource_doc: 
     if operation["method"] == "GET":
         query_parameters = []
         for name in required:
-            if name in fields:
+            if name in fields and name not in path_parameters:
                 query_parameters.append({
                     "name": name,
                     "in": "query",
@@ -758,6 +1764,8 @@ def merge(
                 "$ref": "#/components/schemas/BudgetOverviewResponse"
             }
         path[operation["method"].lower()] = node
+    if api == "public-api":
+        apply_funding_report_query_error_overlays(document, resource_doc)
     if api == "control-api":
         legacy_budget = document.get("paths", {}).get("/v1/internal/queries/get-budget-overview", {}).get("get")
         if isinstance(legacy_budget, dict) and "200" in legacy_budget.get("responses", {}):
@@ -875,10 +1883,26 @@ def main() -> int:
         "--check", action="store_true", help="fail without writing when projections differ"
     )
     args = parser.parse_args()
-    operations = yaml.safe_load(ADDENDUM.read_text())["operations"]
+    addendum_doc = yaml.safe_load(ADDENDUM.read_text())
+    operations = addendum_doc["operations"]
     resource_doc = yaml.safe_load(RESOURCES.read_text())
+    command_doc = yaml.safe_load(COMMAND_SEMANTICS.read_text())
+    owner_doc = yaml.safe_load(OWNER_ADDENDUM.read_text())
+    base_doc = yaml.safe_load(BASE_OPERATIONS.read_text())
+    validate_private_operation_partitions(
+        addendum_doc,
+        resource_doc,
+        command_doc,
+        {operation["operation_id"] for operation in operations},
+    )
+    validate_funding_report_query_error_overlays(
+        addendum_doc, resource_doc, base_doc
+    )
+    partition = validate_operation_partition(
+        operations, resource_doc, owner_doc, base_doc
+    )
     grouped = {
-        "public-api": [],
+        "public-api": [row for row in operations if row["api"] == "public-api"],
         "control-api": [row for row in operations if row["api"] == "control-api"],
         "submission-api": [row for row in operations if row["api"] == "submission-api"],
     }
@@ -901,10 +1925,16 @@ def main() -> int:
     if args.check:
         print(
             "generated OpenAPI projections: PASS "
-            f"additive_operations={sum(map(len, grouped.values()))}"
+            f"additive_external={partition['additive_external']} "
+            f"private_identity_api={partition['private_identity_api']} "
+            f"final_external={partition['final_external']} "
+            f"all_scope_http={partition['all_scope_http']}"
         )
     else:
-        print(f"merged {sum(map(len, grouped.values()))} additive operations")
+        print(
+            f"merged {partition['additive_external']} additive external operations "
+            f"and {partition['private_identity_api']} private identity-api operations"
+        )
     return 0
 
 

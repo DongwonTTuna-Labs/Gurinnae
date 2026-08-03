@@ -33,11 +33,13 @@ pipelines:
   - critical journey E2E
   - frontend unit/component
   - recorded connector contract fixtures
+  - billing fixture-provider authentication and nonobservability
   - security/IDOR/CSRF
 - name: container
   steps:
   - ClamAV quarantine flow
   - Compose startup
+  - billing-gateway internal/data-only DISABLED and TEST_ONLY startup boundaries
   - OIDC egress flow
   - SBOM
   - egress channel isolation
@@ -58,6 +60,7 @@ pipelines:
   - image digest lock
   - archive manifest
   - production preflight with test secrets
+  - production rejection of billing TEST_ONLY mode, fixture keys and fixture payment token
   - signed provenance
 merge_policy:
   required:

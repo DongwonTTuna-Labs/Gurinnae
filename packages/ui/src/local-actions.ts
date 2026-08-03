@@ -30,6 +30,7 @@ const staticTargets: Record<string, string> = {
   "PUB-033:request-alternative": "/contact?topic=alternative-format",
   "PUB-034:go-home": "/",
   "PUB-034:view-status": "#impact",
+  "PUB-035:contact": "/contact",
   "RSP-001:continue": "/respond/overview",
   "RSP-001:report-problem": "/respond/unavailable",
   "RSP-002:start-answer": "/respond/answer",

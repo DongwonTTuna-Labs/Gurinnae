@@ -1213,6 +1213,29 @@
       "asOf": "2026-07-12T00:00:00Z"
     }
   },
+  "downloadTransparencyReport": {
+    "api": "public-api",
+    "status": 200,
+    "mediaType": "application/json",
+    "body": {
+      "reportId": "00000000-0000-4000-8000-000000000001",
+      "status": "READY",
+      "reportKind": "FUNDING_DISCLOSURE",
+      "revision": 1,
+      "notice": "이상 징후 기록이며 위법·부패의 확정이 아님",
+      "filename": "x",
+      "mediaType": "application/json",
+      "byteLength": 1,
+      "contentSha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "contentBase64": "x",
+      "format": "JSON",
+      "rowCount": 0,
+      "sourceRevisionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "projectionDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "publicContentDigest": "0000000000000000000000000000000000000000000000000000000000000000",
+      "generatedAt": "2026-07-12T00:00:00Z"
+    }
+  },
   "createContactRequest": {
     "api": "submission-api",
     "status": 201,

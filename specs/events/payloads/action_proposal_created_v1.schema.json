@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/action.proposal_created.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "proposalId",
+    "version",
+    "actionKind",
+    "contentDigest",
+    "targetId",
+    "targetVersion",
+    "expiresAt"
+  ],
+  "properties": {
+    "actionKind": {
+      "type": "string",
+      "enum": [
+        "HYPOTHESIS",
+        "CLAIM",
+        "TASK",
+        "COMPARABLE",
+        "COMMUNICATION",
+        "PUBLICATION",
+        "RETRACTION",
+        "RULE_ACTIVATION",
+        "ROLE_GRANT",
+        "KILL_SWITCH",
+        "COMMUNICATION_AUTHORIZATION",
+        "ASSET_RIGHTS_DECISION",
+        "RETENTION_SCHEDULE",
+        "FUNDING_DISCLOSURE",
+        "CAPABILITY_ACTIVATION",
+        "RESPONSE_POLICY_CALENDAR",
+        "COMMERCIAL_CONTROL",
+        "PROVIDER_CONTROL",
+        "ECONOMICS_IMPORT"
+      ]
+    },
+    "contentDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "expiresAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "proposalId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "targetId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 10000
+    },
+    "targetVersion": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

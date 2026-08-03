@@ -27,6 +27,8 @@ pub enum ServiceError {
     NotFound,
     #[error("export row limit exceeded")]
     PreconditionFailed,
+    #[error("requested report is not a ready funding disclosure")]
+    ReportPreconditionFailed,
     #[error("public projection is unavailable")]
     Persistence,
 }
@@ -83,7 +85,6 @@ fn dispatch_content(operation: &str) -> Result<Option<Value>, ServiceError> {
             "확인된 사실, 핵심 미확인 사항, 당사자 소명과 반대 근거를 구분합니다.",
             &["독립 검토", "무응답은 인정이 아님", "revision 고정 근거"],
         ),
-        "getFundingContent" => funding_content()?,
         "getGovernanceContent" => content(
             "governance",
             "거버넌스",
@@ -133,12 +134,14 @@ async fn dispatch_query(
         "listPublicDatasets" | "listRules" | "getRule" | "listRuleCases" => {
             dispatch_rules(operation, request, state, query).await
         }
-        "listSourceStatus"
+        "getFundingContent"
+        | "listSourceStatus"
         | "getSource"
         | "searchPublicRecords"
         | "downloadPublicSearchRecords"
         | "getPublicSystemStatus"
         | "listTransparencyReports"
+        | "downloadTransparencyReport"
         | "getPrivacyPolicy"
         | "getTerms" => dispatch_public(operation, request, state, query).await,
         _ => Err(ServiceError::InvalidRequest),
@@ -252,12 +255,16 @@ async fn dispatch_public(
     query: &Query,
 ) -> Result<Value, ServiceError> {
     match operation {
+        "getFundingContent" => funding_content(&state.pool).await,
         "listSourceStatus" => list_sources(&state.pool, query).await,
         "getSource" => get_source(&state.pool, path(request, "sourceId")?).await,
         "searchPublicRecords" => search(&state.pool, query).await,
         "downloadPublicSearchRecords" => download_public_search_records(&state.pool, query).await,
         "getPublicSystemStatus" => system_status(&state.pool).await,
-        "listTransparencyReports" => list_reports(&state.pool, query).await,
+        "listTransparencyReports" => list_funding_reports(&state.pool, query).await,
+        "downloadTransparencyReport" => {
+            download_funding_report(&state.pool, path_uuid(request, "reportId")?, query).await
+        }
         "getPrivacyPolicy" => legal_content(&state.pool, LegalDocumentKind::Privacy).await,
         "getTerms" => legal_content(&state.pool, LegalDocumentKind::Terms).await,
         _ => Err(ServiceError::InvalidRequest),
@@ -275,12 +282,10 @@ impl Query {
     fn parse(request: &HttpRequest) -> Result<Self, ServiceError> {
         let mut values = BTreeMap::<String, Vec<String>>::new();
         for (name, value) in url::form_urlencoded::parse(request.query_string().as_bytes()) {
-            values.entry(name.into_owned()).or_default().extend(
-                value
-                    .split(',')
-                    .filter(|item| !item.is_empty())
-                    .map(str::to_owned),
-            );
+            values
+                .entry(name.into_owned())
+                .or_default()
+                .extend(value.split(',').map(str::to_owned));
         }
         let limit = values
             .get("limit")
@@ -321,6 +326,16 @@ impl Query {
 
     fn many(&self, name: &str) -> Vec<String> {
         self.values.get(name).cloned().unwrap_or_default()
+    }
+
+    fn require_closed_singletons(&self, allowed: &[&str]) -> Result<(), ServiceError> {
+        if self.values.iter().any(|(name, values)| {
+            !allowed.contains(&name.as_str()) || values.len() != 1 || values[0].trim().is_empty()
+        }) {
+            Err(ServiceError::InvalidRequest)
+        } else {
+            Ok(())
+        }
     }
 }
 

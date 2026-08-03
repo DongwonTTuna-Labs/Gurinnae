@@ -12,11 +12,43 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+from validation.design_ui_operations import (
+    design_screen_row,
+    validate_additive_operation_section_closure,
+)
 from validation.models import Validation
 from validation.ui import _action_operation, _external_operation_catalog, _proposal_only_fences
 
 
 class UiOperationCatalogTests(unittest.TestCase):
+    def test_missing_design_screen_fails_closed_without_crashing(self) -> None:
+        result = Validation()
+
+        row = design_screen_row(result, {}, "PUB-035")
+
+        self.assertIsNone(row)
+        self.assertEqual(
+            result.errors,
+            ["PUB-035: screen is missing from design closure"],
+        )
+
+    def test_missing_additive_design_operation_fails_closed_without_crashing(self) -> None:
+        result = Validation()
+
+        validate_additive_operation_section_closure(
+            result,
+            "PUB-023",
+            {},
+            {"downloadTransparencyReport": {"reports"}},
+        )
+
+        self.assertEqual(
+            result.errors,
+            [
+                "PUB-023.downloadTransparencyReport: additive operation is missing from design closure"
+            ],
+        )
+
     def write_catalogs(self, root: Path, *, duplicate: bool = False) -> None:
         documents = {
             'specs/api/operation-contracts.yaml': {

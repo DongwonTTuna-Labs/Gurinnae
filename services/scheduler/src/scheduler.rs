@@ -12,6 +12,7 @@ use uuid::Uuid;
 
 use crate::config::Config;
 use crate::consumer_catalog::consumers_for;
+use crate::donation_charge_scheduler::schedule_due_donation_charge_jobs;
 use crate::entity_retention_scheduler::schedule_due_entity_retention_jobs;
 use crate::event_delivery_payload::event_occurred_at;
 use crate::person_retention_scheduler::schedule_due_person_retention_jobs;
@@ -96,6 +97,8 @@ async fn run_cycle(
     let person_retention_jobs = schedule_due_person_retention_jobs(pool, config.batch_size)
         .await
         .map_err(|error| log_stage_error("schedule_due_person_retention_jobs", error))?;
+    let donation_charge_jobs =
+        schedule_due_donation_charge_jobs(config.donation_charge_scheduling_mode);
     let catalog_syncs = schedule_relay_model_catalog_sync(pool)
         .await
         .map_err(|error| log_stage_error("schedule_relay_model_catalog_sync", error))?;
@@ -107,6 +110,7 @@ async fn run_cycle(
         snapshot_builds,
         entity_retention_jobs,
         person_retention_jobs,
+        donation_charge_jobs,
         catalog_syncs,
         publication_expiry,
         dispatched: dispatch_batch(pool, config.batch_size).await?,

@@ -32,7 +32,7 @@ def validate_mapped_test_sources(root: Path, checks: Checks) -> None:
 
 
 def validate_supplemental_acceptance_release(root: Path, checks: Checks) -> None:
-    """Require one external set-equal receipt index for all 439 scenarios."""
+    """Require one external set-equal receipt index for every effective scenario."""
     structural, registry = validate_static(root)
     _merge(structural, checks)
     if not structural.problems:

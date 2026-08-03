@@ -8,6 +8,7 @@ fn validated_command_payload(operation: &str, body: &[u8]) -> Result<Value, Serv
         return Err(ServiceError::InvalidRequest);
     }
     validate_command(operation, payload_object)?;
+    validate_economics_import_command(operation, payload_object)?;
     Ok(payload)
 }
 

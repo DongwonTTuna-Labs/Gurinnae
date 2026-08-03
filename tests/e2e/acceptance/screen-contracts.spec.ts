@@ -355,10 +355,15 @@ test("[AC-SCREEN_CONTRACTS-010] Compact layout preserves semantic order", async 
 }) => {
   test.setTimeout(300_000);
   const routes = routeCatalog();
-  expect(routes, "compact route inventory").toHaveLength(94);
+  expect(routes, "compact route inventory").toHaveLength(95);
   const screens = catalogScreens();
   const screenById = new Map(screens.map((screen) => [screen.id, screen]));
-  expect(screenById.size, "compact screen-contract ids unique").toBe(94);
+  expect(screenById.size, "compact screen-contract ids unique").toBe(95);
+  expect(screenById.get("PUB-035")).toMatchObject({
+    archetype: "GUIDED_FORM",
+    route: "/donate",
+    surface: "public",
+  });
   expect(
     [...screenById.keys()].sort(),
     "compact route ↔ screen-contract closure",

@@ -19,7 +19,7 @@ export const screen = {
       id: "income",
       title: "재원",
       component: "StructuredContentSection",
-      purpose: "후원·grant·API/SaaS.",
+      purpose: "후원·지원금·조직용 서비스.",
       test_id: "pub_023__section__income",
     },
     {
@@ -35,7 +35,7 @@ export const screen = {
       id: "donors",
       title: "공개 기준",
       component: "StructuredContentSection",
-      purpose: "기준 이상 후원 공개.",
+      purpose: "승인된 공개명·비공개 사유·출처 링크와 UNKNOWN 사유.",
       test_id: "pub_023__section__donors",
     },
     {
@@ -43,7 +43,7 @@ export const screen = {
       id: "conflicts",
       title: "이해상충",
       component: "DecisionReviewPanel",
-      purpose: "회피·검토.",
+      purpose: "승인된 이해상충·완화·독립 검토 결과.",
       test_id: "pub_023__section__conflicts",
     },
     {
@@ -51,7 +51,7 @@ export const screen = {
       id: "reports",
       title: "보고서",
       component: "StructuredContentSection",
-      purpose: "기간별 transparency report.",
+      purpose: "기간별 투명성 보고서.",
       test_id: "pub_023__section__reports",
     },
   ],
@@ -60,11 +60,18 @@ export const screen = {
       id: "download-report",
       label: "투명성 보고서 다운로드",
       capability: "none",
+      operation_id: "downloadTransparencyReport",
+      request_binding: {
+        reportId: "listTransparencyReports.items[].id",
+      },
+      href_binding: {
+        source: "listTransparencyReports.items[].href",
+        must_equal: "/v1/transparency-reports/{reportId}/download",
+      },
       interaction_kind: "DOWNLOAD",
       assurance_level: "NONE",
       step_up_required: false,
       confirmation_required: false,
-      local_only: true,
     },
     {
       id: "view-governance",
@@ -94,6 +101,16 @@ export const screen = {
       path: "/v1/transparency-reports",
       blocking: false,
       response_schema: "TransparencyReportsPage",
+    },
+    {
+      operation_id: "downloadTransparencyReport",
+      api: "public-api",
+      method: "GET",
+      path: "/v1/transparency-reports/{reportId}/download",
+      blocking: false,
+      request_schema: "DownloadTransparencyReportRequestV1",
+      response_schema: "TransparencyReportDownloadV1",
+      success_status: 200,
     },
   ],
 } as const satisfies ScreenViewModel;

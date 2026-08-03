@@ -5,16 +5,26 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from run_acceptance import (
     AcceptanceRunError,
+    EffectiveScenarioCounts,
     ExclusiveRunDirectory,
+    RuntimePrerequisiteLease,
+    _expected_prerequisite_container,
+    _finish_prerequisite_process,
+    _parse_prerequisite_ready,
+    _redact_database_urls,
+    _remove_prerequisite_container,
+    _validate_prerequisite_container,
     archive_override_is_complete,
     automatic_run_id,
     ensure_external_directory,
     ensure_evidence_file,
+    effective_scenario_counts,
     git_binding,
     git_head,
     prepare_evidence_directory,
@@ -29,6 +39,193 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class AcceptanceMutationBoundaryTests(unittest.TestCase):
+    def test_r6e_lease_environment_is_role_scoped_and_url_redacted(self) -> None:
+        lease = RuntimePrerequisiteLease(
+            process=None,
+            scenario_id="AC-BUSINESS_MODEL-047",
+            host="127.0.0.1",
+            port=55432,
+            database="gurine_r6e_monetization",
+            container="gurine-r6e-monetization-123",
+        )
+        environment = lease.child_environment(
+            {"TEST_DATABASE_URL": "postgresql://stale.invalid/db"}
+        )
+        self.assertIn("BILLING_DATABASE_URL", environment)
+        self.assertIn("PROJECTOR_DATABASE_URL", environment)
+        self.assertNotIn("ECONOMICS_DATABASE_URL", environment)
+        self.assertNotIn("TEST_DATABASE_URL", environment)
+        self.assertIn("gurine_control_api", environment["GURINNAE_DATABASE_URL"])
+        output = (
+            f"before {environment['BILLING_DATABASE_URL']} after"
+        ).encode("utf-8")
+        redacted = _redact_database_urls(output, environment)
+        self.assertNotIn(b"postgresql://", redacted)
+        self.assertIn(b"[REDACTED_DATABASE_URL]", redacted)
+
+    def test_r6e_ready_response_is_closed_and_scenario_bound(self) -> None:
+        payload = (
+            b'{"container":"gurine-r6e-monetization-123",'
+            b'"database":"gurine_r6e_monetization","host":"127.0.0.1",'
+            b'"port":55432,"scenario_id":"AC-BUSINESS_MODEL-042",'
+            b'"schema_version":1,"status":"READY"}'
+        )
+        parsed = _parse_prerequisite_ready(payload, "AC-BUSINESS_MODEL-042")
+        self.assertEqual(parsed["port"], 55432)
+        with self.assertRaisesRegex(AcceptanceRunError, "identity differs"):
+            _parse_prerequisite_ready(payload, "AC-BUSINESS_MODEL-043")
+        with self.assertRaisesRegex(AcceptanceRunError, "keys differ"):
+            _parse_prerequisite_ready(payload[:-1] + b',"url":"secret"}', "AC-BUSINESS_MODEL-042")
+
+    def test_r6e_ready_container_is_exactly_child_pid_derived(self) -> None:
+        class Process:
+            pid = 123
+
+        ready = {
+            "container": "gurine-r6e-monetization-123",
+        }
+        self.assertEqual(
+            _expected_prerequisite_container(Process()),
+            "gurine-r6e-monetization-123",
+        )
+        self.assertEqual(
+            _validate_prerequisite_container(ready, Process()),
+            "gurine-r6e-monetization-123",
+        )
+        ready["container"] = "gurine-r6e-monetization-124"
+        with self.assertRaisesRegex(AcceptanceRunError, "container differs"):
+            _validate_prerequisite_container(ready, Process())
+
+    @patch("run_acceptance.subprocess.run")
+    def test_r6e_container_finalizer_targets_only_exact_name(self, run: Mock) -> None:
+        run.side_effect = [
+            subprocess.CompletedProcess([], 1),
+            subprocess.CompletedProcess([], 0, stdout=b""),
+        ]
+        container = "gurine-r6e-monetization-123"
+        self.assertIsNone(_remove_prerequisite_container(container))
+        remove_argv = run.call_args_list[0].args[0]
+        inventory_argv = run.call_args_list[1].args[0]
+        self.assertEqual(
+            remove_argv,
+            ["docker", "container", "rm", "--force", container],
+        )
+        self.assertEqual(inventory_argv[-2:], ["--filter", f"name=^/{container}$"])
+
+    @patch("run_acceptance.subprocess.run")
+    def test_r6e_container_finalizer_rejects_invalid_or_residual_target(
+        self, run: Mock
+    ) -> None:
+        self.assertIsNotNone(_remove_prerequisite_container("other-container"))
+        run.assert_not_called()
+        run.side_effect = [
+            subprocess.CompletedProcess([], 0),
+            subprocess.CompletedProcess(
+                [], 0, stdout=b"gurine-r6e-monetization-123\n"
+            ),
+        ]
+        self.assertIsNotNone(
+            _remove_prerequisite_container("gurine-r6e-monetization-123")
+        )
+
+    @patch("run_acceptance._remove_prerequisite_container", return_value=None)
+    def test_cleanup_failure_overrides_success_only(self, remove: Mock) -> None:
+        class FailedCleanup:
+            returncode = 1
+
+            @staticmethod
+            def communicate(*, input: bytes | None = None, timeout: int | None = None):
+                return b"", b"redacted"
+
+        successful = RuntimePrerequisiteLease(
+            FailedCleanup(),
+            "AC-BUSINESS_MODEL-042",
+            "127.0.0.1",
+            55432,
+            "gurine_r6e_monetization",
+            "gurine-r6e-monetization-123",
+        )
+        with self.assertRaisesRegex(AcceptanceRunError, "cleanup failed"):
+            successful.close(successful=True)
+
+        already_failed = RuntimePrerequisiteLease(
+            FailedCleanup(),
+            "AC-BUSINESS_MODEL-042",
+            "127.0.0.1",
+            55432,
+            "gurine_r6e_monetization",
+            "gurine-r6e-monetization-124",
+        )
+        already_failed.close(successful=False)
+        self.assertEqual(remove.call_count, 2)
+
+    @patch("run_acceptance._remove_prerequisite_container", return_value=None)
+    def test_cleanup_timeout_kills_child_and_runs_exact_finalizer(
+        self, remove: Mock
+    ) -> None:
+        class TimedOutCleanup:
+            pid = 123
+            returncode = -9
+            killed = False
+
+            def communicate(
+                self, *, input: bytes | None = None, timeout: int | None = None
+            ) -> tuple[bytes, bytes]:
+                if input is not None:
+                    raise subprocess.TimeoutExpired("prerequisite", timeout)
+                return b"", b""
+
+            def kill(self) -> None:
+                self.killed = True
+
+        process = TimedOutCleanup()
+        error = _finish_prerequisite_process(
+            process,
+            "AC-BUSINESS_MODEL-042",
+            "gurine-r6e-monetization-123",
+        )
+        self.assertTrue(process.killed)
+        self.assertIsNotNone(error)
+        remove.assert_called_once_with("gurine-r6e-monetization-123")
+
+    def test_runner_derives_effective_counts_from_registry_rows(self) -> None:
+        base_count = 2
+        supplemental_count = 3
+        registry = {
+            "counts": {
+                "base_scenarios": base_count,
+                "supplemental_scenarios": supplemental_count,
+                "effective_scenarios": base_count + supplemental_count,
+            },
+            "scenarios": [
+                *({"origin": "BASE_V13"} for _ in range(base_count)),
+                *(
+                    {"origin": "SUPPLEMENTAL_V1"}
+                    for _ in range(supplemental_count)
+                ),
+            ],
+        }
+        self.assertEqual(
+            effective_scenario_counts(registry),
+            EffectiveScenarioCounts(
+                base=base_count,
+                supplemental=supplemental_count,
+                effective=base_count + supplemental_count,
+            ),
+        )
+
+    def test_runner_rejects_registry_count_mismatch(self) -> None:
+        registry = {
+            "counts": {
+                "base_scenarios": 1,
+                "supplemental_scenarios": 1,
+                "effective_scenarios": 2,
+            },
+            "scenarios": [{"origin": "BASE_V13"}],
+        }
+        with self.assertRaisesRegex(AcceptanceRunError, "count mismatch"):
+            effective_scenario_counts(registry)
+
     def test_acceptance_cli_exposes_defaults_without_required_release_flags(self) -> None:
         completed = subprocess.run(
             [sys.executable, "-B", "scripts/run_acceptance.py", "--help"],

@@ -18,6 +18,35 @@ rules:
   identity proof never enter an event.
 - 'Consumer binding is executable: physical service, module and handler are mandatory for every declared consumer; missing handler is a hard gate,
   not a skipped consumer.'
+supervisor_decision_v1:
+  decision_id: R6E_SUPERVISOR_DECISION_V1
+  authority_label: 감독자 결정 v1
+  authority_kind: PRODUCT_POLICY_DECISION
+  decision_revision: 1
+  status: APPROVED_AS_RECOMMENDED
+  provenance:
+    approval_path: .fable-sol/r6e-authority-approval.md
+    approval_sha256: a73ccb4da942c32b70ac7056dfe2d65b6c5595beb3e64e22999b07eb0f939f47
+    recommendation_record: .fable-sol/run-r6e.log lines 15-104
+  revision_policy:
+    ordinary_revision_forbidden: true
+    only_allowed_round: a later pre-production review jointly owned by the designated legal and finance owners
+    update_shape: a new explicit supervisor decision revision that preserves this decision as provenance; silent reinterpretation or partial package substitution is forbidden
+  event_packages:
+    PAYMENT-TEST-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      events: [donation.fact_recorded.v1, notification.payment_review_requested.v1]
+      binding_rule: PAYMENT_REVIEW_V1 is the only review topic; only the two approved source kinds may request review, the task due instant is occurredAt plus exactly 24 hours, and payment review has zero automatic contract, entitlement or public-access effect.
+    GFD-AUTHORITY-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      events: [governance.funding_disclosure_published.v1]
+      binding_rule: The publisher, complete required payload, ordered counted-decision tuples and ordered related-case review bindings are one indivisible event contract.
+    ECO-AUTHORITY-V1:
+      approval: APPROVED_AS_RECOMMENDED
+      existing_event_binding_rule: Existing economics event bindings use the approved GURINE_LENGTH_PREFIXED_UTF8_V1 ABI; funding event digests never use that ABI.
+    PAID-EVIDENCE-V2-AUTHORITY:
+      approval: APPROVED_AS_RECOMMENDED
+      existing_event_binding_rule: Existing V1 event bytes and relations are not changed or reinterpreted; any V2 event binding is forward-only and uses the approved V2 digest and subject-HMAC domains.
 $defs:
   uuid:
     type: string
@@ -28,6 +57,10 @@ $defs:
   datetime:
     type: string
     format: date-time
+  utc_microsecond:
+    type: string
+    format: date-time
+    pattern: ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z$
   nonempty_string:
     type: string
     minLength: 1
@@ -104,6 +137,9 @@ logical_component_bindings:
   audit-indexer:
     physical_service: projection-worker
     module: audit_index
+  billing-gateway:
+    physical_service: billing-gateway
+    module: payment
   budget-ledger:
     physical_service: workflow-worker
     module: budget_ledger
@@ -263,6 +299,9 @@ logical_component_bindings:
   workflow-worker:
     physical_service: workflow-worker
     module: workflow_hypothesis_recursion
+  workflow-worker.economics-import-executor:
+    physical_service: workflow-worker
+    module: economics_import
 consumer_runtime:
   claim: INSERT ops.inbox(consumer,event_id) before handler; existing completed row returns prior result
   transaction: inbox claim, idempotent handler state mutation and handler result commit atomically where one database owns them; external requests
@@ -920,7 +959,7 @@ events:
           minimum: 0
         actionKind:
           type: string
-          enum: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR]
+          enum: [HYPOTHESIS, CLAIM, TASK, COMPARABLE, COMMUNICATION, PUBLICATION, RETRACTION, RULE_ACTIVATION, ROLE_GRANT, KILL_SWITCH, COMMUNICATION_AUTHORIZATION, ASSET_RIGHTS_DECISION, RETENTION_SCHEDULE, FUNDING_DISCLOSURE, CAPABILITY_ACTIVATION, RESPONSE_POLICY_CALENDAR, COMMERCIAL_CONTROL, PROVIDER_CONTROL, ECONOMICS_IMPORT]
         contentDigest:
           $ref: '#/$defs/sha256'
         targetId:
@@ -5643,8 +5682,22 @@ events:
   governance.funding_snapshot_created.v1:
     category: DOMAIN
     schema_version: 1
-    producer: funding-importer
+    producer: funding-importer|funding-projector
     producer_operations: []
+    producer_bindings:
+    - producer: funding-importer
+      logical_producer: workflow-worker.signed-funding-import
+      source_authority: SIGNED_FUNDING_SOURCES
+      owner_function: ops.import_funding_snapshot_v1(ops.funding_snapshot_import_v1,ops.funding_snapshot_entry_input_v1[])
+      audit_action: IMPORT_FUNDING_SNAPSHOT
+    - producer: funding-projector
+      logical_producer: public-projection-worker.donation-candidate
+      source_authority: AUTHENTICATED_DONATION_FACT
+      owner_function: ops.project_donation_fact_candidate_v1(ops.donation_funding_candidate_projection_v1)
+      audit_action: DONATION_FUNDING_CANDIDATE_PROJECTED
+    producer_binding_invariants:
+    - The signed-import producer writes through the typed funding snapshot owner; the donation-candidate producer can only enter through its closed SECURITY DEFINER projection owner, which delegates to that same typed writer without direct relation DML.
+    - Every other producer or provenance is rejected before write; neither branch grants publication authority, entitlement, access, investigation priority or economics.import authority to the donation candidate.
     aggregate: FundingConcentrationSnapshot
     classification: RESTRICTED
     delivery: OUTBOX_AT_LEAST_ONCE
@@ -5657,29 +5710,46 @@ events:
       - asOf
       - reportingCurrency
       - fxSnapshotDigest
+      - denominatorState
+      - denominatorUnknownReason
       - denominator
       - denominatorApprovalDigest
       - entrySetDigest
       - snapshotDigest
+      - receiptDigest
       properties:
         snapshotBatchId:
           $ref: '#/$defs/uuid'
         fiscalYear:
           type: integer
-          minimum: 0
+          minimum: 1
+          maximum: 9999
         asOf:
           $ref: '#/$defs/datetime'
         reportingCurrency:
           $ref: '#/$defs/currency'
         fxSnapshotDigest:
           $ref: '#/$defs/sha256'
+        denominatorState:
+          type: string
+          enum: [APPROVED, UNKNOWN]
+        denominatorUnknownReason:
+          anyOf:
+          - {type: 'null'}
+          - {type: string, enum: [MISSING, ZERO, APPROVAL_MISSING, APPROVAL_STALE]}
         denominator:
-          $ref: '#/$defs/decimal'
+          anyOf:
+          - {type: 'null'}
+          - {$ref: '#/$defs/decimal'}
         denominatorApprovalDigest:
-          $ref: '#/$defs/sha256'
+          anyOf:
+          - {type: 'null'}
+          - {$ref: '#/$defs/sha256'}
         entrySetDigest:
           $ref: '#/$defs/sha256'
         snapshotDigest:
+          $ref: '#/$defs/sha256'
+        receiptDigest:
           $ref: '#/$defs/sha256'
     payload_required:
     - snapshotBatchId
@@ -5687,10 +5757,13 @@ events:
     - asOf
     - reportingCurrency
     - fxSnapshotDigest
+    - denominatorState
+    - denominatorUnknownReason
     - denominator
     - denominatorApprovalDigest
     - entrySetDigest
     - snapshotDigest
+    - receiptDigest
     redaction:
       allowlist: payload_schema.properties only
       forbidden:
@@ -5752,7 +5825,16 @@ events:
     category: DOMAIN
     schema_version: 1
     producer: action-execution-worker
-    producer_operations: []
+    producer_operations: [private.PublishFundingDisclosureRevision]
+    authority: supervisor_decision_v1.GFD-AUTHORITY-V1
+    publisher_binding:
+      logical_command: private.PublishFundingDisclosureRevision
+      logical_effect_owner: action-execution-worker.funding-disclosure-executor
+      physical_service: workflow-worker
+      database_principal: gurine_workflow_worker
+      owner_function: editorial.publish_funding_disclosure_v1
+      function_owner: gurine_migrator
+      direct_table_dml: 0
     aggregate: FundingDisclosureRevision
     classification: RESTRICTED
     delivery: OUTBOX_AT_LEAST_ONCE
@@ -5761,47 +5843,282 @@ events:
       additionalProperties: false
       required:
       - disclosureId
+      - revisionId
       - revision
+      - priorRevision
+      - priorRevisionDigest
+      - revisionDigest
+      - fiscalYear
+      - fiscalQuarter
+      - periodStart
+      - periodEnd
       - snapshotBatchId
       - snapshotDigest
+      - fundingPolicyVersion
+      - fundingPolicyDigest
+      - policySnapshotDigest
+      - conflictSnapshotDigest
+      - quorumSnapshotDigest
       - concentrationBand
+      - quorumClass
+      - requiresOversightReview
+      - requiresBoardApproval
+      - requiresEnhancedPublicDisclosure
+      - hasRelatedPartyGate
+      - conditionalGateSetDigest
+      - policyRequestOutcomeDigest
+      - sourceLinkSetDigest
+      - entryCount
       - entrySetDigest
-      - priorRevision
+      - publicContentDigest
+      - proposalId
+      - proposalVersion
+      - executionId
+      - executionGeneration
+      - approvalDigest
+      - executionDigest
+      - decisionReceiptSetDigest
+      - independentCaseReviewSetDigest
+      - countedDecisions
+      - independentCaseReviews
+      - publisherUserId
       - effectiveAt
+      - publishedAt
       - receiptDigest
       properties:
         disclosureId:
           $ref: '#/$defs/uuid'
+        revisionId:
+          $ref: '#/$defs/uuid'
         revision:
           type: integer
-          minimum: 0
+          minimum: 1
+        priorRevision:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+        priorRevisionDigest:
+          anyOf:
+          - $ref: '#/$defs/sha256'
+          - type: 'null'
+        revisionDigest:
+          $ref: '#/$defs/sha256'
+        fiscalYear:
+          type: integer
+          minimum: 1
+          maximum: 9999
+        fiscalQuarter:
+          type: integer
+          minimum: 1
+          maximum: 4
+        periodStart:
+          $ref: '#/$defs/date'
+        periodEnd:
+          $ref: '#/$defs/date'
         snapshotBatchId:
           $ref: '#/$defs/uuid'
         snapshotDigest:
           $ref: '#/$defs/sha256'
+        fundingPolicyVersion:
+          type: string
+          minLength: 1
+          maxLength: 128
+        fundingPolicyDigest:
+          $ref: '#/$defs/sha256'
+        policySnapshotDigest:
+          $ref: '#/$defs/sha256'
+        conflictSnapshotDigest:
+          $ref: '#/$defs/sha256'
+        quorumSnapshotDigest:
+          $ref: '#/$defs/sha256'
         concentrationBand:
-          $ref: '#/$defs/nonempty_string'
+          type: string
+          enum: [UNKNOWN, LE_5_PERCENT, GT_5_TO_15_PERCENT, GT_15_TO_25_PERCENT, GT_25_PERCENT]
+        quorumClass:
+          type: string
+          enum: [STANDARD, OVERSIGHT, BOARD, RELATED_PARTY, OVERSIGHT_RELATED_PARTY, BOARD_RELATED_PARTY]
+        requiresOversightReview:
+          type: boolean
+        requiresBoardApproval:
+          type: boolean
+        requiresEnhancedPublicDisclosure:
+          type: boolean
+        hasRelatedPartyGate:
+          type: boolean
+        conditionalGateSetDigest:
+          $ref: '#/$defs/sha256'
+        policyRequestOutcomeDigest:
+          $ref: '#/$defs/sha256'
+        sourceLinkSetDigest:
+          $ref: '#/$defs/sha256'
+        entryCount:
+          type: integer
+          minimum: 0
+          maximum: 10000
         entrySetDigest:
           $ref: '#/$defs/sha256'
-        priorRevision:
-          anyOf:
-          - type: integer
-            minimum: 0
-          - type: 'null'
+        publicContentDigest:
+          $ref: '#/$defs/sha256'
+        proposalId:
+          $ref: '#/$defs/uuid'
+        proposalVersion:
+          type: integer
+          minimum: 1
+        executionId:
+          $ref: '#/$defs/uuid'
+        executionGeneration:
+          type: integer
+          minimum: 1
+        approvalDigest:
+          $ref: '#/$defs/sha256'
+        executionDigest:
+          $ref: '#/$defs/sha256'
+        decisionReceiptSetDigest:
+          $ref: '#/$defs/sha256'
+        independentCaseReviewSetDigest:
+          $ref: '#/$defs/sha256'
+        countedDecisions:
+          type: array
+          minItems: 2
+          maxItems: 4
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties: false
+            required: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+            properties:
+              slotOrdinal:
+                type: integer
+                minimum: 1
+                maximum: 4
+              slotId:
+                type: string
+                enum: [funding_preparer, funding_publisher, oversight_reviewer, board_approver]
+              decisionId:
+                $ref: '#/$defs/uuid'
+              decisionReceiptDigest:
+                $ref: '#/$defs/sha256'
+              actorId:
+                $ref: '#/$defs/uuid'
+            oneOf:
+            - properties: {slotOrdinal: {const: 1}, slotId: {const: funding_preparer}}
+            - properties: {slotOrdinal: {const: 2}, slotId: {const: funding_publisher}}
+            - properties: {slotOrdinal: {const: 3}, slotId: {const: oversight_reviewer}}
+            - properties: {slotOrdinal: {const: 4}, slotId: {const: board_approver}}
+        independentCaseReviews:
+          type: array
+          maxItems: 10000
+          uniqueItems: true
+          items:
+            type: object
+            additionalProperties: false
+            required: [relatedCaseId, publicationProposalId, publicationProposalVersion, publicationApprovalDigest, decisionId, decisionReceiptDigest, reviewerActorId]
+            properties:
+              relatedCaseId:
+                $ref: '#/$defs/uuid'
+              publicationProposalId:
+                $ref: '#/$defs/uuid'
+              publicationProposalVersion:
+                type: integer
+                minimum: 1
+              publicationApprovalDigest:
+                $ref: '#/$defs/sha256'
+              decisionId:
+                $ref: '#/$defs/uuid'
+              decisionReceiptDigest:
+                $ref: '#/$defs/sha256'
+              reviewerActorId:
+                $ref: '#/$defs/uuid'
+        publisherUserId:
+          $ref: '#/$defs/uuid'
         effectiveAt:
-          $ref: '#/$defs/datetime'
+          $ref: '#/$defs/utc_microsecond'
+        publishedAt:
+          $ref: '#/$defs/utc_microsecond'
         receiptDigest:
           $ref: '#/$defs/sha256'
+      allOf:
+      - if:
+          properties:
+            revision: {const: 1}
+          required: [revision]
+        then:
+          properties:
+            priorRevision: {type: 'null'}
+            priorRevisionDigest: {type: 'null'}
+        else:
+          properties:
+            priorRevision: {type: integer, minimum: 1}
+            priorRevisionDigest: {$ref: '#/$defs/sha256'}
     payload_required:
     - disclosureId
+    - revisionId
     - revision
+    - priorRevision
+    - priorRevisionDigest
+    - revisionDigest
+    - fiscalYear
+    - fiscalQuarter
+    - periodStart
+    - periodEnd
     - snapshotBatchId
     - snapshotDigest
+    - fundingPolicyVersion
+    - fundingPolicyDigest
+    - policySnapshotDigest
+    - conflictSnapshotDigest
+    - quorumSnapshotDigest
     - concentrationBand
+    - quorumClass
+    - requiresOversightReview
+    - requiresBoardApproval
+    - requiresEnhancedPublicDisclosure
+    - hasRelatedPartyGate
+    - conditionalGateSetDigest
+    - policyRequestOutcomeDigest
+    - sourceLinkSetDigest
+    - entryCount
     - entrySetDigest
-    - priorRevision
+    - publicContentDigest
+    - proposalId
+    - proposalVersion
+    - executionId
+    - executionGeneration
+    - approvalDigest
+    - executionDigest
+    - decisionReceiptSetDigest
+    - independentCaseReviewSetDigest
+    - countedDecisions
+    - independentCaseReviews
+    - publisherUserId
     - effectiveAt
+    - publishedAt
     - receiptDigest
+    payload_constraints:
+    - Every required key is present. Nullable priorRevision and priorRevisionDigest are explicit JSON null only for revision 1; every revision greater than 1 binds priorRevision=revision-1 and the locked prior head digest.
+    - The database-owned publisher derives every payload field from the locked approved package and persisted revision; caller-supplied revision, digest, decision, review or publisher identity is never event authority.
+    - countedDecisions contains exactly funding_preparer then funding_publisher, followed only by oversight_reviewer when requiresOversightReview is true and board_approver when requiresBoardApproval is true. The tuples are ordered by slotOrdinal then decisionId, and all actorId values are pairwise distinct.
+    - independentCaseReviews contains exactly one current PUBLICATION.independent_editorial APPROVE binding per distinct related case, ordered by relatedCaseId UUID bytes then decisionId; duplicate cases, stale approval bytes or an unbound decision are invalid.
+    - decisionReceiptSetDigest binds countedDecisions in their declared tuple order, and independentCaseReviewSetDigest binds independentCaseReviews in their declared tuple order; independently sorting parallel ID and digest arrays is forbidden.
+    - publisherUserId equals actorId in the unique funding_publisher counted-decision tuple.
+    - effectiveAt is no later than publishedAt, and publishedAt equals the database-owned envelope occurred_at instant.
+    - The projector trusts no event text; it calls the closed source reader with revisionId and revisionDigest and exact-compares every persisted field and recomputed digest before projection.
+    ordered_tuple_bindings:
+      counted_decisions:
+        keys_exactly: [slotOrdinal, slotId, decisionId, decisionReceiptDigest, actorId]
+        order: [slotOrdinal ASC, decisionId ASC]
+        cardinality: exactly 2 plus one iff requiresOversightReview plus one iff requiresBoardApproval
+      independent_case_reviews:
+        keys_exactly: [relatedCaseId, publicationProposalId, publicationProposalVersion, publicationApprovalDigest, decisionId, decisionReceiptDigest, reviewerActorId]
+        order: [relatedCaseId UUID_BYTES_ASC, decisionId ASC]
+        cardinality: exactly one per distinct related case
+    digest_contract:
+      authority: closed Gurine Canonical JSON V1
+      scalar_rules: fixed-six decimal strings, UTC timestamps with exactly six fractional digits and Z, lowercase UUID and SHA-256, explicit null
+      revision_preimage: excludes revisionDigest, receiptDigest and createdAt
+      public_content: includes every stored entryDigest in ordinal order
+      computation_order: entry and set digests -> revisionDigest -> receiptDigest -> event and response digests
     redaction:
       allowlist: payload_schema.properties only
       forbidden:
@@ -5815,14 +6132,16 @@ events:
       - identity proof
       - cookie
       - provider-native account or recipient ID
-      reference_rule: restricted source material appears only as opaque internal ID, HMAC or sha256 digest
+      - decision reason text
+      - private funding entry content
+      - source locator
+      reference_rule: the event contains only the complete persisted approval and revision binding required for verification; private source values and decision content remain behind the funding owner boundary
     ordering:
       key:
       - aggregate_type
       - aggregate_id
       sequence: aggregate_version
-      rule: strict monotonic; same event_id is replay, lower version is stored as out-of-order evidence only where declared, and a gap parks processing
-        until reconciliation
+      rule: revision equals aggregate_version and advances the exact prior revision chain; same event_id is replay, a lower version cannot regress the head, and a gap parks until reconciliation
       tie_breaker:
       - occurred_at
       - event_id
@@ -5845,6 +6164,9 @@ events:
       inbox_key:
       - consumer
       - event_id
+      owner_function: public.project_funding_disclosure_revision_v2(public.funding_disclosure_projection_v2)
+      source_lookup: the projector may invoke only the owner function; editorial.read_public_funding_projection_inputs_v1 remains internal to that SECURITY DEFINER boundary and raw source-table SELECT is forbidden
+      on_first_success: lock and revalidate the exact immutable funding revision through the closed SECURITY DEFINER owner path, append one public transparency report, terminalize inbox and projection job, append one audit and one immutable typed receipt whose outboxEventIds is exactly empty, and emit zero outbox events
       on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
       failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
       ordering: reject regression; park gaps for aggregate reconciliation
@@ -5858,6 +6180,130 @@ events:
       on_exact_replay: return stored handler result without repeating projection, notification, job or external effect
       failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
       ordering: reject regression; park gaps for aggregate reconciliation
+  donation.fact_recorded.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: billing-gateway
+    producer_operations: [private.ExecuteDonationCharge, private.ReceivePaymentWebhook]
+    authority: supervisor_decision_v1.PAYMENT-TEST-V1
+    producer_bindings:
+    - {producer_operation: private.ExecuteDonationCharge, source_authority: PROVIDER_FETCH_CONFIRMED, owner_result_branch: SUCCEEDED}
+    - {producer_operation: private.ReceivePaymentWebhook, source_authority: PROVIDER_FETCH_CONFIRMED, owner_result_branch: SUCCEEDED}
+    producer_binding_invariants:
+    - Both producer rows converge on the same closed payment-owner apply path; the persisted provider-fetch-confirmed charge attempt, donation fact and event payload bindings are identical regardless of the ingress path.
+    - Any other producer operation, source authority or owner result branch is rejected; exact replay emits zero second donation fact or outbox event.
+    aggregate: DonationFact
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [donationFactId, donationFactDigest, chargeAttemptId, chargeAttemptDigest, providerFetchDigest, occurredAt]
+      properties:
+        donationFactId: {$ref: '#/$defs/uuid'}
+        donationFactDigest: {$ref: '#/$defs/sha256'}
+        chargeAttemptId: {$ref: '#/$defs/uuid'}
+        chargeAttemptDigest: {$ref: '#/$defs/sha256'}
+        providerFetchDigest: {$ref: '#/$defs/sha256'}
+        occurredAt: {$ref: '#/$defs/datetime'}
+    payload_required: [donationFactId, donationFactDigest, chargeAttemptId, chargeAttemptDigest, providerFetchDigest, occurredAt]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [donor identity, provider payment identifier, payment method, amount, currency, raw body, signature, billing key, token, secret]
+      reference_rule: the event contains only persisted UUID and digest facts; private payment truth is re-read under the projection worker database authority
+    ordering:
+      key: [aggregate_type, aggregate_id]
+      sequence: aggregate_version
+      rule: one append-only donation fact version per exact fetched-payment receipt; gaps park and lower versions cannot regress the fact chain
+      tie_breaker: [occurred_at, event_id]
+    replay:
+      delivery: at-least-once
+      deduplication_relation: ops.inbox
+      deduplication_key: [consumer, event_id]
+      exact_replay: return the stored candidate receipt without repeating a funding snapshot candidate, notification, public projection or external effect
+      changed_event_identity: same event_id with a changed canonical envelope digest or persisted fact binding is EVENT_REPLAY_CONFLICT
+    consumers: [funding-projector]
+    consumer_bindings:
+    - consumer: funding-projector
+      physical_service: projection-worker
+      module: funding
+      handler: handle_donation_fact_recorded_v1
+      inbox_key: [consumer, event_id]
+      owner_function: ops.project_donation_fact_candidate_v1(ops.donation_funding_candidate_projection_v1)
+      source_lookup: the projector may invoke only the SECURITY DEFINER owner function, which locks the claimed job, attempt, inbox and source outbox, re-reads the exact ops.donation_facts head and its persisted ops.payment_charge_attempts root/digest plus payment-method binding, and equality-checks every event UUID, version, timestamp and digest before any effect; direct SELECT on the private payment relations is forbidden
+      on_first_success: create only one private funding snapshot candidate and store its redacted candidate receipt; never publish or mutate public.transparency_reports
+      on_exact_replay: return the stored candidate receipt without repeating projection, audit, notification or external effect
+      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible reconciliation action
+      ordering: reject regression and park gaps; a missing or mismatched private fact is not acknowledged
+    fact_semantics: IMMUTABLE_FACT_IMPORT
+  notification.payment_review_requested.v1:
+    category: DOMAIN
+    schema_version: 1
+    producer: billing-gateway|workflow-worker.economics-import-executor
+    producer_operations: [private.ReceivePaymentWebhook, private.ExecuteEconomicsImport]
+    authority: supervisor_decision_v1.PAYMENT-TEST-V1
+    notification_topic: PAYMENT_REVIEW_V1
+    producer_bindings:
+    - {producer: billing-gateway, producer_operation: private.ReceivePaymentWebhook, source_authority: PROVIDER_FETCH_CONFIRMED, sourceKind: DONATION_PAYMENT_FAILURE}
+    - {producer: workflow-worker.economics-import-executor, producer_operation: private.ExecuteEconomicsImport, source_authority: BANK_RETURN_CONFIRMED, sourceKind: SIGNED_COLLECTION_FAILURE}
+    source_binding_invariants:
+    - The database derives sourceKind from the persisted authoritative source receipt; a caller cannot relabel either authority into the other sourceKind.
+    - Both branches use the same unique source-receipt review-task owner helper; an existing exact task is replay with zero second task, notification intent or outbox event, while changed source bytes are conflict.
+    review_task_binding:
+      topic: PAYMENT_REVIEW_V1
+      source_kinds_exactly: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]
+      due_at: the persisted review task due_at equals payload.occurredAt plus exactly 24 hours
+      payload_rule: due_at and notification content remain in the authorized task; this event preserves its existing exact seven-field digest-only payload
+    automatic_effect_contract:
+      exact_effects: [operator review task, internal notification request]
+      forbidden: [external dunning, automatic entitlement change, automatic contract change, automatic public-access change]
+      reconciliation_required: {task_writes: 0, notification_writes: 0, automatic_retry_writes: 0, event_writes: 0}
+    aggregate: PaymentReviewTask
+    classification: RESTRICTED
+    delivery: OUTBOX_AT_LEAST_ONCE
+    payload_schema:
+      type: object
+      additionalProperties: false
+      required: [reviewTaskId, reviewTaskVersion, reviewTaskDigest, sourceKind, sourceReceiptId, sourceReceiptDigest, occurredAt]
+      properties:
+        reviewTaskId: {$ref: '#/$defs/uuid'}
+        reviewTaskVersion: {type: integer, minimum: 1}
+        reviewTaskDigest: {$ref: '#/$defs/sha256'}
+        sourceKind: {type: string, enum: [DONATION_PAYMENT_FAILURE, SIGNED_COLLECTION_FAILURE]}
+        sourceReceiptId: {$ref: '#/$defs/uuid'}
+        sourceReceiptDigest: {$ref: '#/$defs/sha256'}
+        occurredAt: {$ref: '#/$defs/datetime'}
+    payload_required: [reviewTaskId, reviewTaskVersion, reviewTaskDigest, sourceKind, sourceReceiptId, sourceReceiptDigest, occurredAt]
+    redaction:
+      allowlist: payload_schema.properties only
+      forbidden: [customer identity, donor identity, invoice identifier, provider payment identifier, payment method, amount, currency, raw body, signature, reason text, token, secret]
+      reference_rule: the event contains only the persisted review task and source receipt identity/version/digests; notification content is resolved under its own authorization
+    ordering:
+      key: [aggregate_type, aggregate_id]
+      sequence: aggregate_version
+      rule: one immutable review-task creation version per exact source receipt; sourceKind must match its declared producer and gaps park
+      tie_breaker: [occurred_at, event_id]
+    replay:
+      delivery: at-least-once
+      deduplication_relation: ops.inbox
+      deduplication_key: [consumer, event_id]
+      exact_replay: return the stored notification result without repeating a notification, task, audit, contract mutation, entitlement mutation or public effect
+      changed_event_identity: same event_id with a changed canonical envelope digest or task/source binding is EVENT_REPLAY_CONFLICT
+    consumers: [notification-worker]
+    consumer_bindings:
+    - consumer: notification-worker
+      physical_service: notification-worker
+      module: notifications
+      handler: handle_notification_payment_review_requested_v1
+      inbox_key: [consumer, event_id]
+      source_lookup: re-read the exact task version/digest and source receipt under the sourceKind-specific private authority before materializing notification content
+      on_exact_replay: return the stored handler result without repeating notification, audit, task creation or any external effect
+      failure: bounded exponential backoff with jitter, then durable DEAD_LETTER plus incident and operator-visible replay action
+      ordering: reject regression and park gaps; a mismatched producer/sourceKind or receipt binding is not acknowledged
+    invariants:
+    - Collection or donation payment failure creates only the operator review task and its notification request.
+    - The event and its consumer cannot mutate a commercial contract, entitlement, paid capability, publication or public access.
+    - payload.occurredAt is the authoritative failure occurrence instant used for the exact 24-hour task due calculation; elapsed time alone is never failure authority.
   incident.state_changed.v1:
     category: DOMAIN
     schema_version: 1
@@ -7628,41 +8074,115 @@ events:
       required:
       - evaluationId
       - deploymentId
+      - organizationId
       - sku
+      - environment
+      - readinessStage
+      - configurationDigest
+      - catalogVersion
+      - catalogDigest
+      - policyDigest
+      - offeredCapabilitySetDigest
+      - itemIdentitySetDigest
+      - evaluationIdentityDigest
       - evaluatedAt
+      - evidenceCutoffAt
+      - itemCount
+      - requiredItemCount
+      - satisfiedRequiredItemCount
+      - blockedRequiredItemCount
+      - unknownRequiredItemCount
       - itemSetDigest
       - state
       - blockerSetDigest
+      - evaluationDigest
       - receiptDigest
       properties:
         evaluationId:
           $ref: '#/$defs/uuid'
         deploymentId:
           $ref: '#/$defs/uuid'
+        organizationId:
+          $ref: '#/$defs/uuid'
         sku:
-          $ref: '#/$defs/nonempty_string'
+          type: string
+          enum: [EVIDENCE_WORKSPACE_ORGANIZATION_V1]
+        environment:
+          type: string
+          enum: [development, test, staging, production]
+        readinessStage:
+          type: string
+          enum: [PILOT_ENTRY_READINESS, POST_FIRST_BILLING_CYCLE, GENERAL_AVAILABILITY]
+        configurationDigest:
+          $ref: '#/$defs/sha256'
+        catalogVersion:
+          type: string
+          const: evidence-workspace-readiness.v1
+        catalogDigest:
+          $ref: '#/$defs/sha256'
+        policyDigest:
+          $ref: '#/$defs/sha256'
+        offeredCapabilitySetDigest:
+          $ref: '#/$defs/sha256'
+        itemIdentitySetDigest:
+          $ref: '#/$defs/sha256'
+        evaluationIdentityDigest:
+          $ref: '#/$defs/sha256'
         evaluatedAt:
           $ref: '#/$defs/datetime'
+        evidenceCutoffAt:
+          $ref: '#/$defs/datetime'
+        itemCount:
+          type: integer
+          minimum: 1
+        requiredItemCount:
+          type: integer
+          minimum: 1
+        satisfiedRequiredItemCount:
+          type: integer
+          minimum: 0
+        blockedRequiredItemCount:
+          type: integer
+          minimum: 0
+        unknownRequiredItemCount:
+          type: integer
+          minimum: 0
         itemSetDigest:
           $ref: '#/$defs/sha256'
         state:
           type: string
-          enum:
-          - READY
-          - BLOCKED
-          - NOT_APPLICABLE
+          enum: [READY, BLOCKED, UNKNOWN]
         blockerSetDigest:
+          $ref: '#/$defs/sha256'
+        evaluationDigest:
           $ref: '#/$defs/sha256'
         receiptDigest:
           $ref: '#/$defs/sha256'
     payload_required:
     - evaluationId
     - deploymentId
+    - organizationId
     - sku
+    - environment
+    - readinessStage
+    - configurationDigest
+    - catalogVersion
+    - catalogDigest
+    - policyDigest
+    - offeredCapabilitySetDigest
+    - itemIdentitySetDigest
+    - evaluationIdentityDigest
     - evaluatedAt
+    - evidenceCutoffAt
+    - itemCount
+    - requiredItemCount
+    - satisfiedRequiredItemCount
+    - blockedRequiredItemCount
+    - unknownRequiredItemCount
     - itemSetDigest
     - state
     - blockerSetDigest
+    - evaluationDigest
     - receiptDigest
     redaction:
       allowlist: payload_schema.properties only

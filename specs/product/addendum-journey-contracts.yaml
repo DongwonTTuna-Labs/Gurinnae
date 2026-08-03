@@ -59,14 +59,15 @@ rules:
 - J-12 stages other than QUALIFIED are read projections. No commercial stage row or stage event is created.
 - J-11 communication edges E19 through E23 remain five separate physical milestones: intent, delivery claim, provider observation,
     reconciliation, and origin receipt return.
-- The 94-screen route set remains closed. PUB-028 and PUB-030 use token-free canonical browser routes; one-time tokens are exchange-request inputs only.
+- The 95-screen route set remains closed. PUB-028 and PUB-030 use token-free canonical browser routes; one-time tokens are exchange-request inputs only.
 counts:
   journeys: 12
   edges: 132
   branches: 17
   handoff_kinds: 20
   cross_journey_arcs: 12
-  routes: 94
+  routes: 95
+  screen_journey_rows: 95
 edge_count_contract:
   fixed_equation: 50 + 17 + 29 + 36 = 132
   j01_equation: E01..E07=7; E05 navigation + E06 persisted subscription receipt + E07 same-case return add three explicit edges
@@ -150,6 +151,114 @@ journey_contracts:
     entry: OPS-004
     success: AUD-001::paid-retention-audit-verified
     accountable_owner: product-pdm-with-sales-cs-finance-data-sre-backups
+screen_journey_registry_provenance:
+  prior_runtime_artifact: fixtures/prior-generated-screen-journeys-v13.ts
+  prior_runtime_artifact_role: IMMUTABLE_HISTORICAL_TEST_FIXTURE_NOT_ACTIVE_GENERATED_AUTHORITY
+  prior_runtime_row_count: 94
+  prior_runtime_artifact_sha256: a83872546cc1619148857305497dc33a6ba465a19c3945d091a8e8c635f6d82c
+  prior_mapping_preimage_contract: UTF8_LEXICOGRAPHIC_SCREEN_ID_EQUALS_JOURNEY_ID_TRAILING_LF
+  prior_mapping_sha256: 1c60c9559e73803588c01f4612c4ecea6f1aacabd26198403c961867da000c0e
+  adoption: COPY_EXACT_94_PLUS_SINGLE_OWNER_ADDITION
+  additive_membership:
+    screen_id: PUB-035
+    journey_id: J-01
+    edge_or_transition_change: NONE
+screen_journey_registry:
+  ACC-001: J-11
+  ADM-001: J-11
+  ADM-002: J-11
+  ADM-003: J-11
+  AUD-001: J-11
+  AUTH-001: J-02
+  AUTH-002: J-02
+  AUTH-003: J-02
+  AUTH-004: J-02
+  CAS-001: J-06
+  CAS-002: J-06
+  CAS-003: J-06
+  CAS-004: J-06
+  CAS-005: J-06
+  CAS-006: J-06
+  CAS-007: J-06
+  CAS-008: J-03
+  CAS-009: J-03
+  CAS-010: J-10
+  CAS-011: J-10
+  CAS-012: J-06
+  CAS-013: J-06
+  CAS-014: J-06
+  CAS-015: J-06
+  CAS-016: J-06
+  COR-001: J-04
+  COR-002: J-04
+  INT-001: J-11
+  INT-002: J-11
+  INT-003: J-11
+  INT-004: J-11
+  OPS-001: J-09
+  OPS-002: J-09
+  OPS-003: J-09
+  OPS-004: J-12
+  OPS-005: J-12
+  OPS-006: J-12
+  PUB-001: J-01
+  PUB-002: J-01
+  PUB-003: J-01
+  PUB-004: J-01
+  PUB-005: J-01
+  PUB-006: J-01
+  PUB-007: J-01
+  PUB-008: J-01
+  PUB-009: J-01
+  PUB-010: J-01
+  PUB-011: J-01
+  PUB-012: J-01
+  PUB-013: J-01
+  PUB-014: J-01
+  PUB-015: J-01
+  PUB-016: J-01
+  PUB-017: J-01
+  PUB-018: J-08
+  PUB-019: J-08
+  PUB-020: J-01
+  PUB-021: J-01
+  PUB-022: J-01
+  PUB-023: J-01
+  PUB-024: J-01
+  PUB-025: J-01
+  PUB-026: J-01
+  PUB-027: J-04
+  PUB-028: J-04
+  PUB-029: J-01
+  PUB-030: J-01
+  PUB-031: J-01
+  PUB-032: J-01
+  PUB-033: J-01
+  PUB-034: J-01
+  PUB-035: J-01
+  REV-001: J-07
+  REV-002: J-07
+  REV-003: J-07
+  RSP-001: J-03
+  RSP-002: J-03
+  RSP-003: J-03
+  RSP-004: J-03
+  RSP-005: J-03
+  RSP-006: J-03
+  RSP-007: J-03
+  RSP-008: J-03
+  RULE-001: J-11
+  RULE-002: J-11
+  RULE-003: J-11
+  RULE-004: J-11
+  SIG-001: J-05
+  SIG-002: J-05
+  SRC-001: J-09
+  SRC-002: J-09
+  SRC-003: J-09
+  SRC-004: J-09
+  SRC-005: J-09
+  SRC-006: J-09
 edge_failure_contract:
   applicability: every primary edge row unless a stricter operation/state contract applies
   dispositions:
@@ -3403,7 +3512,7 @@ acceptance_contract:
   - UX-JOURNEY-GRAPH-ALL-NODES-REACH-TERMINAL
   - UX-JOURNEY-GRAPH-EVERY-NONTERMINAL-HAS-OUTGOING
   - UX-JOURNEY-GRAPH-RESOLVER-SET-EQUALITY
-  - UX-JOURNEY-GRAPH-ROUTE-SET-94-UNCHANGED
+  - UX-JOURNEY-GRAPH-ROUTE-SET-95-UNCHANGED
   - UX-JOURNEY-GRAPH-CROSS-RETURN-CONTEXT-PARITY
   bypass_and_existing_journeys:
   - UX-JOURNEY-J-03-NO-DIRECT-RESPONSE-SEND
@@ -3449,7 +3558,7 @@ negative_canaries:
   expected: contract error and zero journey/outcome writes
 - id: JG-NEG-006
   mutation: change or add one browser route
-  expected: 94-ID and route-set lock fail
+  expected: 95-ID and route-set lock fail
 - id: JG-NEG-007
   mutation: call createResponseRequest directly from J-03 or publishCase directly from J-07
   expected: approval-spine bypass fail
@@ -3506,7 +3615,7 @@ rejected_alternatives:
 - alternative: persist a general commercial stage ledger or event stream
   reason: every stage after QUALIFIED is a deterministic as-of projection
 - alternative: add a fourth paid surface or generic workflow route
-  reason: the fixed three surfaces and 94 routes are product invariants
+  reason: the fixed three surfaces and 95 routes are product invariants
 - alternative: mark J-12 complete at first paid value or activation
   reason: the journey completes only after two additional distinct roots in the fixed window and immutable audit visibility
 implementation_gate:

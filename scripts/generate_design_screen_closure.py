@@ -758,8 +758,8 @@ def main() -> None:
             raise ValueError(f"{screen_id}: runtime trace identity mismatch")
         rows.append(row)
 
-    if len(rows) != 94 or {row["screen_id"] for row in rows} != set(manifest_by):
-        raise ValueError("screen closure is not set-equal to the 94-screen authority")
+    if len(rows) != 95 or {row["screen_id"] for row in rows} != set(manifest_by):
+        raise ValueError("screen closure is not set-equal to the 95-screen authority")
 
     output = {
         "schema_version": 1,
@@ -776,7 +776,7 @@ def main() -> None:
             "specs/ui/component-catalog.yaml",
             "specs/ui/section-surface-overrides.yaml",
         ],
-        "screen_count": 94,
+        "screen_count": 95,
         "rules": [
             "Every row is normative and required.",
             "Section IDs and semantic order remain authority ordered.",

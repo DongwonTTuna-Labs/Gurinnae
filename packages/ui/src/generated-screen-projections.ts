@@ -1504,13 +1504,13 @@ export const SCREEN_PROJECTION_BINDINGS = {
       fieldName: "status",
     },
     "reports.reports": {
-      operationId: "getFundingContent",
+      operationId: "listTransparencyReports",
       path: "$.reports",
       sectionId: "reports",
       fieldName: "reports",
     },
     "reports.status": {
-      operationId: "getFundingContent",
+      operationId: "listTransparencyReports",
       path: "$.status",
       sectionId: "reports",
       fieldName: "status",
@@ -2262,6 +2262,62 @@ export const SCREEN_PROJECTION_BINDINGS = {
       path: "$.status",
       sectionId: "reference",
       fieldName: "status",
+    },
+  },
+  "PUB-035": {
+    "mode.mode": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.mode",
+      sectionId: "mode",
+      fieldName: "mode",
+    },
+    "mode.status": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.status",
+      sectionId: "mode",
+      fieldName: "status",
+    },
+    "independence.independence": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.independence",
+      sectionId: "independence",
+      fieldName: "independence",
+    },
+    "independence.status": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.status",
+      sectionId: "independence",
+      fieldName: "status",
+    },
+    "donation.donation": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.donation",
+      sectionId: "donation",
+      fieldName: "donation",
+    },
+    "donation.status": {
+      operationId: "private.GetDonationFixtureOffer",
+      path: "$.status",
+      sectionId: "donation",
+      fieldName: "status",
+    },
+    "receipt.receipt": {
+      operationId: "private.QueueDonationIntent",
+      path: "$.receipt",
+      sectionId: "receipt",
+      fieldName: "receipt",
+    },
+    "receipt.status": {
+      operationId: "private.QueueDonationIntent",
+      path: "$.status",
+      sectionId: "receipt",
+      fieldName: "status",
+    },
+    "receipt.receiptDigest": {
+      operationId: "private.QueueDonationIntent",
+      path: "$.receiptDigest",
+      sectionId: "receipt",
+      fieldName: "receiptDigest",
     },
   },
   "RSP-001": {

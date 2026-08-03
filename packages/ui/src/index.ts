@@ -1,6 +1,8 @@
 export { default as ScreenPage } from "./components/ScreenPage.svelte";
 export * from "./decision-contract";
+export * from "./donation";
 export * from "./enum-presentation";
+export * from "./funding-transparency";
 export * from "./generated-screen-journeys";
 export * from "./local-actions";
 export * from "./projection-value";
@@ -228,6 +230,10 @@ export type ScreenRuntime = {
           | "COMPLETE";
         asOf: string;
       }>;
+  /** Closed PUB-035 test-only offer and queue receipt projection. */
+  donation?: import("./donation").DonationScreenRuntime;
+  /** Closed PUB-023 approved disclosure and report download projection. */
+  fundingTransparency?: import("./funding-transparency").FundingTransparencyViewModel;
   /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
   destinations?: Readonly<Record<string, string>>;
   /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */

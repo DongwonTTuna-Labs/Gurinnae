@@ -12,8 +12,8 @@ rules:
 
 surface_resolution:
   surfaces: 3
-  screens: 94
-  new_routes: 0
+  screens: 95
+  new_routes: 1
   paid_workspace:
     surface: review-console
     deployment_model: one configured organization per deployment
@@ -23,6 +23,15 @@ surface_resolution:
       - self-service billing route
       - public entitlement UI
       - customer data reuse across deployments
+  public_fundraising:
+    surface: public-web
+    screen: PUB-035
+    route: /donate
+    runtime_mode: TEST_MODE_ONLY
+    production_without_approved_offer_authority: UNAVAILABLE
+    invariants:
+      - This is a route inside the existing public-web surface, not a fourth surface or a commercial SKU checkout.
+      - A donation grants no entitlement, access, investigation exemption, publication influence, or customer capability.
 
 state_machine_inventory:
   machine_count: derived as len(addendum-state-machines.machines)
@@ -31,39 +40,65 @@ state_machine_inventory:
 
 operation_counts:
   count_rule: all values are derived from the immutable base catalogs plus the set-equal registries below; numeric inventory literals are non-normative and forbidden
+  external_scope_rule: External operations are public-api, submission-api, control-api, and browser-exposed identity-provider operations only.
+  all_scope_http_rule: The all-scope HTTP operation set is the exact disjoint union of final.external_operation_ids and the additive PRIVATE_IDENTITY_API supplier operations named below.
+  private_identity_api_scope: PRIVATE_IDENTITY_API
+  private_identity_api_operation_ids:
+    - recordSupplierIdentityResolution
+    - recordSupplierRelationshipAssertion
+    - decideSupplierRelationshipAssertion
+  private_identity_api_registry_contract: set(private_identity_api_operation_ids) is set-equal to additive_operations operation IDs where api=identity-api; every member has kind=COMMAND and scope PRIVATE_IDENTITY_API
+  base_additive_disjointness_rule: intersection(base.external_operation_ids,additive.operation_ids) is empty
   base:
+    external_operation_ids: derived set(specs/api/operation-contracts.yaml operation IDs where api in [public-api, submission-api, control-api, identity-provider])
     public: derived count(specs/api/operation-contracts.yaml operations where api=public-api)
     submission: derived count(specs/api/operation-contracts.yaml operations where api=submission-api)
     control: derived count(specs/api/operation-contracts.yaml operations where api=control-api)
-    browser_identity: derived count(specs/api/operation-contracts.yaml operations where api=identity-api and browser-exposed)
-    external_total: derived sum(base.public,base.submission,base.control,base.browser_identity)
-    private_identity: derived operation count(specs/api/identity-service-internal.openapi.yaml paths)
+    browser_identity: derived count(specs/api/operation-contracts.yaml operations where api=identity-provider)
+    external_total: derived cardinality(base.external_operation_ids)
   additive:
-    public: derived count(additive_operations where api=public-api)
-    submission: derived count(additive_operations where api=submission-api)
-    control: derived count(additive_operations where api=control-api)
-    browser_identity: derived count(additive_operations where api=identity-api)
+    operation_ids: derived set(additive_operations[*].operation_id)
+    external_operation_ids: derived set(additive_operations operation IDs where api in [public-api, submission-api, control-api, identity-provider])
+    private_identity_api_operation_ids: derived set(operation_counts.private_identity_api_operation_ids)
+    public: derived count(additive_operations where api=public-api and operation_id in additive.external_operation_ids)
+    submission: derived count(additive_operations where api=submission-api and operation_id in additive.external_operation_ids)
+    control: derived count(additive_operations where api=control-api and operation_id in additive.external_operation_ids)
+    browser_identity: derived count(additive_operations where api=identity-provider and operation_id in additive.external_operation_ids)
+    external_total: derived cardinality(additive.external_operation_ids)
+    private_identity_api: derived cardinality(additive.private_identity_api_operation_ids)
+    all_scope_http_total: derived cardinality(additive.operation_ids)
+    partition_contract: additive.operation_ids is set-equal to the disjoint union of additive.external_operation_ids and additive.private_identity_api_operation_ids; the selected supplier operations are not browser identity flows
   final:
+    external_operation_ids: derived disjoint union(base.external_operation_ids,additive.external_operation_ids)
     public: derived base.public + additive.public
     submission: derived base.submission + additive.submission
     control: derived base.control + additive.control
     browser_identity: derived base.browser_identity + additive.browser_identity
-    external_total: derived sum(final.public,final.submission,final.control,final.browser_identity)
-    private_identity: derived base.private_identity
+    external_total: derived cardinality(final.external_operation_ids)
+    private_identity_api_operation_ids: derived additive.private_identity_api_operation_ids
+    all_scope_http_operation_ids: derived disjoint union(final.external_operation_ids,final.private_identity_api_operation_ids)
+    all_scope_http_total: derived cardinality(final.all_scope_http_operation_ids)
+  separate_private_inventories:
+    private_identity_service: derived count(HTTP method operations under specs/api/identity-service-internal.openapi.yaml#paths); this service contract is separate from PRIVATE_IDENTITY_API and is not a member of final.all_scope_http_operation_ids
     private_communication_gateway: derived len(private_communication_gateway_operations)
+    private_billing_gateway: derived len(private_billing_gateway_operations)
     private_control_service: derived len(private_control_service_operations)
     private_application_commands: derived len(private_application_commands.commands)
+    scope_rule: These separately governed service, gateway, control, and non-HTTP application-command registries are not members of the product external or all-scope HTTP operation sets above.
   kind_counts:
-    base: {query: derived count(base operations where kind=QUERY), command: derived count(base operations where kind=COMMAND)}
-    additive: {query: derived count(additive_operations where kind=QUERY), command: derived count(additive_operations where kind=COMMAND)}
-    external_final: {query: derived base.query + additive.query, command: derived base.command + additive.command}
-    private_identity: {query: derived count(private identity where kind=QUERY), command: derived count(private identity where kind=COMMAND)}
-    private_communication_gateway: {query: derived count(private_communication_gateway_operations where kind=QUERY), command: derived count(private_communication_gateway_operations where kind=COMMAND)}
-    private_control_service: {query: derived count(private_control_service_operations where kind=QUERY), command: derived count(private_control_service_operations where kind=COMMAND)}
-    private_application_commands: {query: derived count(private_application_commands where kind=QUERY), command: derived count(private_application_commands where kind=COMMAND)}
-    complete_http_catalog: {query: derived external_final.query + private_identity.query + private_communication_gateway.query + private_control_service.query, command: derived external_final.command + private_identity.command + private_communication_gateway.command + private_control_service.command, total: derived query + command}
+    base: {query: derived count(base.external_operation_ids not present in specs/application/command-semantics.yaml#commands), command: derived count(base.external_operation_ids present in specs/application/command-semantics.yaml#commands), non_get: derived count(base.external_operation_ids where method is not GET)}
+    additive_external: {query: derived count(additive_operations where operation_id in additive.external_operation_ids and kind=QUERY), command: derived count(additive_operations where operation_id in additive.external_operation_ids and kind=COMMAND), non_get: derived count(additive_operations where operation_id in additive.external_operation_ids and method is not GET)}
+    private_identity_api: {query: derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and kind=QUERY), command: derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and kind=COMMAND), non_get: derived count(additive_operations where operation_id in additive.private_identity_api_operation_ids and method is not GET)}
+    external_final: {query: derived base.query + additive_external.query, command: derived base.command + additive_external.command, non_get: derived base.non_get + additive_external.non_get, total: derived query + command}
+    all_scope_http: {query: derived external_final.query + private_identity_api.query, command: derived external_final.command + private_identity_api.command, non_get: derived external_final.non_get + private_identity_api.non_get, total: derived query + command}
 
   additive_operations: &additive_operations
+  - operation_id: downloadTransparencyReport
+    api: public-api
+    method: GET
+    path: /v1/transparency-reports/{reportId}/download
+    kind: QUERY
+    owner: public-funding-projection
   - operation_id: listActionApprovalQueue
     api: control-api
     method: GET
@@ -406,6 +441,7 @@ decision_variants:
     - ASSET_RIGHTS_DECISION
     - RETENTION_SCHEDULE
     - FUNDING_DISCLOSURE
+    - ECONOMICS_IMPORT
     - CAPABILITY_ACTIVATION
     - RESPONSE_POLICY_CALENDAR
     - COMMERCIAL_CONTROL
@@ -414,11 +450,11 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 14
-  final_migrations: 38
+  additive_migrations: 15
+  final_migrations: 39
   base_active_tables: 107
-  additive_table_count: 195
-  final_active_tables: 302
+  additive_table_count: 202
+  final_active_tables: 309
   migrations:
     - 0025_evidence_snapshots_and_search.sql
     - 0026_agent_action_approval.sql
@@ -434,7 +470,15 @@ database_delta:
     - 0038_r6d_legal_hardening.sql
     - 0039_r6d_authority_closure.sql
     - 0040_r6d_privacy_authority_closure.sql
+    - 0041_r6e_monetization_runtime.sql
   additive_tables:
+    - ops.action_approval_economics_import_details
+    - ops.cash_application_facts
+    - ops.tax_invoice_issuance_receipts
+    - ops.payment_method_bindings
+    - ops.payment_charge_attempts
+    - ops.provider_webhook_receipts
+    - ops.donation_facts
     - ops.privacy_correction_snapshots_v1
     - ops.privacy_subscription_snapshots_v1
     - ops.privacy_response_party_name_correction_plan_bindings_v1
@@ -689,6 +733,8 @@ event_delta:
     - legal.hold_review_due.v1
     - governance.funding_snapshot_created.v1
     - governance.funding_disclosure_published.v1
+    - donation.fact_recorded.v1
+    - notification.payment_review_requested.v1
     - governance.capability_activation_review_requested.v1
     - response.reminder_due.v1
     - communication.subscription_update_requested.v1
@@ -754,6 +800,7 @@ authorization_delta:
     - {id: actions.read, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN, AUDITOR, EXECUTIVE_APPROVER]}
     - {id: actions.propose, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, RULE_ANALYST, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN]}
     - {id: actions.review, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, PUBLISHER, OPERATIONS, ACCESS_ADMIN, SECURITY_ADMIN, EXECUTIVE_APPROVER]}
+    - {id: economics.import, roles: [OPERATIONS]}
     - {id: actions.operate, roles: [OPERATIONS, SECURITY_ADMIN]}
     - {id: cases.evidence.manage, roles: [INVESTIGATOR, EDITOR]}
     - {id: communications.read, roles: [INVESTIGATOR, EDITOR, LEGAL_REVIEWER, OPERATIONS, AUDITOR]}
@@ -790,6 +837,17 @@ private_communication_gateway_operations:
   - {operation_id: receiveSolapiKakaoCallback, method: POST, path: '/private/v1/callbacks/solapi/kakao/{integrationId}', kind: COMMAND}
   - {operation_id: receiveTwilioVoiceCallback, method: POST, path: '/private/v1/callbacks/twilio/voice/{integrationId}', kind: COMMAND}
 
+private_billing_gateway_operations:
+  - {operation_id: private.GetDonationFixtureOffer, method: GET, path: /internal/v1/donation-offers, kind: QUERY, caller: public-web, runtime_mode: TEST_MODE_ONLY}
+  - {operation_id: private.QueueDonationIntent, method: POST, path: /internal/v1/donation-intents, kind: COMMAND, caller: public-web, runtime_mode: TEST_MODE_ONLY}
+  - {operation_id: private.ReceivePaymentWebhook, method: POST, path: '/internal/v1/payment-webhooks/{provider}', kind: COMMAND, caller: test-fixture, runtime_mode: TEST_MODE_ONLY}
+
+private_billing_gateway_contract:
+  service_assertion: request-bound issuer public-web and audience billing-gateway for public-web calls; method, path, query, body, content type, idempotency key, iat, exp and durable JTI consumption are exact
+  mode: DISABLED by default; TEST_MODE_ONLY is valid only when GURINE_ENV=test
+  production: all offer, donation intent, webhook, provider and live-payment paths fail closed and no live provider host, credential, URL, egress channel or ASP integration exists
+  secrets: payment authorization tokens, service assertion keys, raw webhook bytes and signature headers never enter responses, persistence, audit, logs, Debug or errors
+
 private_control_service_operations:
   - {operation_id: reconcileAgentRun, api: control-api-private, method: POST, path: '/v1/private/agent-runs/{runId}:reconcile', kind: COMMAND, caller: reconciliation-worker}
 
@@ -808,6 +866,8 @@ private_application_commands:
     - {operation_id: private.ReviseAssetRightsDecision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.asset-rights-executor, kind: COMMAND}
     - {operation_id: private.CreateRecordClassScheduleRevision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.retention-schedule-executor, kind: COMMAND}
     - {operation_id: private.PublishFundingDisclosureRevision, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.funding-disclosure-executor, kind: COMMAND}
+    - {operation_id: private.ExecuteEconomicsImport, transport: PRIVATE_APPLICATION_COMMAND, owner: workflow-worker.economics-import-executor, kind: COMMAND}
+    - {operation_id: private.ExecuteDonationCharge, transport: PRIVATE_APPLICATION_COMMAND, owner: billing-gateway.donation-charge-executor, kind: COMMAND}
     - {operation_id: private.DecideCapabilityActivation, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.capability-activation-executor, kind: COMMAND}
     - {operation_id: private.CreateBusinessCalendarVersion, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.business-calendar-executor, kind: COMMAND}
     - {operation_id: private.ApplyCommercialControl, transport: PRIVATE_APPLICATION_COMMAND, owner: action-execution-worker.commercial-control-executor, kind: COMMAND}
@@ -1165,6 +1225,11 @@ route_contract:
     status: 308
 
 fixed_screen_assignments:
+  - capability: public-fundraising-test-only
+    entry: PUB-035
+    work: [PUB-035]
+    approval: []
+    receipt_history: [PUB-035, PUB-023]
   - capability: paid-evidence-workspace
     entry: INT-001
     work: [INT-003, SIG-002, CAS-002, CAS-011]

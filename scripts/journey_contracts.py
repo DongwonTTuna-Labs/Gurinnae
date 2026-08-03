@@ -121,6 +121,44 @@ def _normalized_edges(authority: dict[str, Any]) -> dict[str, list[dict[str, Any
     return result
 
 
+def _screen_journey_registry(
+    authority: dict[str, Any],
+    catalog: dict[str, Any],
+) -> dict[str, str]:
+    screens = catalog.get("screens")
+    _require(isinstance(screens, list), "screen catalog must contain a screen list")
+    _require(
+        len(screens) == 95 and all(isinstance(screen, dict) for screen in screens),
+        "screen catalog must contain 95 unique screen IDs",
+    )
+    screen_ids = [screen.get("id") for screen in screens]
+    _require(
+        len(screen_ids) == len(set(screen_ids)) == 95
+        and all(isinstance(screen_id, str) and screen_id for screen_id in screen_ids),
+        "screen catalog must contain 95 unique screen IDs",
+    )
+    registry = authority.get("screen_journey_registry")
+    _require(isinstance(registry, dict), "screen journey registry must be a mapping")
+    _require(
+        list(registry) == sorted(registry),
+        "screen journey registry order drifted",
+    )
+    _require(
+        len(registry) == 95 and set(registry) == set(screen_ids),
+        "screen journey registry is not screen-catalog-set-equal",
+    )
+    _require(
+        all(journey_id in JOURNEY_IDS for journey_id in registry.values()),
+        "screen journey registry contains an unknown JourneyId",
+    )
+    counts = authority.get("counts", {})
+    _require(
+        counts.get("routes") == counts.get("screen_journey_rows") == len(registry),
+        "screen journey registry declared count drifted",
+    )
+    return {str(screen_id): str(journey_id) for screen_id, journey_id in registry.items()}
+
+
 def _validate_identity(
     authority: dict[str, Any],
     edges_by_journey: dict[str, list[dict[str, Any]]],
@@ -349,6 +387,7 @@ def build_journey_contracts(
     navigation: dict[str, Any],
     operation_action_overrides: dict[tuple[str, str], list[str]],
 ) -> dict[str, Any]:
+    screen_journey_registry = _screen_journey_registry(authority, catalog)
     screen_by = {screen["id"]: screen for screen in catalog["screens"]}
     screen_ids = set(screen_by)
     edges_by_journey = _normalized_edges(authority)
@@ -443,6 +482,7 @@ def build_journey_contracts(
         "authority_mode": "DERIVED_FROM_EXPLICIT_PRODUCT_REGISTRY",
         "sources": [
             "specs/product/addendum-journey-contracts.yaml#edge_registry",
+            "specs/product/addendum-journey-contracts.yaml#screen_journey_registry",
             "specs/ui/screen-catalog.yaml",
             "specs/ui/screen-action-contracts.yaml",
             "specs/ui/navigation-action-contracts.yaml",
@@ -455,6 +495,7 @@ def build_journey_contracts(
             "cross_journey_arcs": len(authority["cross_journey_arc_contracts"]["arcs"]),
             "reachable_outcomes": len(reachability),
             "via_resolved": len(edge_by_id),
+            "screen_journey_rows": len(screen_journey_registry),
         },
         "edge_tuple_fields": EDGE_FIELDS,
         "via_set_equality": {
@@ -466,6 +507,7 @@ def build_journey_contracts(
             "runtime_status": "OPEN_IMPLEMENTATION",
         },
         "reachability_receipt": reachability,
+        "screen_journey_registry": screen_journey_registry,
         "journeys": output_journeys,
         "branch_contracts": deepcopy(authority["branch_contracts"]),
         "handoff_kind_registry": deepcopy(authority["handoff_kind_registry"]),

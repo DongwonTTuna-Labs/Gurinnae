@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gurine.invalid/events/commercial.sku_readiness_evaluated.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "evaluationId",
+    "deploymentId",
+    "organizationId",
+    "sku",
+    "environment",
+    "readinessStage",
+    "configurationDigest",
+    "catalogVersion",
+    "catalogDigest",
+    "policyDigest",
+    "offeredCapabilitySetDigest",
+    "itemIdentitySetDigest",
+    "evaluationIdentityDigest",
+    "evaluatedAt",
+    "evidenceCutoffAt",
+    "itemCount",
+    "requiredItemCount",
+    "satisfiedRequiredItemCount",
+    "blockedRequiredItemCount",
+    "unknownRequiredItemCount",
+    "itemSetDigest",
+    "state",
+    "blockerSetDigest",
+    "evaluationDigest",
+    "receiptDigest"
+  ],
+  "properties": {
+    "evaluationId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "deploymentId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "organizationId": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "sku": {
+      "type": "string",
+      "enum": [
+        "EVIDENCE_WORKSPACE_ORGANIZATION_V1"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "development",
+        "test",
+        "staging",
+        "production"
+      ]
+    },
+    "readinessStage": {
+      "type": "string",
+      "enum": [
+        "PILOT_ENTRY_READINESS",
+        "POST_FIRST_BILLING_CYCLE",
+        "GENERAL_AVAILABILITY"
+      ]
+    },
+    "configurationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "catalogVersion": {
+      "type": "string",
+      "const": "evidence-workspace-readiness.v1"
+    },
+    "catalogDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "policyDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "offeredCapabilitySetDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "itemIdentitySetDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evaluationIdentityDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evaluatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "evidenceCutoffAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "itemCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "requiredItemCount": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "satisfiedRequiredItemCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "blockedRequiredItemCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "unknownRequiredItemCount": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "itemSetDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "BLOCKED",
+        "UNKNOWN"
+      ]
+    },
+    "blockerSetDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evaluationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "receiptDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

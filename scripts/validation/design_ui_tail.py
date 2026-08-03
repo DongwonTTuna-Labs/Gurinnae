@@ -24,7 +24,8 @@ def validate_ui_tail(
     )
     for question in ("state", "matters_now", "evidence", "unknown_or_disputed"):
         result.require(
-            len({row["ten_second_contract"][question]["answer_pattern"] for row in rows}) == 94,
+            len({row["ten_second_contract"][question]["answer_pattern"] for row in rows})
+            == len(catalog_by),
             f"ten-second {question} answer is still generic across screens",
         )
     user_copy = "\n".join(

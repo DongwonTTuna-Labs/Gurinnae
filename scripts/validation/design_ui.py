@@ -7,7 +7,12 @@ import re
 from .design_lifecycle import LifecycleFacts
 from .design_operations import OperationFacts
 from .design_support import DesignDocuments, contains_forbidden_marker, nonempty
-from .design_ui_operations import validate_journey_ui, validate_section_operations
+from .design_ui_operations import (
+    design_screen_row,
+    validate_additive_operation_section_closure,
+    validate_journey_ui,
+    validate_section_operations,
+)
 from .design_ui_tail import validate_ui_tail
 from .loaders import load_yaml
 @dataclass(frozen=True)
@@ -15,6 +20,8 @@ class UiFacts:
     rows: list[dict[str, Any]]
     row_by: dict[str, dict[str, Any]]
     catalog_by: dict[str, dict[str, Any]]
+
+
 def validate_ui(
     documents: DesignDocuments,
     operations: OperationFacts,
@@ -56,14 +63,14 @@ def validate_ui(
     }
     navigation_rows = navigation_contracts["navigation_contracts"]
     result.require(
-        len(navigation_action_keys) == len(navigation_rows) == 108
+        len(navigation_action_keys) == len(navigation_rows) == 109
         and set(navigation_rows) == navigation_action_keys
         and not contains_forbidden_marker(navigation_contracts),
         "navigation action contract set is incomplete or unresolved",
     )
     result.require(
         all(row["status"] == "resolved" for row in navigation_rows.values())
-        and len({row["oracle"] for row in navigation_rows.values()}) == 108,
+        and len({row["oracle"] for row in navigation_rows.values()}) == 109,
         "navigation action status or oracle identity is invalid",
     )
     for key, navigation in navigation_rows.items():
@@ -121,11 +128,11 @@ def validate_ui(
     rows = closure["screens"]
     row_by = {row["screen_id"]: row for row in rows}
     result.require(
-        closure["screen_count"] == len(rows) == 94,
+        closure["screen_count"] == len(rows) == 95,
         "design screen closure count mismatch",
     )
     result.require(
-        len(row_by) == 94 and set(row_by) == set(catalog_by),
+        len(row_by) == 95 and set(row_by) == set(catalog_by),
         "design screen closure is not set-equal to catalog",
     )
     six = {
@@ -137,7 +144,9 @@ def validate_ui(
         "next_action",
     }
     for screen_id, screen in catalog_by.items():
-        row = row_by[screen_id]
+        row = design_screen_row(result, row_by, screen_id)
+        if row is None:
+            continue
         result.require(
             nonempty(row.get("typed_view_model"))
             and nonempty(row.get("runtime_trace_path"))
@@ -325,15 +334,12 @@ def validate_ui(
         row_operations = {
             operation["operation_id"]: operation for operation in row["operations"]
         }
-        for operation_id, section_ids in additive_operations_by_screen.get(
-            screen_id, {}
-        ).items():
-            result.require(
-                row_operations[operation_id].get("source") == "owner-addendum"
-                and set(row_operations[operation_id].get("section_bindings", []))
-                == section_ids,
-                f"{screen_id}.{operation_id}: additive operation section closure mismatch",
-            )
+        validate_additive_operation_section_closure(
+            result,
+            screen_id,
+            row_operations,
+            additive_operations_by_screen.get(screen_id, {}),
+        )
         validate_section_operations(
             result,
             screen_id,
