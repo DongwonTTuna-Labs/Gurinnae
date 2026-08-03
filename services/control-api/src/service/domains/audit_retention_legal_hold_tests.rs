@@ -218,9 +218,14 @@ fn audit_subject_record_is_explicitly_unsupported_before_generic_shape_validatio
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn owner_receipt_requires_exact_bound_proof_and_one_outbox_event() {
     let Some(request) = parsed_request() else {
-        panic!("valid legal-hold request fixture must parse");
+        assert!(false, "valid legal-hold request fixture must parse");
+        return;
     };
     let actor = Uuid::parse_str(ACTOR_ID).ok();
     assert!(actor.is_some());
@@ -266,12 +271,18 @@ fn owner_receipt_requires_exact_bound_proof_and_one_outbox_event() {
 }
 
 #[test]
+#[expect(
+    clippy::assertions_on_constants,
+    reason = "fixture setup failures are test assertions"
+)]
 fn owner_receipt_echoes_exact_request_and_target_binding() {
     let Some(request) = parsed_request() else {
-        panic!("valid legal-hold request fixture must parse");
+        assert!(false, "valid legal-hold request fixture must parse");
+        return;
     };
     let Some(actor) = Uuid::parse_str(ACTOR_ID).ok() else {
-        panic!("valid actor fixture must parse");
+        assert!(false, "valid actor fixture must parse");
+        return;
     };
     let mut wrong_request = owner_result(&request);
     wrong_request["requestDigest"] = json!(DIGEST_A);
