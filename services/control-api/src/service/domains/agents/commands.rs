@@ -39,7 +39,7 @@ impl SuggestionInput {
     }
 }
 
-pub(crate) async fn arm_acceptagentsuggestion_rejectagentsuggestion(
+pub(super) async fn arm_acceptagentsuggestion_rejectagentsuggestion(
     operation: &str,
     payload: &Map<String, Value>,
     request_id: Uuid,
@@ -215,80 +215,6 @@ async fn materialize_accept(
     Ok(())
 }
 
-#[expect(
-    dead_code,
-    reason = "legacy action proposal writer retained for migration compatibility"
-)]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "legacy writer binds the complete immutable proposal row"
-)]
-async fn insert_action_proposal(
-    action_id: Uuid,
-    action_kind: &str,
-    context: &SuggestionContext,
-    target_type: &str,
-    object_scope_digest: &str,
-    receipt_digest: &str,
-    actor: Uuid,
-    audit: Uuid,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    sqlx::query(
-        "INSERT INTO ops.action_proposals(id,action_kind,origin_kind,origin_id,origin_version,origin_digest,target_type,target_id,target_version,target_digest,object_scope_digest,created_by,owner_user_id,last_receipt_digest,last_audit_event_id) VALUES($1,$2,'AGENT_PROPOSAL',$3,$4,CAST($5 AS char(64)),$6,$7,1,CAST($8 AS char(64)),CAST($9 AS char(64)),$10,$10,CAST($11 AS char(64)),$12)",
-    )
-    .bind(action_id).bind(action_kind).bind(context.id).bind(context.expected_version)
-    .bind(&context.stored_payload_sha256).bind(target_type).bind(context.case_id.to_string())
-    .bind(&context.input_snapshot_sha256).bind(object_scope_digest).bind(actor).bind(receipt_digest)
-    .bind(audit).execute(&mut **tx).await.map_err(db)?;
-    Ok(())
-}
-
-#[expect(
-    dead_code,
-    reason = "legacy action version writer retained for migration compatibility"
-)]
-async fn insert_action_version(
-    action_id: Uuid,
-    action_kind: &str,
-    context: &SuggestionContext,
-    reason: &str,
-    actor: Uuid,
-    field_keys: &EnvelopeKeyRing,
-    tx: &mut Transaction<'_, Postgres>,
-) -> Result<(), ServiceError> {
-    let canonical = serde_json::to_vec(&context.payload).map_err(|_| ServiceError::Persistence)?;
-    let rationale = serde_json::to_vec(
-        &json!({"reason":reason,"inputSnapshotSha256":context.input_snapshot_sha256}),
-    )
-    .map_err(|_| ServiceError::Persistence)?;
-    let encrypted_payload = encrypt_control_field(
-        field_keys,
-        "ops.action_proposal_versions",
-        "payload_encrypted",
-        action_id,
-        "json",
-        &canonical,
-    )?;
-    let encrypted_rationale = encrypt_control_field(
-        field_keys,
-        "ops.action_proposal_versions",
-        "rationale_encrypted",
-        action_id,
-        "json",
-        &rationale,
-    )?;
-    let detail = json!({"actionDetailKind":action_kind,"actionDetail":context.payload});
-    let detail_canonical = serde_json::to_vec(&detail).map_err(|_| ServiceError::Persistence)?;
-    sqlx::query(
-        "INSERT INTO ops.action_proposal_versions(proposal_id,version,state,payload_encrypted,content_digest,rationale_encrypted,rationale_digest,last_editor_id,expires_at,action_detail_kind,action_detail,action_detail_canonical,action_detail_digest) VALUES($1,1,'DRAFT',$2,CAST($3 AS char(64)),$4,CAST($5 AS char(64)),$6,clock_timestamp()+interval '7 days',$7,$8,$9,CAST($10 AS char(64)))",
-    )
-    .bind(action_id).bind(encrypted_payload).bind(&context.stored_payload_sha256).bind(encrypted_rationale)
-    .bind(sha256(&rationale)).bind(actor).bind(action_kind).bind(&context.payload).bind(&detail_canonical)
-    .bind(sha256(&detail_canonical)).execute(&mut **tx).await.map_err(db)?;
-    Ok(())
-}
-
 async fn reject_suggestion(
     context: &SuggestionContext,
     reason: &str,
@@ -300,5 +226,85 @@ async fn reject_suggestion(
         .bind(context.id).bind(reason).bind(actor)
         .bind(sha256(format!("REJECT:{}:{}:{}", context.id, context.expected_version, reason).as_bytes()))
         .bind(audit).bind(context.expected_version).execute(&mut **tx).await.map_err(db)?;
+    Ok(())
+}
+
+pub(super) async fn arm_startagentrun(
+    _operation: &str,
+    payload: &Map<String, Value>,
+    id: Uuid,
+    actor: Uuid,
+    _session_id: Uuid,
+    _field_keys: &EnvelopeKeyRing,
+    tx: &mut Transaction<'_, Postgres>,
+) -> Result<(), ServiceError> {
+    let case_id = uuid_value(payload, &["caseId"]).ok_or(ServiceError::InvalidRequest)?;
+    let evidence = payload
+        .get("evidenceScopeIds")
+        .cloned()
+        .ok_or(ServiceError::InvalidRequest)?;
+    let evidence_ids = evidence
+        .as_array()
+        .ok_or(ServiceError::InvalidRequest)?
+        .iter()
+        .map(|value| {
+            value
+                .as_str()
+                .and_then(|value| Uuid::parse_str(value).ok())
+                .ok_or(ServiceError::InvalidRequest)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if evidence_ids.is_empty() {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let evidence_snapshot: Value = sqlx::query_scalar(
+        "SELECT COALESCE(jsonb_agg(jsonb_build_object( \
+           'id',e.id,'contentSha256',btrim(e.content_sha256::text), \
+           'locator',e.source_locator,'updatedAt',e.updated_at, \
+           'promptInjectionFlags',COALESCE(d.prompt_injection_flags,'[]'::jsonb) \
+         ) ORDER BY e.id),'[]'::jsonb) \
+         FROM editorial.evidence e LEFT JOIN raw.source_documents d ON d.id=e.source_document_id \
+         WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) \
+           AND e.verification_status='VERIFIED'",
+    )
+    .bind(case_id)
+    .bind(&evidence_ids)
+    .fetch_one(&mut **tx)
+    .await
+    .map_err(db)?;
+    if evidence_snapshot
+        .as_array()
+        .is_none_or(|rows| rows.len() != evidence_ids.len())
+    {
+        return Err(ServiceError::InvalidRequest);
+    }
+    let snapshot_hash = agent_case_snapshot_sha256(&case_id.to_string(), &evidence_snapshot)
+        .map_err(|_| ServiceError::Persistence)?;
+    sqlx::query(
+        "INSERT INTO ops.agent_runs(id,case_id,agent_type,objective,evidence_scope_ids, \
+         provider_policy,status,input_snapshot_hash,max_cost,created_by) \
+         VALUES($1,$2,$3,$4,$5,$6,'QUEUED',$7,$8,$9)",
+    )
+    .bind(id)
+    .bind(case_id)
+    .bind(string_value(payload, "agentType").ok_or(ServiceError::InvalidRequest)?)
+    .bind(string_value(payload, "objective").ok_or(ServiceError::InvalidRequest)?)
+    .bind(evidence)
+    .bind(string_value(payload, "providerPolicy").ok_or(ServiceError::InvalidRequest)?)
+    .bind(snapshot_hash)
+    .bind(decimal_string(payload, "maxCost")?)
+    .bind(actor)
+    .execute(&mut **tx)
+    .await
+    .map_err(db)?;
+    enqueue_runtime_job(
+        tx,
+        "AGENT_RUN",
+        "analysis-worker",
+        json!({"agentRunId":id}),
+        format!("agent-run:{id}"),
+    )
+    .await?;
+
     Ok(())
 }

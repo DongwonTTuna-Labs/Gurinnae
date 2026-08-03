@@ -1,14 +1,19 @@
-fn action_proposal_detail_response(data: Value) -> Value {
+use super::*;
+
+pub(super) fn action_proposal_detail_response(data: Value) -> Value {
     let raw = data.get("proposal").cloned().unwrap_or(Value::Null);
     let as_of = data
         .get("asOf")
         .and_then(Value::as_str)
         .map(str::to_owned)
         .unwrap_or_else(|| {
-            format_time(OffsetDateTime::now_utc()).unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_owned())
+            format_time(OffsetDateTime::now_utc())
+                .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_owned())
         });
     let proposal_id = raw.get("proposalId").cloned().unwrap_or(Value::Null);
-    let proposal_id_text = proposal_id.as_str().unwrap_or("00000000-0000-0000-0000-000000000000");
+    let proposal_id_text = proposal_id
+        .as_str()
+        .unwrap_or("00000000-0000-0000-0000-000000000000");
     let content_digest = digest_or_zero(raw.get("contentDigest"));
     let approval_digest = digest_or_zero(raw.get("approvalDigest"));
     let target = json!({
@@ -36,14 +41,21 @@ fn action_proposal_detail_response(data: Value) -> Value {
         .and_then(Value::as_str)
         .and_then(|value| serde_json::from_str::<Value>(value).ok())
         .or_else(|| raw.get("rationale").cloned())
-        .unwrap_or_else(|| json!({
-            "summary": "확인되지 않음",
-            "evidenceSegmentIds": [],
-            "unknowns": [],
-            "alternativesConsidered": [],
-            "riskNote": "확인되지 않음"
-        }));
-    let payload = normalize_payload(raw.get("payload"), &target, &rationale, raw.get("actionKind"));
+        .unwrap_or_else(|| {
+            json!({
+                "summary": "확인되지 않음",
+                "evidenceSegmentIds": [],
+                "unknowns": [],
+                "alternativesConsidered": [],
+                "riskNote": "확인되지 않음"
+            })
+        });
+    let payload = normalize_payload(
+        raw.get("payload"),
+        &target,
+        &rationale,
+        raw.get("actionKind"),
+    );
     let as_of_value = json!(as_of.clone());
     json!({
         "proposal": proposal,
@@ -61,7 +73,26 @@ fn action_proposal_detail_response(data: Value) -> Value {
     })
 }
 
-fn normalize_payload(value: Option<&Value>, target: &Value, rationale: &Value, action_kind: Option<&Value>) -> Value {
+fn normalize_history(mut value: Value, order: &str, as_of: &Value) -> Value {
+    let object = value.as_object_mut().cloned().unwrap_or_default();
+    let mut normalized = object;
+    normalized.entry("items").or_insert_with(|| json!([]));
+    normalized.entry("order").or_insert_with(|| json!(order));
+    normalized.entry("asOf").or_insert_with(|| as_of.clone());
+    normalized.entry("pageDigest").or_insert_with(|| {
+        json!("0000000000000000000000000000000000000000000000000000000000000000")
+    });
+    normalized.entry("nextCursor").or_insert(Value::Null);
+    normalized.entry("complete").or_insert(json!(true));
+    Value::Object(normalized)
+}
+
+fn normalize_payload(
+    value: Option<&Value>,
+    target: &Value,
+    rationale: &Value,
+    action_kind: Option<&Value>,
+) -> Value {
     let Some(object) = value.and_then(Value::as_object) else {
         return hypothesis_payload(target, rationale);
     };
@@ -76,8 +107,14 @@ fn normalize_payload(value: Option<&Value>, target: &Value, rationale: &Value, a
 }
 
 fn hypothesis_payload(target: &Value, rationale: &Value) -> Value {
-    let case_id = target.get("targetId").cloned().unwrap_or_else(|| json!("00000000-0000-0000-0000-000000000000"));
-    let version = target.get("expectedVersion").cloned().unwrap_or_else(|| json!(1));
+    let case_id = target
+        .get("targetId")
+        .cloned()
+        .unwrap_or_else(|| json!("00000000-0000-0000-0000-000000000000"));
+    let version = target
+        .get("expectedVersion")
+        .cloned()
+        .unwrap_or_else(|| json!(1));
     json!({
         "schemaVersion": "action-payload.v1",
         "kind": "HYPOTHESIS",
@@ -100,7 +137,10 @@ fn hypothesis_payload(target: &Value, rationale: &Value) -> Value {
 }
 
 fn actor_summary(value: Option<&Value>, default_type: &str) -> Value {
-    let object = value.and_then(Value::as_object).cloned().unwrap_or_default();
+    let object = value
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
     json!({
         "actorType": object.get("actorType").and_then(Value::as_str).unwrap_or(default_type),
         "actorId": object.get("actorId").cloned().unwrap_or(Value::Null),
@@ -122,10 +162,9 @@ fn string_or(value: Value, fallback: &str) -> Value {
 
 fn digest_or_zero(value: Option<&Value>) -> Value {
     const ZERO: &str = "0000000000000000000000000000000000000000000000000000000000000000";
-    if value
-        .and_then(Value::as_str)
-        .is_some_and(|digest| digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit()))
-    {
+    if value.and_then(Value::as_str).is_some_and(|digest| {
+        digest.len() == 64 && digest.bytes().all(|byte| byte.is_ascii_hexdigit())
+    }) {
         value.cloned().unwrap_or_else(|| json!(ZERO))
     } else {
         json!(ZERO)
@@ -137,15 +176,23 @@ fn normalize_origin(value: Option<&Value>, proposal_id: &str, digest: &Value) ->
         return json!({"kind":"SYSTEM_EVENT", "eventId": proposal_id, "eventType":"ACTION_PROPOSAL_CREATED", "eventPayloadSha256": digest});
     };
     match origin.get("kind").and_then(Value::as_str) {
-        Some("HUMAN") | Some("AGENT_PROPOSAL") | Some("SYSTEM_EVENT") | Some("COMPENSATION") => Value::Object(origin.clone()),
-        _ => json!({"kind":"SYSTEM_EVENT", "eventId": proposal_id, "eventType":"ACTION_PROPOSAL_CREATED", "eventPayloadSha256": digest}),
+        Some("HUMAN") | Some("AGENT_PROPOSAL") | Some("SYSTEM_EVENT") | Some("COMPENSATION") => {
+            Value::Object(origin.clone())
+        }
+        _ => {
+            json!({"kind":"SYSTEM_EVENT", "eventId": proposal_id, "eventType":"ACTION_PROPOSAL_CREATED", "eventPayloadSha256": digest})
+        }
     }
 }
 
 fn normalize_quorum(value: Value) -> Value {
     let mut object = value.as_object().cloned().unwrap_or_default();
     let digest = "0000000000000000000000000000000000000000000000000000000000000000";
-    if !object.get("planDigest").and_then(Value::as_str).is_some_and(|v| v.len() == 64) {
+    if !object
+        .get("planDigest")
+        .and_then(Value::as_str)
+        .is_some_and(|v| v.len() == 64)
+    {
         object.insert("planDigest".into(), json!(digest));
     }
     if !object.get("requiredSlots").is_some_and(Value::is_array) {
@@ -157,7 +204,11 @@ fn normalize_quorum(value: Value) -> Value {
     if !object.get("blockingSlots").is_some_and(Value::is_array) {
         object.insert("blockingSlots".into(), json!(["actions.review"]));
     }
-    if !object.get("conflictSnapshotDigest").and_then(Value::as_str).is_some_and(|v| v.len() == 64) {
+    if !object
+        .get("conflictSnapshotDigest")
+        .and_then(Value::as_str)
+        .is_some_and(|v| v.len() == 64)
+    {
         object.insert("conflictSnapshotDigest".into(), json!(digest));
     }
     if !object.get("complete").is_some_and(Value::is_boolean) {

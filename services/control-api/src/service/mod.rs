@@ -75,43 +75,27 @@ pub enum ServiceError {
 }
 
 mod command;
+mod domains;
 mod publication;
+mod query_action_proposal;
 mod query_analysis_vm;
 mod query_business;
-mod query_dispatch;
 mod query_support;
+mod registry;
 mod response;
 mod routing;
 mod schema;
-mod specialized;
-mod specialized_group_1;
-mod specialized_group_2;
-mod specialized_group_3;
-mod specialized_group_4;
-mod specialized_group_5;
-mod specialized_group_5_signal;
-mod specialized_group_6;
-mod specialized_group_7;
 mod util;
 
 use command::*;
 use publication::*;
+use query_action_proposal::*;
 use query_analysis_vm::*;
 use query_business::*;
-use query_dispatch::*;
 use query_support::*;
 use response::*;
 use routing::*;
 use schema::*;
-use specialized::*;
-use specialized_group_1::*;
-use specialized_group_2::*;
-use specialized_group_3::*;
-use specialized_group_4::*;
-use specialized_group_5::*;
-use specialized_group_5_signal::*;
-use specialized_group_6::*;
-use specialized_group_7::*;
 use util::*;
 
 pub async fn execute(
@@ -124,8 +108,12 @@ pub async fn execute(
     domain_events: &Mutex<InProcessDomainEventJournal>,
     request_id: Uuid,
 ) -> Result<Output, ServiceError> {
+    let handler = registry::lookup(operation.id)?;
     if operation.operation_kind == "QUERY" {
-        return query(operation, request, claims, pool).await;
+        let registry::Handler::Query(handler) = handler else {
+            return Err(ServiceError::InvalidRequest);
+        };
+        return registered_query(handler, operation, request, claims, pool).await;
     }
     if operation.api != "control-api"
         || operation.operation_kind != "COMMAND"
@@ -136,7 +124,11 @@ pub async fn execute(
     {
         return Err(ServiceError::InvalidRequest);
     }
+    let registry::Handler::Command(handler) = handler else {
+        return Err(ServiceError::InvalidRequest);
+    };
     command(
+        handler,
         operation,
         request,
         body,
@@ -147,6 +139,54 @@ pub async fn execute(
         request_id,
     )
     .await
+}
+
+async fn registered_query(
+    handler: registry::QueryHandler,
+    operation: &OperationSpec,
+    request: &HttpRequest,
+    claims: &ActorClaims,
+    pool: &PgPool,
+) -> Result<Output, ServiceError> {
+    let parameters = query_parameters(request);
+    let mut data = domains::query(handler, operation, &parameters, claims, pool).await?;
+    if operation.id != "exportCostReport"
+        && let Some(object) = data.as_object_mut()
+    {
+        object.entry("operationId").or_insert(json!(operation.id));
+    }
+    let data = if operation.id == "getActionProposal" {
+        action_proposal_detail_response(data)
+    } else {
+        data
+    };
+    let response = response_for(operation, &data)?;
+    Ok(Output {
+        status: operation.success_status,
+        media_type: "application/json",
+        body: response,
+        replay: false,
+    })
+}
+
+fn envelope(id: Uuid, status: impl Into<String>, data: Value) -> Value {
+    let status = status.into();
+    json!({"id":id,"status":status,"data":data,"links":[]})
+}
+
+fn value_status(value: &Value) -> String {
+    value
+        .get("status")
+        .and_then(Value::as_str)
+        .unwrap_or("READY")
+        .to_owned()
+}
+
+fn query_uuid(parameters: &BTreeMap<String, String>, name: &str) -> Result<Uuid, ServiceError> {
+    parameters
+        .get(name)
+        .and_then(|value| Uuid::parse_str(value).ok())
+        .ok_or(ServiceError::InvalidRequest)
 }
 
 #[cfg(test)]
