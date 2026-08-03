@@ -41,7 +41,29 @@ Canonical enum은 `specs/domain/state-machines.yaml`과 정확히 일치한다. 
 
 ## 4. SQLx
 
-정적 query는 `query!`/`query_as!`를 우선한다. 동적 query는 allowlisted typed filter/sort와 bound parameter를 사용하는 `QueryBuilder`로 제한한다. SQL 문자열 연결은 금지한다.
+정적 query는 `query!`/`query_as!`/`query_scalar!`를 우선한다. 동적 query는 allowlisted typed identifier와 bound parameter만 허용한다. SQL 문자열 연결은 금지한다.
+
+Runtime query API의 승인된 예외는 다음 10개로 제한한다.
+
+- 동적 concurrency guard 3개:
+  `services/control-api/src/service/command_support.rs:256,298,312`.
+  Contract identifier를 `safe_sql_identifier`로 검증하고 `AssertSqlSafe`로
+  감싼 뒤 값은 bound parameter로 전달한다.
+- PostgreSQL polymorphic parameter describe 실패 4개:
+  `services/analysis-worker/src/analysis_provider_lineage.rs:235`의 `$3`,
+  `services/analysis-worker/src/analysis_runtime_bridge.rs:293`의 `$2`,
+  `services/analysis-worker/src/analysis_source_use_roots.rs:15`의 `$1`,
+  `services/ingest-worker/src/ingest_jobs.rs:531`의 `$2`.
+  모두 `jsonb_build_object`에서 먼저 소비되어 타입을 결정할 수 없다. SQL에
+  exact cast를 추가하는 별도 승인 변경 또는 inference 개선 후 전환한다.
+- Schema materialization 누락 3개:
+  `services/workflow-worker/src/workflow_action_execution.rs:164,211,343`가
+  호출하는 세 `ops.*_v1` 함수는 현재 migration tree에 존재하지 않는다.
+  권위 migration에 함수가 추가되고 metadata를 재생성하면 전환한다.
+
+전체 runtime 호출 42개와 승인되지 않은 정적 호출 32개 `OPEN_QUESTIONS`는
+`.sqlx/README.md`의 runtime query inventory를 따른다. `OPEN_QUESTIONS`는
+예외가 아니며 신규 runtime query 추가의 선례로 사용할 수 없다.
 
 ```bash
 cargo sqlx migrate run --source db/migrations

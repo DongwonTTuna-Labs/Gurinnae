@@ -8,6 +8,10 @@ async fn ensure_legacy_agent_source_use_roots(
     // immutable READY AGENT_CASE graph.  In particular, never synthesize a
     // segment/member identity from an editorial evidence row: every value in
     // the inserted row is selected from the FK target relation below.
+    // PostgreSQL cannot describe `$1` because it is first consumed by
+    // polymorphic `jsonb_build_object`; SQLx 0.9 therefore reports an unknown
+    // parameter type. Convert this after an approved SQL change adds an exact
+    // cast, or when SQLx/PostgreSQL can infer the existing statement unchanged.
     sqlx::query(
         r#"
         WITH snapshot_choice AS (

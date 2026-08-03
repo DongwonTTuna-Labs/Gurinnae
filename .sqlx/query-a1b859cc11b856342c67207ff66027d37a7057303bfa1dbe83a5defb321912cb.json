@@ -1,0 +1,190 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT (ops.claim_outbound_delivery_attempt(ROW($1::uuid,$2::text,$3::char(64),$4::bigint,$5::bigint,$6::integer,$7::text)::ops.outbound_delivery_claim_v1)).*",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "attempt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "delivery_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "attempt_ordinal",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "dispatch_generation",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "delivery_version_at_claim",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 5,
+        "name": "fencing_token",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 6,
+        "name": "provider_idempotency_key_sha256",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 7,
+        "name": "request_sha256",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 8,
+        "name": "rendered_sha256",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 9,
+        "name": "provider_config_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 10,
+        "name": "provider_config_version",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 11,
+        "name": "provider_configuration_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "provider_preflight_receipt_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 13,
+        "name": "provider_preflight_receipt_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "authorization_snapshot_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "suppression_snapshot_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "activation_receipt_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "policy_fence_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "claimed_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "lease_expires_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "deadline_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "attempt_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "claim_receipt_digest",
+        "type_info": "Bpchar",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 23,
+        "name": "audit_event_id",
+        "type_info": "Uuid",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bpchar",
+        "Int8",
+        "Int8",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "a1b859cc11b856342c67207ff66027d37a7057303bfa1dbe83a5defb321912cb"
+}
