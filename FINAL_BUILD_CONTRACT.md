@@ -15,10 +15,10 @@ v13 원본과 base provenance를 검증하는 기준이며 현재 `specs/`를 �
 ## 완성 수량
 
 - Public 34 + Response 8 + Internal 52 = **94 화면**
-- Public 41 + Submission 34 + Control 134 + Browser Identity 6 = **215 외부 operation**
+- Public 43 + Submission 34 + Control 134 + Browser Identity 6 = **217 외부 operation**
 - Private Identity = **9 operation**
-- **107 command**: HTTP non-GET write 104 + protocol GET command 3
-- Persistence mapping 215, optimistic-concurrency contract 66
+- **110 query**, **107 command**: HTTP non-GET write 104 + protocol GET command 3
+- Persistence mapping 217, optimistic-concurrency contract 66
 - PostgreSQL **24 migration, 107 active table, 72 active first-party function**, service/privilege role 13
 - Agent 5, read-only tool 9, deterministic evaluation 50
 - Connector 6, upstream operation 44

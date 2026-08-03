@@ -1,9 +1,11 @@
 BEGIN;
 
 INSERT INTO public.agencies(
-  id,name,agency_type,jurisdiction,coverage,descriptive_metrics,case_counts,updated_at
+  id,name,agency_type,jurisdiction,sido_code,sigungu_code,region_code_version,
+  coverage,descriptive_metrics,case_counts,updated_at
 ) VALUES (
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','통합테스트 조달청','CENTRAL','KR',
+  '11','11680','MOIS-2026-01',
   '{"dateRange":{"label":"2026"},"sourceIds":["koneps"],"recordCount":1,"knownGaps":[],"freshness":{"asOf":"2026-07-12T00:00:00Z","status":"CURRENT"}}',
   '[{"id":"contracts","label":"계약 수","value":"1","period":{"label":"2026"},"coverageNote":"공개 projection"}]',
   '{"total":1,"publication":{"neverPublished":0,"publishedAnomaly":1,"publishedExplained":0,"officiallyConfirmed":0,"corrected":0,"retracted":0,"temporarilyRestricted":0},"investigation":{"signalDetected":0,"triage":0,"investigating":0,"awaitingResponse":0,"editorialReview":0,"legalReview":0,"readyToPublish":0,"closed":1},"resolution":{"none":1,"dataError":0,"duplicate":0,"explained":0,"insufficientEvidence":0,"referredConfidential":0,"archived":0}}',

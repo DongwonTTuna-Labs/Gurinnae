@@ -136,7 +136,7 @@ export async function assertRouteOperationOwnership(): Promise<void> {
     (screen) => screen.dataOperations,
   );
   const operations = apiOperations();
-  expect(data, "screen.ts dataOperations").toHaveLength(229);
+  expect(data, "screen.ts dataOperations").toHaveLength(225);
   for (const item of data) {
     const matches = operations.filter(
       (operation) => operation.id === item.operationId,
@@ -252,7 +252,7 @@ export function assertFinalComponents(): void {
       };
     },
   );
-  expect(sections, "section component references").toHaveLength(497);
+  expect(sections, "section component references").toHaveLength(492);
   expect(components, "component catalog").toHaveLength(58);
   assertUnique(
     components.map((component) => component.id),

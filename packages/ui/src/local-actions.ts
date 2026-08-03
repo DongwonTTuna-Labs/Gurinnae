@@ -8,7 +8,6 @@ const staticTargets: Record<string, string> = {
   "PUB-001:search": "/search",
   "PUB-001:browse-cases": "/cases",
   "PUB-003:open-case": "/cases",
-  "PUB-004:request-correction": "/correction-request",
   "PUB-013:view-coverage": "/coverage",
   "PUB-020:view-schema": "/api",
   "PUB-020:open-api-docs": "/api",

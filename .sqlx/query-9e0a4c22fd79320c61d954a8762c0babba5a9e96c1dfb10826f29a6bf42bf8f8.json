@@ -1,0 +1,168 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT e.id,e.title,e.evidence_type,e.document_title,e.publisher,e.published_at, e.source_url,e.page_anchor,e.source_locator,e.content_sha256, e.redacted_public_excerpt,e.classification::text classification,e.verification_status FROM editorial.evidence e WHERE e.case_id=$1 AND e.id=ANY($2::uuid[]) ORDER BY array_position($2::uuid[],e.id)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "evidence_type",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "evidence_type"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "document_title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "document_title"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "publisher",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "publisher"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "source_url",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "source_url"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "page_anchor",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "page_anchor"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "source_locator",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "source_locator"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "content_sha256",
+        "type_info": "Bpchar",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "content_sha256"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "redacted_public_excerpt",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "redacted_public_excerpt"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "classification",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 12,
+        "name": "verification_status",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.evidence",
+            "name": "verification_status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      null,
+      false
+    ]
+  },
+  "hash": "9e0a4c22fd79320c61d954a8762c0babba5a9e96c1dfb10826f29a6bf42bf8f8"
+}

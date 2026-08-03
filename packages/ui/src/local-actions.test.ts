@@ -117,6 +117,35 @@ describe("local action destinations", () => {
     ).toBeUndefined();
   });
 
+  it("uses only a case-and-revision-bound PUB-004 correction destination", () => {
+    const detail = screen("PUB-004", "/cases/case-1");
+    const action = {
+      id: "request-correction",
+      label: "정정 요청",
+      interaction_kind: "NAVIGATION",
+    } as const;
+    expect(
+      localActionHref(
+        detail,
+        {
+          ...runtime(),
+          pathname: "/cases/case-1",
+          destinations: {
+            "request-correction": "/correction-request?case=case-1&revision=3",
+          },
+        },
+        action,
+      ),
+    ).toBe("/correction-request?case=case-1&revision=3");
+    expect(
+      localActionHref(
+        detail,
+        { ...runtime(), pathname: "/cases/case-1" },
+        action,
+      ),
+    ).toBeUndefined();
+  });
+
   it.each([
     [
       "CAS-002",

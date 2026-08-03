@@ -5,17 +5,21 @@ import { operationFields, requiredServerValue } from "@gurine/config";
 import {
   buildRowSelectionNavigationOptions,
   canonicalizeScreenViewModel,
+  PUBLIC_LEDGER_CONTRACTS,
   projectFetchedData,
   type ScreenField,
   type ScreenRuntime,
   type ScreenViewModel,
-  serverActionDestinations,
   typedScreenViewModel,
 } from "@gurine/ui";
 import { type RequestEvent, redirect } from "@sveltejs/kit";
-import * as v from "valibot";
 import { env } from "$env/dynamic/private";
 import { publicRuntimeState } from "$lib/view-models/runtime";
+import { publicCasePresentation } from "./public-case-presentation";
+import {
+  publicDatasetPresentation,
+  publicLedgerPresentation,
+} from "./public-presentation";
 import {
   operationPathParams,
   operationQuery,
@@ -27,6 +31,7 @@ import {
   ATTACHMENT_MAX_BYTES,
   operations,
 } from "./screen-contract";
+import { publicScreenDestinations } from "./screen-destinations";
 import {
   actionIdempotencyKeys,
   actionOperationId,
@@ -51,40 +56,39 @@ import {
   readSubmissionSession,
 } from "./submission-cookie";
 
-const sourceOfficialUrlSchema = v.object({
-  data: v.object({
-    officialUrl: v.nullable(
-      v.pipe(v.string(), v.url(), v.regex(/^https?:\/\/\S+$/i)),
-    ),
-  }),
-});
+export { publicScreenDestinations };
 
 export const INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE =
   "필수 검색 조건이 올바르지 않습니다.";
 
-export function publicScreenDestinations(
-  screen: ScreenViewModel,
-  pathname: string,
-  data: Readonly<Record<string, unknown>>,
-): Readonly<Record<string, string>> {
-  const declared = serverActionDestinations(screen, pathname);
-  if (screen.id !== "PUB-017") return declared;
-  const destinations = Object.fromEntries(
-    Object.entries(declared).filter(
-      ([actionId]) => actionId !== "view-official",
-    ),
-  );
-  const officialUrl = validatedOfficialSourceUrl(data.getSource);
-  return officialUrl
-    ? { ...destinations, "view-official": officialUrl }
-    : destinations;
-}
+type PublicInitialLoadPlan =
+  | { kind: "request"; query: Record<string, unknown> }
+  | { kind: "skip"; state: "awaiting-query" }
+  | { kind: "invalid" };
 
-function validatedOfficialSourceUrl(response: unknown): string | undefined {
-  const result = v.safeParse(sourceOfficialUrlSchema, response);
-  return result.success
-    ? (result.output.data.officialUrl ?? undefined)
-    : undefined;
+export function publicInitialLoadPlan(
+  screenId: string,
+  operationId: string,
+  parameters: Array<{ name: string; in: string; required?: boolean }>,
+  current: URLSearchParams,
+): PublicInitialLoadPlan {
+  if (
+    screenId === "PUB-002" &&
+    operationId === "searchPublicRecords" &&
+    !current.get("q")?.trim()
+  ) {
+    return { kind: "skip", state: "awaiting-query" };
+  }
+  const query = operationQuery(parameters, current);
+  if (query === null) return { kind: "invalid" };
+  if (
+    screenId === "PUB-001" &&
+    operationId === "listPublicCases" &&
+    query.sort === undefined
+  ) {
+    return { kind: "request", query: { ...query, sort: "published_desc" } };
+  }
+  return { kind: "request", query };
 }
 
 export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
@@ -96,6 +100,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     { binary: string; mime: string; extension: "json" | "csv" }
   > = {};
   const errors: string[] = [];
+  let neutralInitialState: "awaiting-query" | undefined;
   const submissionSession = readSubmissionSession(event);
   const attachmentUpload =
     submissionSession?.sessionKind === "CORRECTION_DRAFT" &&
@@ -173,7 +178,9 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       continue;
     }
     try {
-      let query = operationQuery(
+      let plan = publicInitialLoadPlan(
+        screen.id,
+        contract.operation_id,
         indexed.operation.parameters ?? [],
         event.url.searchParams,
       );
@@ -183,18 +190,23 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       // initial screen can prepare a deterministic JSON receipt without
       // exposing the public API's internal URL or raw response DTO.
       if (
-        query === null &&
+        plan.kind === "invalid" &&
         screen.id === "PUB-011" &&
         contract.operation_id === "downloadContracts"
       ) {
-        query = { format: "JSONL" };
+        plan = { kind: "request", query: { format: "JSONL" } };
       }
-      if (query === null) {
+      if (plan.kind === "skip") {
+        neutralInitialState = plan.state;
+        continue;
+      }
+      if (plan.kind === "invalid") {
         if (contract.blocking) {
           errors.push(INVALID_REQUIRED_SEARCH_CONDITIONS_MESSAGE);
         }
         continue;
       }
+      const { query } = plan;
       const result =
         contract.api === "submission-api"
           ? await submissionLoadRequest(
@@ -280,19 +292,66 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   if (needsBotChallenge && !siteKey)
     errors.push("자동 제출 방지 검증이 구성되지 않았습니다.");
   const hasData = Object.values(data).some((value) => hasRecords(value));
-  const navigationOptions = buildRowSelectionNavigationOptions(screen.id, data);
+  let ledgerPresentation: ReturnType<typeof publicLedgerPresentation>;
+  let publicDatasets: ReturnType<typeof publicDatasetPresentation>;
+  let publicCase: ReturnType<typeof publicCasePresentation>;
+  let presentationFailed = false;
+  try {
+    ledgerPresentation = publicLedgerPresentation(screen.id, data);
+    publicDatasets = publicDatasetPresentation(screen.id, data);
+    publicCase = publicCasePresentation(screen.id, data, event.url);
+  } catch {
+    presentationFailed = true;
+    errors.push(
+      screen.id === "PUB-004"
+        ? "공개 사건 응답 형식이 올바르지 않습니다."
+        : screen.id === "PUB-020"
+          ? "공개 데이터셋 응답 형식이 올바르지 않습니다."
+          : "공개 목록 응답 형식이 올바르지 않습니다.",
+    );
+  }
+  const navigationOptions =
+    ledgerPresentation?.navigationOptions ??
+    (Object.hasOwn(PUBLIC_LEDGER_CONTRACTS, screen.id)
+      ? {}
+      : buildRowSelectionNavigationOptions(screen.id, data));
+  const projectionData =
+    presentationFailed && screen.id === "PUB-004"
+      ? Object.fromEntries(
+          Object.entries(data).filter(
+            ([operationId]) => operationId !== "getPublicCase",
+          ),
+        )
+      : data;
   const runtime: ScreenRuntime = {
-    state: publicRuntimeState({
-      errors: errors.length,
-      resolved,
-      hasData,
-      invalidFilter: errors.some((error) => error.includes("필수 검색 조건")),
-    }),
+    state: presentationFailed
+      ? "error"
+      : neutralInitialState && errors.length === 0 && resolved === 0
+        ? neutralInitialState
+        : publicRuntimeState({
+            errors: errors.length,
+            resolved,
+            hasData,
+            invalidFilter: errors.some((error) =>
+              error.includes("필수 검색 조건"),
+            ),
+          }),
     pathname: event.url.pathname,
     data: {},
-    projection: projectFetchedData(screen, data),
+    projection: projectFetchedData(screen, projectionData),
     errors,
     forms,
+    ...(ledgerPresentation
+      ? { publicLedger: ledgerPresentation.viewModel }
+      : {}),
+    ...(publicDatasets !== undefined ? { publicDatasets } : {}),
+    ...(publicCase
+      ? {
+          publicCaseLead: publicCase.lead,
+          publicEvidence: publicCase.evidence,
+          publicSeo: publicCase.seo,
+        }
+      : {}),
     ...(screen.id === "PUB-020"
       ? { formOperationIds: { "download-dataset": "createDatasetExport" } }
       : {}),
@@ -335,7 +394,12 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? { notice: event.url.searchParams.get("notice") ?? "" }
       : {}),
     search: event.url.search,
-    destinations: publicScreenDestinations(screen, event.url.pathname, data),
+    destinations: publicScreenDestinations(
+      screen,
+      event.url.pathname,
+      data,
+      event.url.searchParams,
+    ),
     ...(Object.keys(navigationOptions).length > 0 ? { navigationOptions } : {}),
   };
   return { screen, runtime };

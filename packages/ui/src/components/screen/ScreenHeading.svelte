@@ -31,7 +31,7 @@ const headingTestId = $derived(`${screen.id.toLowerCase()}__heading`);
     <p class="home-safety">자동 부패 판정기가 아닙니다 — 가격 차이나 반복 계약은 조사 신호일 뿐 위법·비리를 의미하지 않습니다.</p>
   </header>
 {:else if variant === "public"}
-  <header class="page-heading"><Breadcrumb {screen} {runtime} /><p class="eyebrow">{contract.journey} · {contract.persona}</p><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
+  <header class="page-heading" data-journey={contract.journey}><Breadcrumb {screen} {runtime} /><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
 {:else if variant === "response"}
   <header class="page-heading"><p class="eyebrow">{responseStep > 0 ? `${responseStep} / 5 · ` : ""}보호된 소명 절차</p><h1 id={headingTestId} data-testid={projection.focus.heading} data-focus-target={projection.focus.heading}>{screen.title}</h1><p class="lead">{contract.answerFirst}</p></header>
 {:else if variant === "auth"}

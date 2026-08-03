@@ -1,7 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { displayReadonlyFieldValue } from "./screen-action-display";
+import {
+  autocompleteForField,
+  displayReadonlyFieldValue,
+} from "./screen-action-display";
 
 describe("readonly screen action display", () => {
+  it.each([
+    ["contactEmail", "email"],
+    ["phoneNumber", "tel"],
+    ["firstName", "given-name"],
+    ["lastName", "family-name"],
+    ["partyName", "name"],
+    ["locale", "language"],
+    ["reason", "off"],
+  ])("maps %s to the %s autocomplete token", (name, token) => {
+    expect(autocompleteForField(name)).toBe(token);
+  });
+
   it("summarizes the server-bound subscription query without exposing JSON or enum tokens", () => {
     const value = JSON.stringify({
       route: "/cases",
@@ -41,15 +56,18 @@ describe("readonly screen action display", () => {
     );
   });
 
-  it("preserves existing scalar and absent-value display behavior", () => {
+  it("formats readonly scalar values through the closed presentation layer", () => {
     expect(
       displayReadonlyFieldValue({ name: "scopeType", value: "QUERY" }),
-    ).toBe("QUERY");
+    ).toBe("검색 조건");
+    expect(
+      displayReadonlyFieldValue({ name: "scopeType", value: "CORRECTIONS" }),
+    ).toBe("정정");
     expect(
       displayReadonlyFieldValue({ name: "expectedVersion", value: 4 }),
     ).toBe("4");
     expect(displayReadonlyFieldValue({ name: "consent", value: false })).toBe(
-      "false",
+      "아니오",
     );
     expect(displayReadonlyFieldValue({ name: "scopeRef" })).toBe("—");
   });

@@ -8,13 +8,11 @@ rules:
   - The resolved component and variant must exist in the v13 component catalog and support the screen surface.
   - No other section may use this override mechanism.
 overrides:
-  PUB-012.related: {authority_component: SignalTriagePanel, component: DataCollection, variant: cards, reason: 공개 사건 링크는 내부 triage control 없이 공개 카드 모음으로 표시한다.}
   PUB-013.ai: {authority_component: AccessManagementPanel, component: StructuredContentSection, variant: bordered, reason: 공개 방법론은 권한 제어가 아니라 AI 역할과 금지 범위를 설명한다.}
   PUB-019.review: {authority_component: DecisionReviewPanel, component: RevisionTimeline, variant: public, reason: 공개 화면에는 내부 결정 control 대신 공개 가능한 검토 이력만 표시한다.}
   PUB-021.errors: {authority_component: AgentSuggestionPanel, component: StructuredContentSection, variant: bordered, reason: API 오류 계약은 내부 AI 제안이 아니라 versioned Problem Details 설명이다.}
   PUB-023.conflicts: {authority_component: DecisionReviewPanel, component: StructuredContentSection, variant: bordered, reason: 이해상충은 승인 control 없이 공개 disclosure와 회피 절차를 설명한다.}
   PUB-027.review: {authority_component: DecisionReviewPanel, component: CheckAnswers, variant: correction, reason: 정정 요청자는 내부 검토 결정을 하지 않고 제출 전 입력을 확인한다.}
-  PUB-029.email: {authority_component: AgentSuggestionPanel, component: CheckAnswers, variant: subscription, reason: 구독 이메일과 verification 선택을 공개 구독 입력으로 확인한다.}
   PUB-032.service: {authority_component: AgentSuggestionPanel, component: LongFormArticle, variant: policy, reason: 서비스 조건은 내부 AI 제안이 아니라 versioned 정책 본문이다.}
   PUB-032.liability: {authority_component: DecisionReviewPanel, component: LongFormArticle, variant: policy, reason: 책임과 한계는 내부 승인 control 없이 공개 정책으로 읽힌다.}
   RSP-001.identity: {authority_component: CoverageStatement, component: PageHeader, variant: form, reason: 소명 요청 identity와 공개 범위를 response form header에서 확인한다.}

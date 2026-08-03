@@ -400,17 +400,18 @@ def merge(api: str, operations: list[dict], resource_doc: dict) -> None:
     # same tag repeatedly and inflated the source diff on every regeneration.
     document["tags"] = [
         tag for tag in document.get("tags", []) if tag.get("name") != "addendum"
-    ] + [{"name": "addendum"}]
+    ] + ([{"name": "addendum"}] if operations else [])
     schemas = document.setdefault("components", {}).setdefault("schemas", {})
-    schemas.setdefault("AddendumProblemDetailsV1", {
-        "type": "object", "additionalProperties": False,
-        "properties": {
-            "code": {"type": "string"}, "title": {"type": "string"},
-            "status": {"type": "integer"}, "requestId": {"type": "string", "format": "uuid"},
-            "detail": {"type": ["string", "null"]},
-        },
-        "required": ["code", "title", "status", "requestId"],
-    })
+    if operations:
+        schemas.setdefault("AddendumProblemDetailsV1", {
+            "type": "object", "additionalProperties": False,
+            "properties": {
+                "code": {"type": "string"}, "title": {"type": "string"},
+                "status": {"type": "integer"}, "requestId": {"type": "string", "format": "uuid"},
+                "detail": {"type": ["string", "null"]},
+            },
+            "required": ["code", "title", "status", "requestId"],
+        })
     # Repair the legacy self-reference in the estimate query schema while
     # materialising the merged document.  Its data payload is a concrete
     # estimate, not another envelope.
@@ -514,8 +515,11 @@ def write_identity(operations: list[dict], resource_doc: dict) -> None:
 def main() -> None:
     operations = yaml.safe_load(ADDENDUM.read_text())["operations"]
     resource_doc = yaml.safe_load(RESOURCES.read_text())
-    grouped = {"control-api": [row for row in operations if row["api"] == "control-api"],
-               "submission-api": [row for row in operations if row["api"] == "submission-api"]}
+    grouped = {
+        "public-api": [],
+        "control-api": [row for row in operations if row["api"] == "control-api"],
+        "submission-api": [row for row in operations if row["api"] == "submission-api"],
+    }
     for api, rows in grouped.items():
         merge(api, rows, resource_doc)
     write_identity([row for row in operations if row.get("api") == "identity-api"], resource_doc)

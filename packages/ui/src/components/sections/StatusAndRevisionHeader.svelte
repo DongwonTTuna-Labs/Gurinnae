@@ -1,15 +1,21 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../../index";
+import ProjectionValue from "../ProjectionValue.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, runtime, projection }: ScreenSectionProps = $props();
+const knownFields = $derived(
+  projection?.fields.filter((field) => field.known && field.value !== null) ??
+    [],
+);
 </script>
 <SectionHeading {section} kicker="현재 상태" />
-<div class="status-revision-grid">
-  {#if projection}
-    {#each projection.fields as field}<p><span>{field.label}</span><strong>{field.value ?? "확인 필요"}</strong></p>{/each}
-  {:else}<p role="status">권위 투영값을 불러오는 중입니다.</p>{/if}
-</div>
+{#if knownFields.length > 0}
+  <dl class="status-revision-grid">
+    {#each knownFields as field}<div><dt>{field.label}</dt><dd><ProjectionValue name={field.name} label={field.label} value={field.value} /></dd></div>{/each}
+  </dl>
+{:else if !projection}<p class="status-empty" role="status">상태 정보를 불러오는 중입니다.</p>
+{:else}<p class="status-empty" role="status">자료 없음</p>{/if}
 
 <style>
   .status-revision-grid {
@@ -21,14 +27,13 @@ let { section, runtime, projection }: ScreenSectionProps = $props();
     background: var(--paper-200);
   }
 
-  .status-revision-grid p {
+  .status-revision-grid > div {
     min-width: 0;
-    margin: 0;
     padding: 0.375rem 0.5rem;
     background: var(--paper-0);
   }
 
-  .status-revision-grid span {
+  .status-revision-grid dt {
     display: block;
     color: var(--ink-500);
     font-size: var(--text-meta, 0.75rem);
@@ -36,13 +41,22 @@ let { section, runtime, projection }: ScreenSectionProps = $props();
     line-height: 1.4;
   }
 
-  .status-revision-grid strong {
+  .status-revision-grid dd {
     display: block;
+    margin: 0;
     margin-top: 0.125rem;
     font-size: var(--text-data, 0.875rem);
     font-weight: 650;
     line-height: 1.45;
     overflow-wrap: anywhere;
+  }
+
+  .status-empty {
+    margin: 0.5rem 0 0;
+    padding: 0.375rem 0.5rem;
+    border-block: 1px solid var(--paper-200);
+    color: var(--ink-700);
+    font-size: var(--text-data, 0.875rem);
   }
 
   @media (max-width: 620px) {

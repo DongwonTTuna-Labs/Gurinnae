@@ -22,6 +22,7 @@ def gt(path: str, value: Any) -> dict[str, Any]:
 
 def semantics() -> dict[str, dict[str, Any]]:
     return {
+        "awaiting-query": {"family": "query-entry", "trigger": {"all": [eq("signals.blocking_pending", False), eq("signals.blocking_failure", False), eq("signals.query_present", False)]}, "preserve": "search-input-and-filters", "action_policy": "enter-or-choose-query", "focus": "search-input", "live": "polite-once"},
         "initial-loading": {"family": "initial-read", "trigger": {"all": [eq("signals.blocking_pending", True), eq("signals.has_display_data", False)]}, "preserve": "none", "action_policy": "none", "focus": "main-heading", "live": "polite-once"},
         "loading": {"family": "initial-read", "trigger": {"all": [eq("signals.blocking_pending", True), eq("signals.has_display_data", False)]}, "preserve": "none", "action_policy": "none", "focus": "main-heading", "live": "polite-once"},
         "refreshing": {"family": "background-read", "trigger": {"all": [eq("signals.background_pending", True), eq("signals.has_display_data", True)]}, "preserve": "visible-data-and-focus", "action_policy": "keep-safe-actions", "focus": "preserve", "live": "polite-once-after-completion"},
@@ -99,7 +100,17 @@ def render() -> str:
         "runtime_signal_contract": {
             "type": "ScreenRuntimeSignalsV1",
             "additional_properties": False,
-            "rule": "Every signal is bound by a screen contract to an operation result, persisted receipt, trusted session fact, or browser connectivity fact; a renderer cannot invent it.",
+            "rule": "Every signal is bound by a screen contract to an operation result, persisted receipt, trusted session fact, BFF-validated URL query fact, or browser connectivity fact; a renderer cannot invent it.",
+            "source_provenance": {
+                "signals.query_present": {
+                    "type": "boolean",
+                    "profiles": ["public-search"],
+                    "source": "BFF-normalized URL query parameter q",
+                    "true_when": "q contains a non-whitespace value",
+                    "false_when": "q is absent or blank",
+                    "forbidden_sources": ["renderer inference", "unvalidated browser state"],
+                }
+            },
         },
         "selection_rules": [
             "A screen's explicit state_profile is authoritative.",

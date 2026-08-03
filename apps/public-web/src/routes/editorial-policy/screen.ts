@@ -11,7 +11,7 @@ export const screen = {
       id: "states",
       title: "상태",
       component: "StatusAndRevisionHeader",
-      purpose: "public lifecycle.",
+      purpose: "탐지·검토·공개·정정·철회 상태 기준.",
       test_id: "pub_025__section__states",
     },
     {

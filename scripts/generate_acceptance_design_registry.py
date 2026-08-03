@@ -45,6 +45,7 @@ PROOF_SEMANTICS = (
     "scripts/design_bundle_digest.py",
     "scripts/generate_acceptance_design_registry.py",
     "scripts/generate_effective_execution_registry.py",
+    "scripts/generate_journey_registry.py",
     "scripts/generate_supplemental_execution_mapping.py",
     "scripts/run_acceptance_assertion_mutations.py",
     "scripts/source_provenance.py",

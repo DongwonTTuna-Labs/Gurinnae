@@ -29,7 +29,7 @@ screens:
   sections:
   - id: mission
     title: 서비스 정의와 한계
-    purpose: 이상 징후와 비리 확정을 분리한다.
+    purpose: 이상 징후와 위법·비리 확정의 구분 원칙.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -45,7 +45,7 @@ screens:
     responsive_order: 2
   - id: recent
     title: 최근 공개 기록
-    purpose: 상태가 균형 잡힌 최신 기록을 보여준다.
+    purpose: 상태 균형을 반영한 최신 공개 기록.
     priority: primary
     order: 3
     component: StatusAndRevisionHeader
@@ -53,7 +53,7 @@ screens:
     responsive_order: 3
   - id: corrections
     title: 최근 설명·정정·철회
-    purpose: 제품이 오류와 해소 사례를 숨기지 않음을 보여준다.
+    purpose: 오류·해소 이력을 포함한 정정·철회 기록.
     priority: primary
     order: 4
     component: RevisionAndCorrectionPanel
@@ -69,7 +69,7 @@ screens:
     responsive_order: 5
   - id: method
     title: 방법론
-    purpose: 탐지 방식과 한계를 설명한다.
+    purpose: 탐지 방식과 판정 한계.
     priority: primary
     order: 6
     component: LongFormArticle
@@ -95,11 +95,10 @@ screens:
   - id: subscribe
     label: 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CORRECTIONS
     interaction_kind: NAVIGATION
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_requirements:
@@ -130,15 +129,6 @@ screens:
     path: /v1/sources/status
     request_schema: listSourceStatusQuery
     response_schema: SourceStatusPage
-  - operation_id: searchPublicRecords
-    status: READY
-    api: public-api
-    purpose: 통합 검색 autocomplete
-    blocking: true
-    method: GET
-    path: /v1/search
-    request_schema: searchPublicRecordsQuery
-    response_schema: PublicRecordsSearchResultPage
   state_profile: public-data
   special_states:
   - no-publications
@@ -198,36 +188,20 @@ screens:
   sections:
   - id: query
     title: 검색어
-    purpose: 검색 범위와 예시를 제공한다.
+    purpose: 기관·업체·계약·사건 검색과 유형·기간·공개 상태 파셋.
     priority: primary
     order: 1
     component: UnifiedSearch
     anchor: query
     responsive_order: 1
-  - id: types
-    title: 객체 유형
-    purpose: 사건·계약·기관·업체·방법론·정정을 구분한다.
-    priority: primary
-    order: 2
-    component: RevisionAndCorrectionPanel
-    anchor: types
-    responsive_order: 2
   - id: results
     title: 검색 결과
-    purpose: 일치 필드와 상태·freshness를 표시한다.
+    purpose: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
     priority: primary
-    order: 3
-    component: UnifiedSearch
+    order: 2
+    component: DataCollection
     anchor: results
-    responsive_order: 3
-  - id: coverage
-    title: 검색 범위
-    purpose: indexing 지연과 source coverage를 표시한다.
-    priority: primary
-    order: 4
-    component: UnifiedSearch
-    anchor: coverage
-    responsive_order: 4
+    responsive_order: 2
   actions:
   - id: submit-search
     label: 검색
@@ -238,15 +212,14 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-  - id: filter-type
-    label: 유형 필터
+  - id: open-result
+    label: 검색 결과 보기
     capability: none
-    local_only: true
-    persistence: url
-    interaction_kind: COMMAND
+    interaction_kind: NAVIGATION
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+    local_only: true
   - id: clear
     label: 검색 초기화
     capability: none
@@ -256,6 +229,22 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+  - id: download-csv
+    label: CSV 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
+  - id: download-jsonl
+    label: JSONL 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
   data_requirements:
   - operation_id: searchPublicRecords
     status: READY
@@ -266,7 +255,16 @@ screens:
     path: /v1/search
     request_schema: searchPublicRecordsQuery
     response_schema: PublicRecordsSearchResultPage
-  state_profile: public-data
+  - operation_id: downloadPublicSearchRecords
+    status: READY
+    api: public-api
+    purpose: 현재 검색 필터 결과 내려받기
+    blocking: false
+    method: GET
+    path: /v1/search/download
+    request_schema: downloadPublicSearchRecordsQuery
+    response_schema: PublicSearchDownload
+  state_profile: public-search
   special_states:
   - query-too-short
   - no-results
@@ -288,15 +286,13 @@ screens:
   visual_status: FINAL
   test_id_prefix: pub_002
   layout_contract:
-    wide: 12-column grid; query header 12; filter rail 3 + results 9
-    medium: filters in horizontal toolbar; results 8 columns
-    compact: single column; filters open in full-height sheet; selected filters remain inline
+    wide: 12-column grid; query and facets 12; results table 12
+    medium: query and facets precede the results table
+    compact: single column; selected filters remain inline
     container: public_main
   above_fold_order:
   - query
-  - types
   - results
-  - coverage
   primary_action_id: submit-search
   implementation_files:
     page: apps/public-web/src/routes/search/+page.svelte
@@ -325,7 +321,7 @@ screens:
   sections:
   - id: scope
     title: 목록 범위
-    purpose: 공개된 revision만 포함함을 설명한다.
+    purpose: 공개 확정 개정본 한정 사례 범위.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -333,7 +329,7 @@ screens:
     responsive_order: 1
   - id: filters
     title: 필터
-    purpose: 상태·기관 유형·지역·방법론·기간·소명 상태.
+    purpose: 공개 상태·기관·업체·방법론·기간·소명·정정 조건.
     priority: primary
     order: 2
     component: UnifiedSearch
@@ -341,10 +337,10 @@ screens:
     responsive_order: 2
   - id: results
     title: 결과
-    purpose: 관찰 사실·미확인·상태·freshness를 포함한다.
+    purpose: 관찰 사실·미확인·상태·자료 기준일을 포함한 사례 대장.
     priority: primary
     order: 3
-    component: StatusAndRevisionHeader
+    component: DataCollection
     anchor: results
     responsive_order: 3
   - id: pagination
@@ -376,14 +372,28 @@ screens:
   - id: subscribe-filter
     label: 이 조건 구독
     capability: none
-    guard: verified subscription destination + explicit consent + rate-limit clearance
-    operation_id: createSubscription
-    preset:
-      scope_type: QUERY
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+  - id: download-csv
+    label: CSV 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
+  - id: download-jsonl
+    label: JSONL 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
   data_requirements:
   - operation_id: listPublicCases
     status: READY
@@ -394,15 +404,15 @@ screens:
     path: /v1/cases
     request_schema: listPublicCasesQuery
     response_schema: PublicCasesPage
-  - operation_id: createSubscription
+  - operation_id: downloadPublicCases
     status: READY
-    api: submission-api
-    purpose: 필터 기반 구독
+    api: public-api
+    purpose: 현재 사건 필터 결과 내려받기
     blocking: false
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    response_schema: createSubscriptionReceipt
+    method: GET
+    path: /v1/cases/download
+    request_schema: downloadPublicCasesQuery
+    response_schema: PublicCasesDownload
   state_profile: public-data
   special_states:
   - filtered-empty
@@ -463,7 +473,7 @@ screens:
   sections:
   - id: status
     title: 상태·개정·최신성
-    purpose: 정정·철회와 최신성을 가장 먼저 표시한다.
+    purpose: 최신 공개 상태·정정·개정 기준.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -563,11 +573,10 @@ screens:
   - id: subscribe-case
     label: 이 사건 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CASE
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_requirements:
@@ -598,15 +607,6 @@ screens:
     path: /v1/cases/{caseSlug}/reproducibility
     request_schema: getCaseReproducibilityQuery
     response_schema: CaseReproducibilityResponse
-  - operation_id: createSubscription
-    status: READY
-    api: submission-api
-    purpose: 사건 구독
-    blocking: false
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    response_schema: createSubscriptionReceipt
   state_profile: public-data
   special_states:
   - corrected
@@ -670,7 +670,7 @@ screens:
   sections:
   - id: revision-banner
     title: 개정본 안내
-    purpose: 과거본 여부와 최신본 링크.
+    purpose: 지정 개정본의 기준 시점과 최신본 연결.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -802,7 +802,7 @@ screens:
   sections:
   - id: summary
     title: 재현 요약
-    purpose: rule/version/result.
+    purpose: 적용 규칙·개정본·계산 결과 요약.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -947,36 +947,28 @@ screens:
   sections:
   - id: search
     title: 기관 검색
-    purpose: 공식 명칭과 과거 명칭.
+    purpose: 공식·과거 기관명과 기관 유형·관할 파셋.
     priority: primary
     order: 1
     component: UnifiedSearch
     anchor: search
     responsive_order: 1
-  - id: filters
-    title: 지역·유형
-    purpose: coverage-aware filter.
-    priority: primary
-    order: 2
-    component: UnifiedSearch
-    anchor: filters
-    responsive_order: 2
   - id: results
     title: 기관 목록
-    purpose: 기관 identity·관할·coverage.
+    purpose: 기관명·유형·관할·자료 범위를 포함한 기관 대장.
     priority: primary
-    order: 3
-    component: CoverageStatement
+    order: 2
+    component: DataCollection
     anchor: results
-    responsive_order: 3
+    responsive_order: 2
   - id: coverage
     title: 수집 범위
     purpose: 미포함 기관 설명.
     priority: primary
-    order: 4
+    order: 3
     component: CoverageStatement
     anchor: coverage
-    responsive_order: 4
+    responsive_order: 3
   actions:
   - id: open-agency
     label: 기관 보기
@@ -1029,7 +1021,6 @@ screens:
     container: public_main
   above_fold_order:
   - search
-  - filters
   - results
   - coverage
   primary_action_id: open-agency
@@ -1060,7 +1051,7 @@ screens:
   sections:
   - id: identity
     title: 기관 식별 정보
-    purpose: 공식명·유형·관할·변경 이력.
+    purpose: 기관 공식명·유형·관할·변경 이력.
     priority: primary
     order: 1
     component: RevisionTimeline
@@ -1134,11 +1125,10 @@ screens:
   - id: subscribe-agency
     label: 기관 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: AGENCY
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_requirements:
@@ -1169,15 +1159,6 @@ screens:
     path: /v1/agencies/{agencyId}/cases
     request_schema: listAgencyCasesQuery
     response_schema: AgencyCasesPage
-  - operation_id: createSubscription
-    status: READY
-    api: submission-api
-    purpose: 기관 구독
-    blocking: false
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    response_schema: createSubscriptionReceipt
   state_profile: public-data
   special_states:
   - partial-coverage
@@ -1235,36 +1216,28 @@ screens:
   sections:
   - id: search
     title: 업체 검색
-    purpose: 공식·과거 명칭.
+    purpose: 공식·과거 업체명과 영업·식별 상태 파셋.
     priority: primary
     order: 1
     component: UnifiedSearch
     anchor: search
     responsive_order: 1
-  - id: filters
-    title: 지역·업종
-    purpose: 공개 가능한 범위.
-    priority: primary
-    order: 2
-    component: UnifiedSearch
-    anchor: filters
-    responsive_order: 2
   - id: results
     title: 업체 목록
-    purpose: 구분 정보와 coverage.
+    purpose: 업체명·영업 상태·식별 한계·자료 범위를 포함한 업체 대장.
     priority: primary
-    order: 3
-    component: CoverageStatement
+    order: 2
+    component: DataCollection
     anchor: results
-    responsive_order: 3
+    responsive_order: 2
   - id: identity-note
     title: 식별 한계
     purpose: 미확정 merge를 설명.
     priority: primary
-    order: 4
+    order: 3
     component: StructuredContentSection
     anchor: identity-note
-    responsive_order: 4
+    responsive_order: 3
   actions:
   - id: open-supplier
     label: 업체 보기
@@ -1317,7 +1290,6 @@ screens:
     container: public_main
   above_fold_order:
   - search
-  - filters
   - results
   - identity-note
   primary_action_id: open-supplier
@@ -1348,7 +1320,7 @@ screens:
   sections:
   - id: identity
     title: 업체 식별 정보
-    purpose: 공식명·식별·변경 이력·확인 한계.
+    purpose: 업체 공식명·식별 정보·변경 이력·확인 한계.
     priority: primary
     order: 1
     component: KnownUnknownResponse
@@ -1422,11 +1394,10 @@ screens:
   - id: subscribe-supplier
     label: 업체 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: SUPPLIER
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_requirements:
@@ -1457,15 +1428,6 @@ screens:
     path: /v1/suppliers/{supplierId}/cases
     request_schema: listSupplierCasesQuery
     response_schema: SupplierCasesPage
-  - operation_id: createSubscription
-    status: READY
-    api: submission-api
-    purpose: 업체 구독
-    blocking: false
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    response_schema: createSubscriptionReceipt
   state_profile: public-data
   special_states:
   - identity-ambiguous
@@ -1524,7 +1486,7 @@ screens:
   sections:
   - id: scope
     title: 계약 관측 범위
-    purpose: 사건 여부와 무관한 관측 범위.
+    purpose: 사건 공개 여부와 무관한 계약 관측 범위.
     priority: primary
     order: 1
     component: CoverageStatement
@@ -1540,7 +1502,7 @@ screens:
     responsive_order: 2
   - id: results
     title: 계약 결과
-    purpose: 금액·기간·source·related case.
+    purpose: 계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.
     priority: primary
     order: 3
     component: DataCollection
@@ -1656,7 +1618,7 @@ screens:
   sections:
   - id: identity
     title: 계약 식별 정보
-    purpose: source ID·기관·업체·상태.
+    purpose: 계약 원문 식별자·기관·업체·현재 상태.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -1678,38 +1640,30 @@ screens:
     component: StructuredContentSection
     anchor: changes
     responsive_order: 3
-  - id: procurement
-    title: 입찰·낙찰 연결
-    purpose: 가능한 source 연결.
+  - id: provenance
+    title: 원문 출처
+    purpose: 공개 원문 링크와 수집 기준.
     priority: primary
     order: 4
     component: StructuredContentSection
-    anchor: procurement
-    responsive_order: 4
-  - id: provenance
-    title: 필드 출처 이력
-    purpose: raw locator·parser version.
-    priority: primary
-    order: 5
-    component: StructuredContentSection
     anchor: provenance
-    responsive_order: 5
+    responsive_order: 4
   - id: related
     title: 관련 공개 사건
-    purpose: 내부 signal count는 숨김.
+    purpose: 공개된 관련 사건과 현재 공개 상태.
     priority: primary
-    order: 6
-    component: SignalTriagePanel
+    order: 5
+    component: DataCollection
     anchor: related
-    responsive_order: 6
+    responsive_order: 5
   - id: limitations
     title: 데이터 한계
     purpose: 누락·bundle·unit.
     priority: primary
-    order: 7
+    order: 6
     component: StructuredContentSection
     anchor: limitations
-    responsive_order: 7
+    responsive_order: 6
   actions:
   - id: open-source
     label: 원문 보기
@@ -1785,7 +1739,7 @@ screens:
   - identity
   - terms
   - changes
-  - procurement
+  - provenance
   primary_action_id: open-source
   implementation_files:
     page: apps/public-web/src/routes/contracts/[contractId]/+page.svelte
@@ -1814,7 +1768,7 @@ screens:
   sections:
   - id: overview
     title: 방법론 개요
-    purpose: 발견과 판정 분리.
+    purpose: 탐지·조사·공개 절차와 판정 한계.
     priority: primary
     order: 1
     component: LongFormArticle
@@ -1950,7 +1904,7 @@ screens:
   sections:
   - id: purpose
     title: 목적
-    purpose: 찾는 패턴과 비목표.
+    purpose: 탐지 대상 유형과 비대상 범위.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -2095,7 +2049,7 @@ screens:
   sections:
   - id: summary
     title: 수집 범위 요약
-    purpose: 전체 범위와 current status.
+    purpose: 수집 대상·제외 범위·기준일별 최신 상태.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -2224,7 +2178,7 @@ screens:
   sections:
   - id: status
     title: 출처 상태 요약
-    purpose: healthy/stale/incident.
+    purpose: 공식 데이터 출처별 정상·지연·장애 상태.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -2327,7 +2281,7 @@ screens:
   sections:
   - id: identity
     title: 출처 설명
-    purpose: owner·접근 방식.
+    purpose: 출처 운영 기관·공식 접근 경로.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -2462,7 +2416,7 @@ screens:
   sections:
   - id: principle
     title: 정정 정책
-    purpose: 오류를 숨기지 않는 원칙.
+    purpose: 공개 기록의 정정·철회·변경 공개 원칙.
     priority: primary
     order: 1
     component: RevisionAndCorrectionPanel
@@ -2478,10 +2432,10 @@ screens:
     responsive_order: 2
   - id: records
     title: 정정 목록
-    purpose: 대상·before/after·reason·date.
+    purpose: 대상·변경 요약·이유·공개일을 포함한 정정 대장.
     priority: primary
     order: 3
-    component: RevisionAndCorrectionPanel
+    component: DataCollection
     anchor: records
     responsive_order: 3
   - id: feed
@@ -2493,6 +2447,15 @@ screens:
     anchor: feed
     responsive_order: 4
   actions:
+  - id: apply-filter
+    label: 필터 적용
+    capability: none
+    local_only: true
+    persistence: url
+    interaction_kind: COMMAND
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
   - id: open-correction
     label: 정정 상세
     capability: none
@@ -2504,11 +2467,10 @@ screens:
   - id: subscribe
     label: 정정 알림 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CORRECTIONS
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_requirements:
@@ -2521,15 +2483,6 @@ screens:
     path: /v1/corrections
     request_schema: listCorrectionsQuery
     response_schema: CorrectionsPage
-  - operation_id: createSubscription
-    status: READY
-    api: submission-api
-    purpose: 정정 feed 구독
-    blocking: false
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    response_schema: createSubscriptionReceipt
   state_profile: public-data
   special_states:
   - no-corrections
@@ -2586,7 +2539,7 @@ screens:
   sections:
   - id: status
     title: 정정 유형·시각
-    purpose: correction/retraction과 effective time.
+    purpose: 정정·철회 유형과 적용 시각.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -2723,10 +2676,10 @@ screens:
   sections:
   - id: datasets
     title: 데이터셋
-    purpose: cases/contracts/corrections/methods.
+    purpose: 공개 데이터셋과 이용 가능한 형식.
     priority: primary
     order: 1
-    component: RevisionAndCorrectionPanel
+    component: GuidedFormSection
     anchor: datasets
     responsive_order: 1
   - id: snapshots
@@ -2771,13 +2724,13 @@ screens:
     responsive_order: 6
   actions:
   - id: download-dataset
-    label: 데이터 다운로드
+    label: 데이터 내려받기
     capability: none
-    interaction_kind: DOWNLOAD
-    assurance_level: NONE
+    operation_id: createDatasetExport
+    interaction_kind: COMMAND
+    assurance_level: ANONYMOUS_PROOF
     step_up_required: false
     confirmation_required: false
-    local_only: true
   - id: view-schema
     label: 스키마 보기
     capability: none
@@ -2869,7 +2822,7 @@ screens:
   sections:
   - id: getting-started
     title: 시작
-    purpose: base URL·auth/rate.
+    purpose: 공개 자료 조회 주소·접근 조건·호출 한도.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -3006,7 +2959,7 @@ screens:
   sections:
   - id: mission
     title: 운영 목적
-    purpose: 제품 정의.
+    purpose: 구린네의 운영 목적과 공개 범위.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -3123,7 +3076,7 @@ screens:
   sections:
   - id: principles
     title: 독립성 원칙
-    purpose: 돈과 편집의 방화벽.
+    purpose: 후원·수익과 편집 독립성의 분리 원칙.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -3258,7 +3211,7 @@ screens:
   sections:
   - id: structure
     title: 운영 구조
-    purpose: 책임과 위원회.
+    purpose: 운영 책임·의사결정·외부 감독 구조.
     priority: primary
     order: 1
     component: OperationsStatusPanel
@@ -3383,7 +3336,7 @@ screens:
   sections:
   - id: states
     title: 상태
-    purpose: public lifecycle.
+    purpose: 탐지·검토·공개·정정·철회 상태 기준.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -3514,7 +3467,7 @@ screens:
   sections:
   - id: routing
     title: 문의 유형
-    purpose: 정정/소명/보안/언론/일반.
+    purpose: 정정·소명·보안·언론·일반 문의 경로.
     priority: primary
     order: 1
     component: KnownUnknownResponse
@@ -3643,7 +3596,7 @@ screens:
   sections:
   - id: intro
     title: 절차·긴급 안내
-    purpose: 일반/긴급 경로.
+    purpose: 정정 요청 절차와 긴급 사안 경로.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -3662,7 +3615,7 @@ screens:
     purpose: 유형·설명·제안 수정.
     priority: primary
     order: 3
-    component: StructuredContentSection
+    component: GuidedFormSection
     anchor: issue
     responsive_order: 3
   - id: evidence
@@ -3836,7 +3789,7 @@ screens:
   sections:
   - id: receipt
     title: 접수 결과
-    purpose: ID·시각·상태.
+    purpose: 접수 번호·시각·처리 상태.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader
@@ -3956,7 +3909,7 @@ screens:
   sections:
   - id: topic
     title: 구독 대상
-    purpose: case/agency/supplier/corrections.
+    purpose: 사건·기관·업체·정정별 구독 범위.
     priority: primary
     order: 1
     component: RevisionAndCorrectionPanel
@@ -3980,10 +3933,10 @@ screens:
     responsive_order: 3
   - id: email
     title: 이메일
-    purpose: verification.
+    purpose: 이메일 확인과 구독 신청.
     priority: primary
     order: 4
-    component: AgentSuggestionPanel
+    component: CheckAnswers
     anchor: email
     responsive_order: 4
   - id: privacy
@@ -4079,7 +4032,7 @@ screens:
   sections:
   - id: identity
     title: 구독 확인
-    purpose: 마스킹 이메일.
+    purpose: 가림 처리된 이메일과 구독 대상 확인.
     priority: primary
     order: 1
     component: KnownUnknownResponse
@@ -4228,7 +4181,7 @@ screens:
   sections:
   - id: controller
     title: 처리자
-    purpose: 법인·연락처.
+    purpose: 개인정보 처리 주체와 연락처.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -4368,7 +4321,7 @@ screens:
   sections:
   - id: service
     title: 서비스 조건
-    purpose: availability.
+    purpose: 서비스 제공 범위와 이용 조건.
     priority: primary
     order: 1
     component: AgentSuggestionPanel
@@ -4491,7 +4444,7 @@ screens:
   sections:
   - id: commitment
     title: 접근성 약속
-    purpose: WCAG/KWCAG.
+    purpose: 적용 접근성 기준과 지원 약속.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -4606,7 +4559,7 @@ screens:
   sections:
   - id: message
     title: 상황
-    purpose: 구체적이되 민감정보 없음.
+    purpose: 민감정보를 제외한 오류·점검·장애 현황.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -5037,7 +4990,7 @@ screens:
     responsive_order: 3
   - id: consent
     title: 공개 동의
-    purpose: FULL/REDACTED/SUMMARY/NO_CONSENT.
+    purpose: 전체 공개·가림 공개·요약 공개·공개 비동의.
     priority: primary
     order: 4
     component: StructuredContentSection
@@ -6375,6 +6328,22 @@ screens:
     assurance_level: ACTIVE_SESSION
     step_up_required: false
     confirmation_required: false
+  - id: submit-action-decision
+    label: 전달 승인·반려 결정
+    capability: actions.review
+    operation_id: submitActionDecision
+    interaction_kind: DESTRUCTIVE_CONFIRMATION
+    assurance_level: STEP_UP
+    step_up_required: true
+    confirmation_required: true
+  - id: decide-journey-handoff
+    label: 인계 승인·반려 결정
+    capability: journeys.handoff.decide
+    operation_id: decideJourneyHandoff
+    interaction_kind: DESTRUCTIVE_CONFIRMATION
+    assurance_level: STEP_UP
+    step_up_required: true
+    confirmation_required: true
   data_requirements:
   - operation_id: listMyTasks
     status: READY
@@ -6394,6 +6363,36 @@ screens:
     path: /v1/internal/commands/reassign-task
     request_schema: reassignTaskRequest
     response_schema: reassignTaskReceipt
+  - operation_id: listActionApprovalQueue
+    status: READY
+    api: control-api
+    purpose: 승인 검토 대기열
+    blocking: true
+    method: GET
+    path: /v1/internal/action-proposals
+    request_schema: ListActionApprovalQueueRequestV1
+    response_schema: ActionApprovalQueuePageV1
+    success_status: 200
+  - operation_id: getActionExecutionReceipt
+    status: READY
+    api: control-api
+    purpose: 승인 실행 영수증
+    blocking: true
+    method: GET
+    path: /v1/internal/action-executions/{executionId}/receipt
+    request_schema: GetActionExecutionReceiptRequestV1
+    response_schema: ActionExecutionReceiptChainV1
+    success_status: 200
+  - operation_id: getActionProposal
+    status: READY
+    api: control-api
+    purpose: 선택 제안 상세
+    blocking: true
+    method: GET
+    path: /v1/internal/action-proposals/{proposalId}
+    request_schema: GetActionProposalRequestV1
+    response_schema: ActionProposalDetailV1
+    success_status: 200
   state_profile: internal-data
   special_states:
   - overdue
@@ -7885,7 +7884,7 @@ screens:
   sections:
   - id: board
     title: 가설 현황판
-    purpose: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
+    purpose: 열림·근거로 뒷받침됨·반박됨·해결됨.
     priority: primary
     order: 1
     component: StructuredContentSection
@@ -8884,7 +8883,7 @@ screens:
   sections:
   - id: watermark
     title: 미리보기 상태
-    purpose: DRAFT·snapshot hash.
+    purpose: 초안·미리보기 무결성 식별값.
     priority: primary
     order: 1
     component: StatusAndRevisionHeader

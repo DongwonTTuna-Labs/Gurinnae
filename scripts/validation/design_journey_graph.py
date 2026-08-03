@@ -27,7 +27,8 @@ EDGE_FIELDS = [
     "handler_status",
 ]
 JOURNEY_IDS = [f"J-{ordinal:02d}" for ordinal in range(1, 13)]
-EDGE_COUNTS = [4, 5, 7, 5, 4, 9, 5, 4, 4, 17, 29, 36]
+EDGE_COUNTS = [7, 5, 7, 5, 4, 9, 5, 4, 4, 17, 29, 36]
+EDGE_TOTAL = sum(EDGE_COUNTS)
 
 
 def _product_edges(document: dict[str, Any], result: Any) -> dict[str, dict[str, Any]]:
@@ -59,12 +60,12 @@ def _product_edges(document: dict[str, Any], result: Any) -> dict[str, dict[str,
     }
     result.require(observed_counts == EDGE_COUNTS, "journey per-journey edge counts drifted")
     result.require(
-        len(rows) == len(edge_by_id) == 129,
-        "journey product edge IDs are not a unique 129-row set",
+        len(rows) == len(edge_by_id) == EDGE_TOTAL,
+        f"journey product edge IDs are not a unique {EDGE_TOTAL}-row set",
     )
     result.require(
         document.get("counts", {}).get("journeys") == 12
-        and document.get("counts", {}).get("edges") == 129,
+        and document.get("counts", {}).get("edges") == EDGE_TOTAL,
         "journey product declared counts drifted",
     )
     return edge_by_id
@@ -92,19 +93,19 @@ def _ui_edges(document: dict[str, Any], result: Any) -> dict[str, dict[str, Any]
         if isinstance(row.get("edge_id"), str)
     }
     result.require(
-        len(rows) == len(edge_by_id) == 129,
-        "journey UI edge IDs are not a unique 129-row set",
+        len(rows) == len(edge_by_id) == EDGE_TOTAL,
+        f"journey UI edge IDs are not a unique {EDGE_TOTAL}-row set",
     )
     counts = document.get("counts", {})
     result.require(
         counts
         == {
             "journeys": 12,
-            "edges": 129,
+            "edges": EDGE_TOTAL,
             "branches": 17,
             "cross_journey_arcs": 12,
             "reachable_outcomes": 12,
-            "via_resolved": 129,
+            "via_resolved": EDGE_TOTAL,
         },
         "journey UI source-derived counts drifted",
     )
@@ -218,7 +219,7 @@ def _validate_action_union(documents: DesignDocuments, ui_edges: dict[str, dict[
         # decision/detail placements to the command overlay.  Keep this
         # assertion source-derived while retaining the exact cardinality
         # receipt for the current canonical registry.
-        and (len(base), len(command), len(journey)) == (252, 82, 17),
+        and (len(base), len(command), len(journey)) == (259, 82, 17),
         "base, command, and journey action registries are not an exact disjoint union",
     )
     counts = actions.get("counts", {})
@@ -226,7 +227,7 @@ def _validate_action_union(documents: DesignDocuments, ui_edges: dict[str, dict[
         counts.get("base_actions") == len(base)
         and counts.get("visible_placements") == len(command)
         and counts.get("journey_visible_actions") == len(journey)
-        and counts.get("effective_actions") == len(base | command | journey) == 351,
+        and counts.get("effective_actions") == len(base | command | journey) == 358,
         "effective action count is not source-derived from all three registries",
     )
     visible = base | command | journey

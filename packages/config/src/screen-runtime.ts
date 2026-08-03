@@ -447,8 +447,6 @@ function defaultValue(
   if (name === "expectedVersion") return 1;
   if (!required) return undefined;
   if (schema.type === "boolean") return false;
-  if (schema.type === "object") return "{}";
-  if (schema.type === "array") return "[]";
   return undefined;
 }
 

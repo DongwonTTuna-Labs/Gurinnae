@@ -28,7 +28,7 @@ screens:
     id: mission
     title: 서비스 정의와 한계
     component: StructuredContentSection
-    purpose: 이상 징후와 비리 확정을 분리한다.
+    purpose: 이상 징후와 위법·비리 확정의 구분 원칙.
     test_id: pub_001__section__mission
   - order: 2
     id: search
@@ -40,13 +40,13 @@ screens:
     id: recent
     title: 최근 공개 기록
     component: StatusAndRevisionHeader
-    purpose: 상태가 균형 잡힌 최신 기록을 보여준다.
+    purpose: 상태 균형을 반영한 최신 공개 기록.
     test_id: pub_001__section__recent
   - order: 4
     id: corrections
     title: 최근 설명·정정·철회
     component: RevisionAndCorrectionPanel
-    purpose: 제품이 오류와 해소 사례를 숨기지 않음을 보여준다.
+    purpose: 오류·해소 이력을 포함한 정정·철회 기록.
     test_id: pub_001__section__corrections
   - order: 5
     id: coverage
@@ -58,7 +58,7 @@ screens:
     id: method
     title: 방법론
     component: LongFormArticle
-    purpose: 탐지 방식과 한계를 설명한다.
+    purpose: 탐지 방식과 판정 한계.
     test_id: pub_001__section__method
   actions:
   - id: search
@@ -80,11 +80,10 @@ screens:
   - id: subscribe
     label: 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CORRECTIONS
     interaction_kind: NAVIGATION
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_operations:
@@ -106,12 +105,6 @@ screens:
     path: /v1/sources/status
     blocking: true
     response_schema: SourceStatusPage
-  - operation_id: searchPublicRecords
-    api: public-api
-    method: GET
-    path: /v1/search
-    blocking: true
-    response_schema: PublicRecordsSearchResultPage
   states:
   - loading
   - success
@@ -163,40 +156,26 @@ screens:
   archetype: SEARCH_INDEX
   access: anonymous
   layout:
-    wide: 12-column grid; query header 12; filter rail 3 + results 9
-    medium: filters in horizontal toolbar; results 8 columns
-    compact: single column; filters open in full-height sheet; selected filters remain inline
+    wide: 12-column grid; query and facets 12; results table 12
+    medium: query and facets precede the results table
+    compact: single column; selected filters remain inline
     container: public_main
   above_fold_order:
   - query
-  - types
   - results
-  - coverage
   section_order:
   - order: 1
     id: query
     title: 검색어
     component: UnifiedSearch
-    purpose: 검색 범위와 예시를 제공한다.
+    purpose: 기관·업체·계약·사건 검색과 유형·기간·공개 상태 파셋.
     test_id: pub_002__section__query
   - order: 2
-    id: types
-    title: 객체 유형
-    component: RevisionAndCorrectionPanel
-    purpose: 사건·계약·기관·업체·방법론·정정을 구분한다.
-    test_id: pub_002__section__types
-  - order: 3
     id: results
     title: 검색 결과
-    component: UnifiedSearch
-    purpose: 일치 필드와 상태·freshness를 표시한다.
+    component: DataCollection
+    purpose: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
     test_id: pub_002__section__results
-  - order: 4
-    id: coverage
-    title: 검색 범위
-    component: UnifiedSearch
-    purpose: indexing 지연과 source coverage를 표시한다.
-    test_id: pub_002__section__coverage
   actions:
   - id: submit-search
     label: 검색
@@ -207,15 +186,14 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
-  - id: filter-type
-    label: 유형 필터
+  - id: open-result
+    label: 검색 결과 보기
     capability: none
-    local_only: true
-    persistence: url
-    interaction_kind: COMMAND
+    interaction_kind: NAVIGATION
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+    local_only: true
   - id: clear
     label: 검색 초기화
     capability: none
@@ -225,6 +203,22 @@ screens:
     assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+  - id: download-csv
+    label: CSV 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
+  - id: download-jsonl
+    label: JSONL 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
   data_operations:
   - operation_id: searchPublicRecords
     api: public-api
@@ -232,7 +226,14 @@ screens:
     path: /v1/search
     blocking: true
     response_schema: PublicRecordsSearchResultPage
+  - operation_id: downloadPublicSearchRecords
+    api: public-api
+    method: GET
+    path: /v1/search/download
+    blocking: false
+    response_schema: PublicSearchDownload
   states:
+  - awaiting-query
   - loading
   - success
   - empty
@@ -240,9 +241,9 @@ screens:
   - stale
   - error
   responsive:
-    wide: 12-column grid; query header 12; filter rail 3 + results 9
-    medium: filters in horizontal toolbar; results 8 columns
-    compact: single column; filters open in full-height sheet; selected filters remain inline
+    wide: 12-column grid; query and facets 12; results table 12
+    medium: query and facets precede the results table
+    compact: single column; selected filters remain inline
     container: public_main
   accessibility:
     landmarks:
@@ -297,19 +298,19 @@ screens:
     id: scope
     title: 목록 범위
     component: StatusAndRevisionHeader
-    purpose: 공개된 revision만 포함함을 설명한다.
+    purpose: 공개 확정 개정본 한정 사례 범위.
     test_id: pub_003__section__scope
   - order: 2
     id: filters
     title: 필터
     component: UnifiedSearch
-    purpose: 상태·기관 유형·지역·방법론·기간·소명 상태.
+    purpose: 공개 상태·기관·업체·방법론·기간·소명·정정 조건.
     test_id: pub_003__section__filters
   - order: 3
     id: results
     title: 결과
-    component: StatusAndRevisionHeader
-    purpose: 관찰 사실·미확인·상태·freshness를 포함한다.
+    component: DataCollection
+    purpose: 관찰 사실·미확인·상태·자료 기준일을 포함한 사례 대장.
     test_id: pub_003__section__results
   - order: 4
     id: pagination
@@ -338,14 +339,28 @@ screens:
   - id: subscribe-filter
     label: 이 조건 구독
     capability: none
-    guard: verified subscription destination + explicit consent + rate-limit clearance
-    operation_id: createSubscription
-    preset:
-      scope_type: QUERY
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
+  - id: download-csv
+    label: CSV 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
+  - id: download-jsonl
+    label: JSONL 내려받기
+    capability: none
+    interaction_kind: DOWNLOAD
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
+    local_only: true
   data_operations:
   - operation_id: listPublicCases
     api: public-api
@@ -353,12 +368,12 @@ screens:
     path: /v1/cases
     blocking: true
     response_schema: PublicCasesPage
-  - operation_id: createSubscription
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
+  - operation_id: downloadPublicCases
+    api: public-api
+    method: GET
+    path: /v1/cases/download
     blocking: false
-    response_schema: createSubscriptionReceipt
+    response_schema: PublicCasesDownload
   states:
   - loading
   - success
@@ -424,7 +439,7 @@ screens:
     id: status
     title: 상태·개정·최신성
     component: StatusAndRevisionHeader
-    purpose: 정정·철회와 최신성을 가장 먼저 표시한다.
+    purpose: 최신 공개 상태·정정·개정 기준.
     test_id: pub_004__section__status
   - order: 2
     id: known
@@ -504,11 +519,10 @@ screens:
   - id: subscribe-case
     label: 이 사건 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CASE
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_operations:
@@ -530,12 +544,6 @@ screens:
     path: /v1/cases/{caseSlug}/reproducibility
     blocking: true
     response_schema: CaseReproducibilityResponse
-  - operation_id: createSubscription
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    blocking: false
-    response_schema: createSubscriptionReceipt
   states:
   - loading
   - success
@@ -604,7 +612,7 @@ screens:
     id: revision-banner
     title: 개정본 안내
     component: StatusAndRevisionHeader
-    purpose: 과거본 여부와 최신본 링크.
+    purpose: 지정 개정본의 기준 시점과 최신본 연결.
     test_id: pub_005__section__revision-banner
   - order: 2
     id: snapshot
@@ -727,7 +735,7 @@ screens:
     id: summary
     title: 재현 요약
     component: StructuredContentSection
-    purpose: rule/version/result.
+    purpose: 적용 규칙·개정본·계산 결과 요약.
     test_id: pub_006__section__summary
   - order: 2
     id: inputs
@@ -852,7 +860,6 @@ screens:
     container: public_main
   above_fold_order:
   - search
-  - filters
   - results
   - coverage
   section_order:
@@ -860,21 +867,15 @@ screens:
     id: search
     title: 기관 검색
     component: UnifiedSearch
-    purpose: 공식 명칭과 과거 명칭.
+    purpose: 공식·과거 기관명과 기관 유형·관할 파셋.
     test_id: pub_007__section__search
   - order: 2
-    id: filters
-    title: 지역·유형
-    component: UnifiedSearch
-    purpose: coverage-aware filter.
-    test_id: pub_007__section__filters
-  - order: 3
     id: results
     title: 기관 목록
-    component: CoverageStatement
-    purpose: 기관 identity·관할·coverage.
+    component: DataCollection
+    purpose: 기관명·유형·관할·자료 범위를 포함한 기관 대장.
     test_id: pub_007__section__results
-  - order: 4
+  - order: 3
     id: coverage
     title: 수집 범위
     component: CoverageStatement
@@ -968,7 +969,7 @@ screens:
     id: identity
     title: 기관 식별 정보
     component: RevisionTimeline
-    purpose: 공식명·유형·관할·변경 이력.
+    purpose: 기관 공식명·유형·관할·변경 이력.
     test_id: pub_008__section__identity
   - order: 2
     id: coverage
@@ -1026,11 +1027,10 @@ screens:
   - id: subscribe-agency
     label: 기관 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: AGENCY
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_operations:
@@ -1052,12 +1052,6 @@ screens:
     path: /v1/agencies/{agencyId}/cases
     blocking: true
     response_schema: AgencyCasesPage
-  - operation_id: createSubscription
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    blocking: false
-    response_schema: createSubscriptionReceipt
   states:
   - loading
   - success
@@ -1115,7 +1109,6 @@ screens:
     container: public_main
   above_fold_order:
   - search
-  - filters
   - results
   - identity-note
   section_order:
@@ -1123,21 +1116,15 @@ screens:
     id: search
     title: 업체 검색
     component: UnifiedSearch
-    purpose: 공식·과거 명칭.
+    purpose: 공식·과거 업체명과 영업·식별 상태 파셋.
     test_id: pub_009__section__search
   - order: 2
-    id: filters
-    title: 지역·업종
-    component: UnifiedSearch
-    purpose: 공개 가능한 범위.
-    test_id: pub_009__section__filters
-  - order: 3
     id: results
     title: 업체 목록
-    component: CoverageStatement
-    purpose: 구분 정보와 coverage.
+    component: DataCollection
+    purpose: 업체명·영업 상태·식별 한계·자료 범위를 포함한 업체 대장.
     test_id: pub_009__section__results
-  - order: 4
+  - order: 3
     id: identity-note
     title: 식별 한계
     component: StructuredContentSection
@@ -1231,7 +1218,7 @@ screens:
     id: identity
     title: 업체 식별 정보
     component: KnownUnknownResponse
-    purpose: 공식명·식별·변경 이력·확인 한계.
+    purpose: 업체 공식명·식별 정보·변경 이력·확인 한계.
     test_id: pub_010__section__identity
   - order: 2
     id: coverage
@@ -1289,11 +1276,10 @@ screens:
   - id: subscribe-supplier
     label: 업체 업데이트 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: SUPPLIER
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_operations:
@@ -1315,12 +1301,6 @@ screens:
     path: /v1/suppliers/{supplierId}/cases
     blocking: true
     response_schema: SupplierCasesPage
-  - operation_id: createSubscription
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    blocking: false
-    response_schema: createSubscriptionReceipt
   states:
   - loading
   - success
@@ -1385,7 +1365,7 @@ screens:
     id: scope
     title: 계약 관측 범위
     component: CoverageStatement
-    purpose: 사건 여부와 무관한 관측 범위.
+    purpose: 사건 공개 여부와 무관한 계약 관측 범위.
     test_id: pub_011__section__scope
   - order: 2
     id: filters
@@ -1397,7 +1377,7 @@ screens:
     id: results
     title: 계약 결과
     component: DataCollection
-    purpose: 금액·기간·source·related case.
+    purpose: 계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.
     test_id: pub_011__section__results
   - order: 4
     id: limitations
@@ -1502,13 +1482,13 @@ screens:
   - identity
   - terms
   - changes
-  - procurement
+  - provenance
   section_order:
   - order: 1
     id: identity
     title: 계약 식별 정보
     component: StatusAndRevisionHeader
-    purpose: source ID·기관·업체·상태.
+    purpose: 계약 원문 식별자·기관·업체·현재 상태.
     test_id: pub_012__section__identity
   - order: 2
     id: terms
@@ -1523,24 +1503,18 @@ screens:
     purpose: 금액·기간 변경.
     test_id: pub_012__section__changes
   - order: 4
-    id: procurement
-    title: 입찰·낙찰 연결
-    component: StructuredContentSection
-    purpose: 가능한 source 연결.
-    test_id: pub_012__section__procurement
-  - order: 5
     id: provenance
-    title: 필드 출처 이력
+    title: 원문 출처
     component: StructuredContentSection
-    purpose: raw locator·parser version.
+    purpose: 공개 원문 링크와 수집 기준.
     test_id: pub_012__section__provenance
-  - order: 6
+  - order: 5
     id: related
     title: 관련 공개 사건
-    component: SignalTriagePanel
-    purpose: 내부 signal count는 숨김.
+    component: DataCollection
+    purpose: 공개된 관련 사건과 현재 공개 상태.
     test_id: pub_012__section__related
-  - order: 7
+  - order: 6
     id: limitations
     title: 데이터 한계
     component: StructuredContentSection
@@ -1649,7 +1623,7 @@ screens:
     id: overview
     title: 방법론 개요
     component: LongFormArticle
-    purpose: 발견과 판정 분리.
+    purpose: 탐지·조사·공개 절차와 판정 한계.
     test_id: pub_013__section__overview
   - order: 2
     id: pipeline
@@ -1774,7 +1748,7 @@ screens:
     id: purpose
     title: 목적
     component: StructuredContentSection
-    purpose: 찾는 패턴과 비목표.
+    purpose: 탐지 대상 유형과 비대상 범위.
     test_id: pub_014__section__purpose
   - order: 2
     id: inputs
@@ -1905,7 +1879,7 @@ screens:
     id: summary
     title: 수집 범위 요약
     component: StatusAndRevisionHeader
-    purpose: 전체 범위와 current status.
+    purpose: 수집 대상·제외 범위·기준일별 최신 상태.
     test_id: pub_015__section__summary
   - order: 2
     id: sources
@@ -2024,7 +1998,7 @@ screens:
     id: status
     title: 출처 상태 요약
     component: StatusAndRevisionHeader
-    purpose: healthy/stale/incident.
+    purpose: 공식 데이터 출처별 정상·지연·장애 상태.
     test_id: pub_016__section__status
   - order: 2
     id: list
@@ -2122,7 +2096,7 @@ screens:
     id: identity
     title: 출처 설명
     component: StructuredContentSection
-    purpose: owner·접근 방식.
+    purpose: 출처 운영 기관·공식 접근 경로.
     test_id: pub_017__section__identity
   - order: 2
     id: freshness
@@ -2246,7 +2220,7 @@ screens:
     id: principle
     title: 정정 정책
     component: RevisionAndCorrectionPanel
-    purpose: 오류를 숨기지 않는 원칙.
+    purpose: 공개 기록의 정정·철회·변경 공개 원칙.
     test_id: pub_018__section__principle
   - order: 2
     id: filters
@@ -2257,8 +2231,8 @@ screens:
   - order: 3
     id: records
     title: 정정 목록
-    component: RevisionAndCorrectionPanel
-    purpose: 대상·before/after·reason·date.
+    component: DataCollection
+    purpose: 대상·변경 요약·이유·공개일을 포함한 정정 대장.
     test_id: pub_018__section__records
   - order: 4
     id: feed
@@ -2267,6 +2241,15 @@ screens:
     purpose: 정정 알림.
     test_id: pub_018__section__feed
   actions:
+  - id: apply-filter
+    label: 필터 적용
+    capability: none
+    local_only: true
+    persistence: url
+    interaction_kind: COMMAND
+    assurance_level: NONE
+    step_up_required: false
+    confirmation_required: false
   - id: open-correction
     label: 정정 상세
     capability: none
@@ -2278,11 +2261,10 @@ screens:
   - id: subscribe
     label: 정정 알림 구독
     capability: none
-    operation_id: createSubscription
-    preset:
-      scope_type: CORRECTIONS
-    interaction_kind: COMMAND
-    assurance_level: ANONYMOUS_PROOF
+    local_only: true
+    persistence: url
+    interaction_kind: NAVIGATION
+    assurance_level: NONE
     step_up_required: false
     confirmation_required: false
   data_operations:
@@ -2292,12 +2274,6 @@ screens:
     path: /v1/corrections
     blocking: true
     response_schema: CorrectionsPage
-  - operation_id: createSubscription
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    blocking: false
-    response_schema: createSubscriptionReceipt
   states:
   - loading
   - success
@@ -2362,7 +2338,7 @@ screens:
     id: status
     title: 정정 유형·시각
     component: StatusAndRevisionHeader
-    purpose: correction/retraction과 effective time.
+    purpose: 정정·철회 유형과 적용 시각.
     test_id: pub_019__section__status
   - order: 2
     id: target
@@ -2489,8 +2465,8 @@ screens:
   - order: 1
     id: datasets
     title: 데이터셋
-    component: RevisionAndCorrectionPanel
-    purpose: cases/contracts/corrections/methods.
+    component: GuidedFormSection
+    purpose: 공개 데이터셋과 이용 가능한 형식.
     test_id: pub_020__section__datasets
   - order: 2
     id: snapshots
@@ -2524,13 +2500,13 @@ screens:
     test_id: pub_020__section__limits
   actions:
   - id: download-dataset
-    label: 데이터 다운로드
+    label: 데이터 내려받기
     capability: none
-    interaction_kind: DOWNLOAD
-    assurance_level: NONE
+    operation_id: createDatasetExport
+    interaction_kind: COMMAND
+    assurance_level: ANONYMOUS_PROOF
     step_up_required: false
     confirmation_required: false
-    local_only: true
   - id: view-schema
     label: 스키마 보기
     capability: none
@@ -2623,7 +2599,7 @@ screens:
     id: getting-started
     title: 시작
     component: StructuredContentSection
-    purpose: base URL·auth/rate.
+    purpose: 공개 자료 조회 주소·접근 조건·호출 한도.
     test_id: pub_021__section__getting-started
   - order: 2
     id: resources
@@ -2748,7 +2724,7 @@ screens:
     id: mission
     title: 운영 목적
     component: StructuredContentSection
-    purpose: 제품 정의.
+    purpose: 구린네의 운영 목적과 공개 범위.
     test_id: pub_022__section__mission
   - order: 2
     id: non-goals
@@ -2860,7 +2836,7 @@ screens:
     id: principles
     title: 독립성 원칙
     component: StructuredContentSection
-    purpose: 돈과 편집의 방화벽.
+    purpose: 후원·수익과 편집 독립성의 분리 원칙.
     test_id: pub_023__section__principles
   - order: 2
     id: income
@@ -2985,7 +2961,7 @@ screens:
     id: structure
     title: 운영 구조
     component: OperationsStatusPanel
-    purpose: 책임과 위원회.
+    purpose: 운영 책임·의사결정·외부 감독 구조.
     test_id: pub_024__section__structure
   - order: 2
     id: independence
@@ -3102,7 +3078,7 @@ screens:
     id: states
     title: 상태
     component: StatusAndRevisionHeader
-    purpose: public lifecycle.
+    purpose: 탐지·검토·공개·정정·철회 상태 기준.
     test_id: pub_025__section__states
   - order: 2
     id: publication-gate
@@ -3225,7 +3201,7 @@ screens:
     id: routing
     title: 문의 유형
     component: KnownUnknownResponse
-    purpose: 정정/소명/보안/언론/일반.
+    purpose: 정정·소명·보안·언론·일반 문의 경로.
     test_id: pub_026__section__routing
   - order: 2
     id: channels
@@ -3346,7 +3322,7 @@ screens:
     id: intro
     title: 절차·긴급 안내
     component: StatusAndRevisionHeader
-    purpose: 일반/긴급 경로.
+    purpose: 정정 요청 절차와 긴급 사안 경로.
     test_id: pub_027__section__intro
   - order: 2
     id: target
@@ -3357,7 +3333,7 @@ screens:
   - order: 3
     id: issue
     title: 오류 설명
-    component: StructuredContentSection
+    component: GuidedFormSection
     purpose: 유형·설명·제안 수정.
     test_id: pub_027__section__issue
   - order: 4
@@ -3509,7 +3485,7 @@ screens:
     id: receipt
     title: 접수 결과
     component: StatusAndRevisionHeader
-    purpose: ID·시각·상태.
+    purpose: 접수 번호·시각·처리 상태.
     test_id: pub_028__section__receipt
   - order: 2
     id: summary
@@ -3586,7 +3562,7 @@ screens:
   - 내부 법률 메모 노출
   - 접수=정정 승인 표현
   acceptance:
-  - Route `/correction-request/receipt/{receiptId}` renders under its declared access mode.
+  - Route `/correction-request/receipt` renders under its declared access mode.
   - The section order exactly matches this manifest.
   - All blocking operations resolve before the success state.
   - Loading, empty, partial, stale and error states preserve the same information hierarchy.
@@ -3621,7 +3597,7 @@ screens:
     id: topic
     title: 구독 대상
     component: RevisionAndCorrectionPanel
-    purpose: case/agency/supplier/corrections.
+    purpose: 사건·기관·업체·정정별 구독 범위.
     test_id: pub_029__section__topic
   - order: 2
     id: events
@@ -3638,8 +3614,8 @@ screens:
   - order: 4
     id: email
     title: 이메일
-    component: AgentSuggestionPanel
-    purpose: verification.
+    component: CheckAnswers
+    purpose: 이메일 확인과 구독 신청.
     test_id: pub_029__section__email
   - order: 5
     id: privacy
@@ -3734,7 +3710,7 @@ screens:
     id: identity
     title: 구독 확인
     component: KnownUnknownResponse
-    purpose: 마스킹 이메일.
+    purpose: 가림 처리된 이메일과 구독 대상 확인.
     test_id: pub_030__section__identity
   - order: 2
     id: topics
@@ -3831,7 +3807,7 @@ screens:
   - 해지 숨김
   - cross-sell
   acceptance:
-  - Route `/subscription/manage/{token}` renders under its declared access mode.
+  - Route `/subscription/manage` renders under its declared access mode.
   - The section order exactly matches this manifest.
   - All blocking operations resolve before the success state.
   - Loading, empty, partial, stale and error states preserve the same information hierarchy.
@@ -3866,7 +3842,7 @@ screens:
     id: controller
     title: 처리자
     component: StructuredContentSection
-    purpose: 법인·연락처.
+    purpose: 개인정보 처리 주체와 연락처.
     test_id: pub_031__section__controller
   - order: 2
     id: categories
@@ -3996,7 +3972,7 @@ screens:
     id: service
     title: 서비스 조건
     component: AgentSuggestionPanel
-    purpose: availability.
+    purpose: 서비스 제공 범위와 이용 조건.
     test_id: pub_032__section__service
   - order: 2
     id: content
@@ -4113,7 +4089,7 @@ screens:
     id: commitment
     title: 접근성 약속
     component: StructuredContentSection
-    purpose: WCAG/KWCAG.
+    purpose: 적용 접근성 기준과 지원 약속.
     test_id: pub_033__section__commitment
   - order: 2
     id: conformance
@@ -4225,7 +4201,7 @@ screens:
     id: message
     title: 상황
     component: StructuredContentSection
-    purpose: 구체적이되 민감정보 없음.
+    purpose: 민감정보를 제외한 오류·점검·장애 현황.
     test_id: pub_034__section__message
   - order: 2
     id: impact
@@ -4621,7 +4597,7 @@ screens:
     id: consent
     title: 공개 동의
     component: StructuredContentSection
-    purpose: FULL/REDACTED/SUMMARY/NO_CONSENT.
+    purpose: 전체 공개·가림 공개·요약 공개·공개 비동의.
     test_id: rsp_003__section__consent
   - order: 5
     id: save
@@ -5896,6 +5872,22 @@ screens:
     assurance_level: ACTIVE_SESSION
     step_up_required: false
     confirmation_required: false
+  - id: submit-action-decision
+    label: 전달 승인·반려 결정
+    capability: actions.review
+    operation_id: submitActionDecision
+    interaction_kind: DESTRUCTIVE_CONFIRMATION
+    assurance_level: STEP_UP
+    step_up_required: true
+    confirmation_required: true
+  - id: decide-journey-handoff
+    label: 인계 승인·반려 결정
+    capability: journeys.handoff.decide
+    operation_id: decideJourneyHandoff
+    interaction_kind: DESTRUCTIVE_CONFIRMATION
+    assurance_level: STEP_UP
+    step_up_required: true
+    confirmation_required: true
   data_operations:
   - operation_id: listMyTasks
     api: control-api
@@ -5909,6 +5901,24 @@ screens:
     path: /v1/internal/commands/reassign-task
     blocking: false
     response_schema: reassignTaskReceipt
+  - operation_id: listActionApprovalQueue
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals
+    blocking: true
+    response_schema: ActionApprovalQueuePageV1
+  - operation_id: getActionExecutionReceipt
+    api: control-api
+    method: GET
+    path: /v1/internal/action-executions/{executionId}/receipt
+    blocking: true
+    response_schema: ActionExecutionReceiptChainV1
+  - operation_id: getActionProposal
+    api: control-api
+    method: GET
+    path: /v1/internal/action-proposals/{proposalId}
+    blocking: true
+    response_schema: ActionProposalDetailV1
   states:
   - loading
   - success
@@ -7316,7 +7326,7 @@ screens:
     id: board
     title: 가설 현황판
     component: StructuredContentSection
-    purpose: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
+    purpose: 열림·근거로 뒷받침됨·반박됨·해결됨.
     test_id: cas_007__section__board
   - order: 2
     id: matrix
@@ -8239,7 +8249,7 @@ screens:
     id: watermark
     title: 미리보기 상태
     component: StatusAndRevisionHeader
-    purpose: DRAFT·snapshot hash.
+    purpose: 초안·미리보기 무결성 식별값.
     test_id: cas_014__section__watermark
   - order: 2
     id: render

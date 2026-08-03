@@ -13,6 +13,17 @@ section_field_hints:
   authority: [authority, authorityStatus, status]
 
 screen_section_field_overrides:
+  PUB-001:
+    corrections: [items]
+    coverage: [totalApproximate]
+  PUB-002:
+    query: [appliedFilters]
+    results: [items, nextCursor, totalApproximate, asOf]
+  PUB-003:
+    scope: [totalApproximate, asOf]
+    filters: [appliedFilters]
+    results: [items, totalApproximate, asOf]
+    pagination: [nextCursor]
   PUB-004:
     status: [slug, title, publicState, revision, publishedAt, updatedAt, freshness]
     known: [summary, confirmedFacts]
@@ -23,10 +34,45 @@ screen_section_field_overrides:
     evidence: [claims, evidence]
     timeline: [timeline]
     revision: [revision, corrections]
+  PUB-007:
+    search: [appliedFilters]
+    results: [items, totalApproximate]
+    coverage: [asOf]
+  PUB-009:
+    search: [appliedFilters]
+    results: [items, totalApproximate]
+    identity-note: [asOf]
+  PUB-011:
+    scope: [totalApproximate, asOf]
+    filters: [appliedFilters]
+    results: [items, totalApproximate]
+    limitations: [asOf]
+  PUB-012:
+    identity: [id, contractNumber, title, agency, supplier, status]
+    terms: [contractMethod, signedAt, startAt, endAt, currency, originalAmount, currentAmount, lineItems]
+    changes: [changes]
+    provenance: [sourceDocuments]
+    related: [relatedCases]
+    limitations: [normalizationWarnings]
+  PUB-018:
+    principle: [asOf]
+    filters: [appliedFilters]
+    records: [items, totalApproximate]
+    feed: [nextCursor]
+  PUB-020:
+    datasets: [items]
+    snapshots: [asOf]
+    schemas: []
+    license: []
+    corrections: []
+    limits: []
   OPS-005:
     model-catalog: [items, currentProviders, syncStatus, asOf]
 
 screen_section_operation_overrides:
+  PUB-001:
+    corrections: listCorrections
+    coverage: listSourceStatus
   OPS-005:
     model-catalog: listRelayModels
 

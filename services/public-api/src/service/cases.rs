@@ -1,3 +1,38 @@
+struct CaseCardRow {
+    slug: String,
+    title: String,
+    public_state: String,
+    summary: String,
+    latest_revision: i32,
+    updated_at: OffsetDateTime,
+    response_status: Option<String>,
+    correction_status: Option<String>,
+}
+
+fn case_card(row: CaseCardRow) -> Result<Value, ServiceError> {
+    let CaseCardRow {
+        slug,
+        title,
+        public_state,
+        summary,
+        latest_revision,
+        updated_at,
+        response_status,
+        correction_status,
+    } = row;
+    Ok(json!({
+        "slug": slug,
+        "title": title,
+        "publicState": public_state,
+        "summary": summary,
+        "revision": latest_revision,
+        "updatedAt": timestamp(updated_at)?,
+        "responseStatus": response_status,
+        "correctionStatus": correction_status,
+        "href": format!("/cases/{slug}"),
+    }))
+}
+
 struct CaseFilters {
     states: Vec<String>,
     agency: Option<String>,
@@ -7,6 +42,8 @@ struct CaseFilters {
     published_to: Option<Date>,
     has_response: Option<bool>,
     has_correction: Option<bool>,
+    sido_code: Option<String>,
+    sigungu_code: Option<String>,
     sort: String,
 }
 
@@ -37,6 +74,7 @@ fn case_filters(
     let published_to = optional_date(query, "publishedTo")?;
     let has_response = optional_bool(query, "hasResponse")?;
     let has_correction = optional_bool(query, "hasCorrection")?;
+    let (sido_code, sigungu_code) = region_filters(query)?;
     validate_range(published_from.as_ref(), published_to.as_ref())?;
     let sort = if relation.is_some() {
         requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?
@@ -56,6 +94,8 @@ fn case_filters(
         published_to,
         has_response,
         has_correction,
+        sido_code,
+        sigungu_code,
         sort: sort.to_owned(),
     })
 }
@@ -74,6 +114,8 @@ fn case_applied_filters(
         "agencyId",
         "supplierId",
         "ruleId",
+        "sidoCode",
+        "sigunguCode",
         "publishedFrom",
         "publishedTo",
     ] {
@@ -104,7 +146,7 @@ async fn list_cases(
     let filters = case_filters(query, relation)?;
     let rows = sqlx::query_as!(
         CaseCardRow,
-        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::text IS NULL OR r.payload->>'agencyId'=$2 OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $2) AND ($3::text IS NULL OR r.payload->>'supplierId'=$3 OR COALESCE(r.payload->'supplierIds','[]'::jsonb) ? $3) AND ($4::text IS NULL OR r.payload->>'ruleId'=$4 OR COALESCE(r.payload->'ruleIds','[]'::jsonb) ? $4) AND ($5::date IS NULL OR c.published_at::date >= $5) AND ($6::date IS NULL OR c.published_at::date <= $6) AND ($7::boolean IS NULL OR (jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]'))=$7) AND ($8::boolean IS NULL OR EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id)=$8) ORDER BY CASE WHEN $9='updated_desc' THEN c.updated_at END DESC,CASE WHEN $9='created_asc' THEN c.published_at END ASC,CASE WHEN $9='published_desc' THEN c.published_at END DESC,CASE WHEN $9='title_asc' THEN c.title END ASC,c.id LIMIT $10 OFFSET $11",
+        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at,CASE WHEN jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]') THEN 'RECEIVED'::text END AS \"response_status?\",CASE WHEN EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id) THEN 'PUBLISHED'::text END AS \"correction_status?\" FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (cardinality($1::text[])=0 OR c.public_state=ANY($1)) AND ($2::text IS NULL OR r.payload->>'agencyId'=$2 OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $2) AND ($3::text IS NULL OR r.payload->>'supplierId'=$3 OR COALESCE(r.payload->'supplierIds','[]'::jsonb) ? $3) AND ($4::text IS NULL OR r.payload->>'ruleId'=$4 OR COALESCE(r.payload->'ruleIds','[]'::jsonb) ? $4) AND ($5::date IS NULL OR c.published_at::date >= $5) AND ($6::date IS NULL OR c.published_at::date <= $6) AND ($7::boolean IS NULL OR (jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]'))=$7) AND ($8::boolean IS NULL OR EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id)=$8) AND (($9::text IS NULL AND $10::text IS NULL) OR EXISTS(SELECT 1 FROM public.agencies a WHERE r.payload->>'agencyId'=a.id::text AND ($9::text IS NULL OR btrim(a.sido_code::text)=$9) AND ($10::text IS NULL OR btrim(a.sigungu_code::text)=$10))) ORDER BY CASE WHEN $11='updated_desc' THEN c.updated_at END DESC,CASE WHEN $11='created_asc' THEN c.published_at END ASC,CASE WHEN $11='published_desc' THEN c.published_at END DESC,CASE WHEN $11='title_asc' THEN c.title END ASC,c.id LIMIT $12 OFFSET $13",
         &filters.states,
         &filters.agency as _,
         &filters.supplier as _,
@@ -113,6 +155,8 @@ async fn list_cases(
         filters.published_to,
         filters.has_response,
         filters.has_correction,
+        &filters.sido_code as _,
+        &filters.sigungu_code as _,
         &filters.sort,
         query.limit + 1,
         query.offset,
@@ -136,7 +180,8 @@ async fn get_case(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
     let summary = row.summary;
     obj.insert("slug".into(), json!(slug));
     obj.insert("title".into(), json!(&title));
-    obj.insert("publicState".into(), json!(row.public_state));
+    let public_state = row.public_state;
+    obj.insert("publicState".into(), json!(&public_state));
     obj.insert("revision".into(), json!(row.latest_revision));
     obj.insert("publishedAt".into(), json!(timestamp(row.published_at)?));
     obj.insert("updatedAt".into(), json!(timestamp(row.updated_at)?));
@@ -156,7 +201,11 @@ async fn get_case(pool: &PgPool, slug: &str) -> Result<Value, ServiceError> {
         obj.entry(key).or_insert(json!([]));
     }
     obj.entry("freshness").or_insert(row.source_freshness);
-    obj.entry("seo").or_insert(json!({"title":title,"description":summary,"canonicalUrl":format!("/cases/{slug}"),"robots":"index,follow"}));
+    normalize_public_case(obj, &public_state)?;
+    obj.insert(
+        "seo".into(),
+        json!({"title":title,"description":case_seo_description(&summary,obj),"canonicalUrl":format!("/cases/{slug}"),"robots":"index,follow"}),
+    );
     obj.remove("reproducibility");
     obj.remove("content");
     obj.remove("agencyId");
@@ -195,11 +244,15 @@ async fn list_revisions(pool: &PgPool, query: &Query, slug: &str) -> Result<Valu
 }
 
 async fn get_revision(pool: &PgPool, slug: &str, revision: i32) -> Result<Value, ServiceError> {
-    let row=sqlx::query!("SELECT c.latest_revision,r.revision,r.payload,r.payload_sha256,r.published_at,r.supersedes_revision FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 AND r.revision=$2", slug, revision)
+    let row=sqlx::query!("SELECT c.latest_revision,c.public_state,r.revision,r.state::text \"state!\",r.payload,r.payload_sha256,r.published_at,r.supersedes_revision FROM public.case_revisions r JOIN public.cases c ON c.id=r.case_id WHERE c.slug=$1 AND r.revision=$2", slug, revision)
         .fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
     let payload = row.payload;
     let mut content = payload.get("content").cloned().unwrap_or(payload);
     if let Some(object) = content.as_object_mut() {
+        normalize_public_case(
+            object,
+            revision_non_conclusion_state(&row.public_state, &row.state),
+        )?;
         for key in [
             "agencyId",
             "supplierId",
@@ -423,42 +476,27 @@ async fn get_source(pool: &PgPool, id: &str) -> Result<Value, ServiceError> {
 }
 
 async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
-    let q = query
-        .first("q")
-        .filter(|v| v.trim().len() >= 2)
-        .ok_or(ServiceError::InvalidRequest)?;
-    let pattern = format!("%{q}%");
-    let types = query
-        .many("types")
-        .into_iter()
-        .map(|value| value.to_ascii_uppercase())
-        .collect::<Vec<_>>();
-    let states = query.many("publicationState");
-    let date_from = optional_date(query, "dateFrom")?;
-    let date_to = optional_date(query, "dateTo")?;
-    validate_range(date_from.as_ref(), date_to.as_ref())?;
-    let sort = requested_sort(
-        query,
-        &["relevance", "updated_desc", "title_asc"],
-        "relevance",
-    )?;
+    let criteria = search_filters(query)?;
     let rows = sqlx::query!(
         "SELECT result_type AS \"result_type!\",id AS \"id!\",title AS \"title!\",subtitle,status,summary,updated_at,href AS \"href!\" FROM (\
-         SELECT 'CASE'::text result_type,id::text,title,slug subtitle,public_state status,summary,updated_at,'/cases/'||slug href FROM public.cases WHERE (title ILIKE $1 OR summary ILIKE $1) AND (cardinality($2::text[])=0 OR 'CASE'=ANY($2)) AND (cardinality($3::text[])=0 OR public_state=ANY($3)) AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'AGENCY',id::text,name,jurisdiction,agency_type,NULL,updated_at,'/agencies/'||id::text FROM public.agencies WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'AGENCY'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text FROM public.suppliers WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'SUPPLIER'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'CONTRACT',id::text,title,contract_number,status,NULL,updated_at,'/contracts/'||id::text FROM public.contracts WHERE (title ILIKE $1 OR contract_number ILIKE $1) AND (cardinality($2::text[])=0 OR 'CONTRACT'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'RULE',rule_id,name,active_version,'ACTIVE',public_description,updated_at,'/methodology/rules/'||rule_id FROM public.rules WHERE (name ILIKE $1 OR public_description ILIKE $1) AND (cardinality($2::text[])=0 OR 'RULE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'CORRECTION',x.id::text,x.summary,c.slug,c.public_state,x.reason,x.published_at,'/corrections/'||x.id::text FROM public.corrections x JOIN public.cases c ON c.id=x.case_id WHERE (x.summary ILIKE $1 OR x.reason ILIKE $1) AND (cardinality($2::text[])=0 OR 'CORRECTION'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR x.published_at::date >= $4) AND ($5::date IS NULL OR x.published_at::date <= $5) \
-         UNION ALL SELECT 'DATASET',id,title,format,'PUBLISHED',description,updated_at,'/data' FROM public.datasets WHERE (title ILIKE $1 OR description ILIKE $1) AND (cardinality($2::text[])=0 OR 'DATASET'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) \
-         UNION ALL SELECT 'SOURCE',source_id,display_name,status,status,public_message,updated_at,'/sources/'||source_id FROM public.source_status WHERE (display_name ILIKE $1 OR source_id ILIKE $1 OR public_message ILIKE $1) AND (cardinality($2::text[])=0 OR 'SOURCE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5)\
-         ) x ORDER BY CASE WHEN $6='relevance' THEN (title ILIKE $1) END DESC,CASE WHEN $6 IN ('relevance','updated_desc') THEN updated_at END DESC NULLS LAST,CASE WHEN $6='title_asc' THEN title END ASC,id LIMIT $7 OFFSET $8",
-        &pattern,
-        &types,
-        &states,
-        date_from,
-        date_to,
-        sort,
+         SELECT 'CASE'::text result_type,c.id::text,c.title,c.slug subtitle,c.public_state status,c.summary,c.updated_at,'/cases/'||c.slug href FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (c.title ILIKE $1 OR c.summary ILIKE $1) AND (cardinality($2::text[])=0 OR 'CASE'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR c.updated_at::date >= $4) AND ($5::date IS NULL OR c.updated_at::date <= $5) AND ($6::uuid IS NULL OR r.payload->>'agencyId'=$6::text OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $6::text) AND (($7::text IS NULL AND $8::text IS NULL) OR EXISTS(SELECT 1 FROM public.agencies a WHERE r.payload->>'agencyId'=a.id::text AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8))) \
+         UNION ALL SELECT 'AGENCY',a.id::text,a.name,a.jurisdiction,a.agency_type,NULL,a.updated_at,'/agencies/'||a.id::text FROM public.agencies a WHERE a.name ILIKE $1 AND (cardinality($2::text[])=0 OR 'AGENCY'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR a.updated_at::date >= $4) AND ($5::date IS NULL OR a.updated_at::date <= $5) AND ($6::uuid IS NULL OR a.id=$6) AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8) \
+         UNION ALL SELECT 'SUPPLIER',id::text,name,business_status,business_status,NULL,updated_at,'/suppliers/'||id::text FROM public.suppliers WHERE name ILIKE $1 AND (cardinality($2::text[])=0 OR 'SUPPLIER'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL \
+         UNION ALL SELECT 'CONTRACT',c.id::text,c.title,c.contract_number,c.status,NULL,c.updated_at,'/contracts/'||c.id::text FROM public.contracts c LEFT JOIN public.agencies a ON a.id=c.agency_id WHERE (c.title ILIKE $1 OR c.contract_number ILIKE $1) AND (cardinality($2::text[])=0 OR 'CONTRACT'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR c.updated_at::date >= $4) AND ($5::date IS NULL OR c.updated_at::date <= $5) AND ($6::uuid IS NULL OR c.agency_id=$6) AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8) \
+         UNION ALL SELECT 'RULE',rule_id,name,active_version,'ACTIVE',public_description,updated_at,'/methodology/rules/'||rule_id FROM public.rules WHERE (name ILIKE $1 OR public_description ILIKE $1) AND (cardinality($2::text[])=0 OR 'RULE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL \
+         UNION ALL SELECT 'CORRECTION',x.id::text,x.summary,c.slug,c.public_state,x.reason,x.published_at,'/corrections/'||x.id::text FROM public.corrections x JOIN public.cases c ON c.id=x.case_id JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE (x.summary ILIKE $1 OR x.reason ILIKE $1) AND (cardinality($2::text[])=0 OR 'CORRECTION'=ANY($2)) AND (cardinality($3::text[])=0 OR c.public_state=ANY($3)) AND ($4::date IS NULL OR x.published_at::date >= $4) AND ($5::date IS NULL OR x.published_at::date <= $5) AND ($6::uuid IS NULL OR r.payload->>'agencyId'=$6::text OR COALESCE(r.payload->'agencyIds','[]'::jsonb) ? $6::text) AND (($7::text IS NULL AND $8::text IS NULL) OR EXISTS(SELECT 1 FROM public.agencies a WHERE r.payload->>'agencyId'=a.id::text AND ($7::text IS NULL OR btrim(a.sido_code::text)=$7) AND ($8::text IS NULL OR btrim(a.sigungu_code::text)=$8))) \
+         UNION ALL SELECT 'DATASET',id,title,format,'PUBLISHED',description,updated_at,'/data' FROM public.datasets WHERE (title ILIKE $1 OR description ILIKE $1) AND (cardinality($2::text[])=0 OR 'DATASET'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL \
+         UNION ALL SELECT 'SOURCE',source_id,display_name,status,status,public_message,updated_at,'/sources/'||source_id FROM public.source_status WHERE (display_name ILIKE $1 OR source_id ILIKE $1 OR public_message ILIKE $1) AND (cardinality($2::text[])=0 OR 'SOURCE'=ANY($2)) AND cardinality($3::text[])=0 AND ($4::date IS NULL OR updated_at::date >= $4) AND ($5::date IS NULL OR updated_at::date <= $5) AND $6::uuid IS NULL AND $7::text IS NULL AND $8::text IS NULL\
+         ) x ORDER BY CASE WHEN $9='relevance' THEN (title ILIKE $1) END DESC,CASE WHEN $9 IN ('relevance','updated_desc') THEN updated_at END DESC NULLS LAST,CASE WHEN $9='title_asc' THEN title END ASC,id LIMIT $10 OFFSET $11",
+        &criteria.pattern,
+        &criteria.types,
+        &criteria.states,
+        criteria.date_from,
+        criteria.date_to,
+        criteria.agency_id,
+        &criteria.sido_code as _,
+        &criteria.sigungu_code as _,
+        &criteria.sort,
         query.limit + 1,
         query.offset,
     )
@@ -499,10 +537,10 @@ async fn search(pool: &PgPool, query: &Query) -> Result<Value, ServiceError> {
         items.push(Value::Object(v));
     }
     let mut filters = Map::new();
-    filters.insert("q".into(), json!(q));
-    filters.insert("types".into(), json!(types));
-    filters.insert("publicationState".into(), json!(states));
-    for name in ["dateFrom", "dateTo"] {
+    filters.insert("q".into(), json!(criteria.q));
+    filters.insert("types".into(), json!(criteria.types));
+    filters.insert("publicationState".into(), json!(criteria.states));
+    for name in ["agencyId", "sidoCode", "sigunguCode", "dateFrom", "dateTo"] {
         if let Some(value) = query.first(name) {
             filters.insert(name.into(), json!(value));
         }

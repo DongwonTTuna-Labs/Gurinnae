@@ -21,14 +21,14 @@ rules:
 - A $projection binding is an OPEN_IMPLEMENTATION requirement, never evidence that the field exists.
 counts:
   screens: 94
-  sections: 497
+  sections: 492
   closed_screen_view_model_types: 94
-  closed_section_view_model_types: 497
-  explicit_browser_projection_allowlists: 497
+  closed_section_view_model_types: 492
+  explicit_browser_projection_allowlists: 492
   semantic_dimensions_per_screen: 6
-  base_operation_occurrences: 225
+  base_operation_occurrences: 221
   additive_operation_section_occurrences: 100
-  screens_requiring_api_or_bff_projection_work: 92
+  screens_requiring_api_or_bff_projection_work: 89
   build_manifest_profile_refinements: 94
   archetype_default_overrides: 63
 canonical_profile_set_equality_oracle:
@@ -37,15 +37,15 @@ canonical_profile_set_equality_oracle:
   canonical_profile_source_count: 94
   manifest_refinement_count: 94
   archetype_override_count: 63
-  canonical_profile_state_occurrences: 840
-  expected_profile_state_occurrences: 840
+  canonical_profile_state_occurrences: 841
+  expected_profile_state_occurrences: 841
   failure_rule: Missing, extra, unmapped, multiply canonical, or source-order-derived profile rows fail validation.
 screen_section_set_equality_oracle:
   screen_ids: 94
-  catalog_section_keys: 497
-  effective_section_keys: 497
-  semantic_anchor_section_keys: 398
-  supplemental_section_keys: 99
+  catalog_section_keys: 492
+  effective_section_keys: 492
+  semantic_anchor_section_keys: 397
+  supplemental_section_keys: 95
   missing: 0
   extra: 0
   duplicate: 0
@@ -91,7 +91,7 @@ browser_secret_stripping_contract:
   - client storage
   - console
   - client log
-  set_equality_scan: all 94 closed screen schemas + all 497 section leaf/nested/array allowlists + all action and journey
+  set_equality_scan: all 94 closed screen schemas + all 492 section leaf/nested/array allowlists + all action and journey
     browser bindings
   runtime_status: OPEN_IMPLEMENTATION
 implementation_requirements:
@@ -14084,7 +14084,7 @@ screens:
       copy:
         heading: 가설 현황판
         prompt: 어떤 설명들이 가능한가?
-        explanation: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
+        explanation: 열림·근거로 뒷받침됨·반박됨·해결됨.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.board
@@ -14163,7 +14163,7 @@ screens:
   - section_id: board
     order: 1
     title: 가설 현황판
-    purpose: OPEN/SUPPORTED/CONTRADICTED/RESOLVED.
+    purpose: 열림·근거로 뒷받침됨·반박됨·해결됨.
     priority: primary
     test_id: cas_007__section__board
     semantic_roles:
@@ -22246,7 +22246,7 @@ screens:
   - section_id: watermark
     order: 1
     title: 미리보기 상태
-    purpose: DRAFT·snapshot hash.
+    purpose: 초안·미리보기 무결성 식별값.
     priority: primary
     test_id: cas_014__section__watermark
     semantic_roles:
@@ -22335,16 +22335,20 @@ screens:
       - path: public_render
         type: PublicCaseSnapshot
         allowed_fields:
+        - agencyName
+        - amount
         - case
         - claims
         - comparison
         - confirmedFacts
+        - contractName
         - corrections
         - counterEvidence
         - criticalUnknowns
         - evidence
         - freshness
         - limitations
+        - nonConclusion
         - partyResponses
         - signals
         - timeline
@@ -38705,7 +38709,7 @@ screens:
         view_model_field: recent_state
       copy:
         heading: 최근 공개 기록
-        explanation: 상태가 균형 잡힌 최신 기록을 보여준다.
+        explanation: 상태 균형을 반영한 최신 공개 기록.
         sources:
         - screen-catalog.sections.recent
       binding_status: OPEN_IMPLEMENTATION
@@ -38726,7 +38730,7 @@ screens:
       copy:
         heading: 서비스 정의와 한계
         prompt: 구린네는 무엇을 하는가?
-        explanation: 이상 징후와 비리 확정을 분리한다.
+        explanation: 이상 징후와 위법·비리 확정의 구분 원칙.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.mission
@@ -38770,7 +38774,7 @@ screens:
         prompts:
         - 최근 어떤 기록이 공개·설명·정정됐는가?
         - 데이터는 얼마나 최신인가?
-        explanation: 제품이 오류와 해소 사례를 숨기지 않음을 보여준다.
+        explanation: 오류·해소 이력을 포함한 정정·철회 기록.
         sources:
         - screen-catalog.user_questions[1:]
         - screen-catalog.sections.corrections
@@ -38805,7 +38809,7 @@ screens:
   - section_id: mission
     order: 1
     title: 서비스 정의와 한계
-    purpose: 이상 징후와 비리 확정을 분리한다.
+    purpose: 이상 징후와 위법·비리 확정의 구분 원칙.
     priority: primary
     test_id: pub_001__section__mission
     semantic_roles:
@@ -38948,7 +38952,7 @@ screens:
   - section_id: recent
     order: 3
     title: 최근 공개 기록
-    purpose: 상태가 균형 잡힌 최신 기록을 보여준다.
+    purpose: 상태 균형을 반영한 최신 공개 기록.
     priority: primary
     test_id: pub_001__section__recent
     semantic_roles:
@@ -39004,7 +39008,7 @@ screens:
   - section_id: corrections
     order: 4
     title: 최근 설명·정정·철회
-    purpose: 제품이 오류와 해소 사례를 숨기지 않음을 보여준다.
+    purpose: 오류·해소 이력을 포함한 정정·철회 기록.
     priority: primary
     test_id: pub_001__section__corrections
     semantic_roles:
@@ -39116,7 +39120,7 @@ screens:
   - section_id: method
     order: 6
     title: 방법론
-    purpose: 탐지 방식과 한계를 설명한다.
+    purpose: 탐지 방식과 판정 한계.
     priority: primary
     test_id: pub_001__section__method
     semantic_roles: []
@@ -39736,67 +39740,6 @@ screens:
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
-  - operation_id: searchPublicRecords
-    source: specs/ui/screen-data-contracts.yaml
-    kind: QUERY
-    api: public-api
-    method: GET
-    path: /v1/search
-    request_schema: searchPublicRecordsQuery
-    request_field_set:
-    - name: q
-      type: string
-      required: true
-      in: query
-    - name: types
-      type: array:string
-      required: false
-      in: query
-    - name: publicationState
-      type: array:string
-      required: false
-      in: query
-    - name: dateFrom
-      type: date
-      required: false
-      in: query
-    - name: dateTo
-      type: date
-      required: false
-      in: query
-    - name: cursor
-      type: string
-      required: false
-      in: query
-    - name: limit
-      type: integer(1..100)
-      required: false
-      in: query
-    - name: sort
-      type: enum:relevance,updated_desc,title_asc
-      required: false
-      in: query
-    server_only_request_field_set: []
-    response_schema: PublicRecordsSearchResultPage
-    response_field_set:
-    - name: items
-      type: array:PublicRecordsSearchResultItem
-      required: true
-    - name: nextCursor
-      type: string
-      required: false
-    - name: totalApproximate
-      type: integer
-      required: false
-    - name: appliedFilters
-      type: PublicRecordsSearchResultAppliedFilters
-      required: true
-    - name: asOf
-      type: date-time
-      required: true
-    server_only_response_field_set: []
-    browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
-    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   integration_dependencies:
   - 'PUB-001.object: listPublicCases.$projection.mission_object must be added to the closed BFF projection.'
   - 'PUB-001.state: listPublicCases.$projection.recent_state must be added to the closed BFF projection.'
@@ -39841,14 +39784,10 @@ screens:
         additional_properties: false
         required:
         - query
-        - types
         - results
-        - coverage
         fields:
           query: Pub002QuerySectionVmV1
-          types: Pub002TypesSectionVmV1
           results: Pub002ResultsSectionVmV1
-          coverage: Pub002CoverageSectionVmV1
       primary_action: Pub002ScreenVmPrimaryActionV1
   semantic_contract:
     object:
@@ -39858,10 +39797,14 @@ screens:
       view_model_path: sections.query.object
       required_view_model_fields:
       - query_object
+      - types_applied_filters
       operation_bindings:
       - operation_id: searchPublicRecords
         operation_field_path: $projection.query_object
         view_model_field: query_object
+      - operation_id: searchPublicRecords
+        operation_field_path: appliedFilters
+        view_model_field: types_applied_filters
       copy:
         heading: 통합 검색
         explanation: 공개 객체를 이름·계약번호·키워드로 찾아 정확한 상세 화면으로 이동한다.
@@ -39875,7 +39818,7 @@ screens:
     state:
       section_id: results
       test_id: pub_002__section__results
-      component: UnifiedSearch
+      component: DataCollection
       view_model_path: sections.results.state
       required_view_model_fields:
       - results_state
@@ -39885,17 +39828,17 @@ screens:
         view_model_field: results_state
       copy:
         heading: 검색 결과
-        explanation: 일치 필드와 상태·freshness를 표시한다.
+        explanation: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
         sources:
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: UnifiedSearch
-      component_variant: home
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     answer:
       section_id: results
       test_id: pub_002__section__results
-      component: UnifiedSearch
+      component: DataCollection
       view_model_path: sections.results.answer
       required_view_model_fields:
       - results_answer
@@ -39906,19 +39849,19 @@ screens:
       copy:
         heading: 검색 결과
         prompt: 내가 찾는 기관·업체·계약·사건이 있는가?
-        explanation: 일치 필드와 상태·freshness를 표시한다.
+        explanation: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: UnifiedSearch
-      component_variant: home
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
-      section_id: coverage
-      test_id: pub_002__section__coverage
-      component: UnifiedSearch
-      view_model_path: sections.coverage.evidence
+      section_id: results
+      test_id: pub_002__section__results
+      component: DataCollection
+      view_model_path: sections.results.evidence
       required_view_model_fields:
       - coverage_evidence
       operation_bindings:
@@ -39926,19 +39869,19 @@ screens:
         operation_field_path: $projection.coverage_evidence
         view_model_field: coverage_evidence
       copy:
-        heading: 검색 범위
-        explanation: indexing 지연과 source coverage를 표시한다.
+        heading: 검색 결과
+        explanation: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
         sources:
-        - screen-catalog.sections.coverage
+        - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: UnifiedSearch
-      component_variant: home
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     unknown:
-      section_id: coverage
-      test_id: pub_002__section__coverage
-      component: UnifiedSearch
-      view_model_path: sections.coverage.unknown
+      section_id: results
+      test_id: pub_002__section__results
+      component: DataCollection
+      view_model_path: sections.results.unknown
       required_view_model_fields:
       - coverage_unknown
       operation_bindings:
@@ -39946,17 +39889,17 @@ screens:
         operation_field_path: $projection.coverage_unknown
         view_model_field: coverage_unknown
       copy:
-        heading: 검색 범위
+        heading: 검색 결과
         prompts:
         - 왜 이 결과가 검색됐는가?
         - 결과 범위가 최신인가?
-        explanation: indexing 지연과 source coverage를 표시한다.
+        explanation: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
         sources:
         - screen-catalog.user_questions[1:]
-        - screen-catalog.sections.coverage
+        - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: UnifiedSearch
-      component_variant: home
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     next_action:
       section_id: query
@@ -39985,7 +39928,7 @@ screens:
   - section_id: query
     order: 1
     title: 검색어
-    purpose: 검색 범위와 예시를 제공한다.
+    purpose: 기관·업체·계약·사건 검색과 유형·기간·공개 상태 파셋.
     priority: primary
     test_id: pub_002__section__query
     semantic_roles:
@@ -40004,6 +39947,7 @@ screens:
       required:
       - query_next_action
       - query_object
+      - types_applied_filters
       fields:
       - name: query_next_action
         type: Pub002QueryQueryNextActionProjectionV1
@@ -40021,10 +39965,19 @@ screens:
           operation_id: searchPublicRecords
           field_path: $projection.query_object
           status: RUNTIME_PROJECTION_REQUIRED
+      - name: types_applied_filters
+        type: PublicRecordsSearchResultAppliedFilters
+        required: true
+        nullable: false
+        source:
+          operation_id: searchPublicRecords
+          field_path: appliedFilters
+          status: CURRENT_CLOSED_OPERATION_FIELD
     browser_projection_allowlist:
       top_level_fields:
       - query_next_action
       - query_object
+      - types_applied_filters
       nested_object_fields:
       - path: query_next_action
         type: Pub002QueryQueryNextActionProjectionV1
@@ -40043,6 +39996,19 @@ screens:
         - facts
         - as_of
         - provenance
+        additional_properties: false
+      - path: types_applied_filters
+        type: PublicRecordsSearchResultAppliedFilters
+        allowed_fields:
+        - agencyId
+        - dateFrom
+        - dateTo
+        - publicationState
+        - q
+        - sidoCode
+        - sigunguCode
+        - sort
+        - types
         additional_properties: false
       array_item_fields:
       - path: query_next_action.facts[]
@@ -40069,63 +40035,21 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: types
-    order: 2
-    title: 객체 유형
-    purpose: 사건·계약·기관·업체·방법론·정정을 구분한다.
-    priority: primary
-    test_id: pub_002__section__types
-    semantic_roles: []
-    component:
-      authority_component: RevisionAndCorrectionPanel
-      component: RevisionAndCorrectionPanel
-      variant: revision-list
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Pub002TypesSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - types_applied_filters
-      fields:
-      - name: types_applied_filters
-        type: PublicRecordsSearchResultAppliedFilters
-        required: true
-        nullable: false
-        source:
-          operation_id: searchPublicRecords
-          field_path: appliedFilters
-          status: CURRENT_CLOSED_OPERATION_FIELD
-    browser_projection_allowlist:
-      top_level_fields:
-      - types_applied_filters
-      nested_object_fields:
-      - path: types_applied_filters
-        type: PublicRecordsSearchResultAppliedFilters
-        allowed_fields:
-        - dateFrom
-        - dateTo
-        - publicationState
-        - q
-        - types
-        additional_properties: false
-      array_item_fields: []
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: results
-    order: 3
+    order: 2
     title: 검색 결과
-    purpose: 일치 필드와 상태·freshness를 표시한다.
+    purpose: 일치 항목·공개 상태·자료 기준일과 검색 범위 각주.
     priority: primary
     test_id: pub_002__section__results
     semantic_roles:
     - answer
+    - evidence
     - state
+    - unknown
     component:
-      authority_component: UnifiedSearch
-      component: UnifiedSearch
-      variant: home
+      authority_component: DataCollection
+      component: DataCollection
+      variant: cards
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -40133,9 +40057,27 @@ screens:
       kind: object
       additional_properties: false
       required:
+      - coverage_evidence
+      - coverage_unknown
       - results_answer
       - results_state
       fields:
+      - name: coverage_evidence
+        type: Pub002ResultsCoverageEvidenceProjectionV1
+        required: true
+        nullable: false
+        source:
+          operation_id: searchPublicRecords
+          field_path: $projection.coverage_evidence
+          status: RUNTIME_PROJECTION_REQUIRED
+      - name: coverage_unknown
+        type: Pub002ResultsCoverageUnknownProjectionV1
+        required: true
+        nullable: false
+        source:
+          operation_id: searchPublicRecords
+          field_path: $projection.coverage_unknown
+          status: RUNTIME_PROJECTION_REQUIRED
       - name: results_answer
         type: Pub002ResultsResultsAnswerProjectionV1
         required: true
@@ -40154,9 +40096,29 @@ screens:
           status: RUNTIME_PROJECTION_REQUIRED
     browser_projection_allowlist:
       top_level_fields:
+      - coverage_evidence
+      - coverage_unknown
       - results_answer
       - results_state
       nested_object_fields:
+      - path: coverage_evidence
+        type: Pub002ResultsCoverageEvidenceProjectionV1
+        allowed_fields:
+        - summary
+        - status
+        - facts
+        - as_of
+        - provenance
+        additional_properties: false
+      - path: coverage_unknown
+        type: Pub002ResultsCoverageUnknownProjectionV1
+        allowed_fields:
+        - summary
+        - status
+        - facts
+        - as_of
+        - provenance
+        additional_properties: false
       - path: results_answer
         type: Pub002ResultsResultsAnswerProjectionV1
         allowed_fields:
@@ -40176,6 +40138,28 @@ screens:
         - provenance
         additional_properties: false
       array_item_fields:
+      - path: coverage_evidence.facts[]
+        item_type: Pub002ResultsCoverageEvidenceProjectionV1FactV1
+        allowed_item_fields:
+        - label
+        - value
+        - unit
+        - source_revision
+        - locator
+        - uncertainty
+        - href
+        additional_properties: false
+      - path: coverage_unknown.facts[]
+        item_type: Pub002ResultsCoverageUnknownProjectionV1FactV1
+        allowed_item_fields:
+        - label
+        - value
+        - unit
+        - source_revision
+        - locator
+        - uncertainty
+        - href
+        additional_properties: false
       - path: results_answer.facts[]
         item_type: Pub002ResultsResultsAnswerProjectionV1FactV1
         allowed_item_fields:
@@ -40200,182 +40184,7 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: coverage
-    order: 4
-    title: 검색 범위
-    purpose: indexing 지연과 source coverage를 표시한다.
-    priority: primary
-    test_id: pub_002__section__coverage
-    semantic_roles:
-    - evidence
-    - unknown
-    component:
-      authority_component: UnifiedSearch
-      component: UnifiedSearch
-      variant: home
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Pub002CoverageSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - coverage_evidence
-      - coverage_unknown
-      fields:
-      - name: coverage_evidence
-        type: Pub002CoverageCoverageEvidenceProjectionV1
-        required: true
-        nullable: false
-        source:
-          operation_id: searchPublicRecords
-          field_path: $projection.coverage_evidence
-          status: RUNTIME_PROJECTION_REQUIRED
-      - name: coverage_unknown
-        type: Pub002CoverageCoverageUnknownProjectionV1
-        required: true
-        nullable: false
-        source:
-          operation_id: searchPublicRecords
-          field_path: $projection.coverage_unknown
-          status: RUNTIME_PROJECTION_REQUIRED
-    browser_projection_allowlist:
-      top_level_fields:
-      - coverage_evidence
-      - coverage_unknown
-      nested_object_fields:
-      - path: coverage_evidence
-        type: Pub002CoverageCoverageEvidenceProjectionV1
-        allowed_fields:
-        - summary
-        - status
-        - facts
-        - as_of
-        - provenance
-        additional_properties: false
-      - path: coverage_unknown
-        type: Pub002CoverageCoverageUnknownProjectionV1
-        allowed_fields:
-        - summary
-        - status
-        - facts
-        - as_of
-        - provenance
-        additional_properties: false
-      array_item_fields:
-      - path: coverage_evidence.facts[]
-        item_type: Pub002CoverageCoverageEvidenceProjectionV1FactV1
-        allowed_item_fields:
-        - label
-        - value
-        - unit
-        - source_revision
-        - locator
-        - uncertainty
-        - href
-        additional_properties: false
-      - path: coverage_unknown.facts[]
-        item_type: Pub002CoverageCoverageUnknownProjectionV1FactV1
-        allowed_item_fields:
-        - label
-        - value
-        - unit
-        - source_revision
-        - locator
-        - uncertainty
-        - href
-        additional_properties: false
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   projection_schema_definitions:
-  - name: Pub002CoverageCoverageEvidenceProjectionV1
-    kind: object
-    additional_properties: false
-    required:
-    - summary
-    - status
-    - facts
-    - as_of
-    - provenance
-    fields:
-      summary: string[1..4096]
-      status: AVAILABLE|EMPTY|PARTIAL|STALE|RESTRICTED|UNAVAILABLE
-      facts: array<Pub002CoverageCoverageEvidenceProjectionV1FactV1>[0..256]
-      as_of: datetime
-      provenance: Pub002CoverageCoverageEvidenceProjectionV1ProvenanceV1
-    fact_item:
-      name: Pub002CoverageCoverageEvidenceProjectionV1FactV1
-      kind: object
-      additional_properties: false
-      required:
-      - label
-      - value
-      - source_revision
-      - uncertainty
-      fields:
-        label: string[1..160]
-        value: string[0..4096]
-        unit: string[1..64]|null
-        source_revision: string[1..256]
-        locator: string[1..2048]|null
-        uncertainty: CONFIRMED|ESTIMATED|DISPUTED|UNKNOWN|NOT_APPLICABLE
-        href: same-origin-authorized-uri-reference|null
-    provenance_type:
-      name: Pub002CoverageCoverageEvidenceProjectionV1ProvenanceV1
-      kind: object
-      additional_properties: false
-      required:
-      - operation_id
-      - projection_version
-      - source_digest
-      fields:
-        operation_id: operation-id
-        projection_version: int64>=1
-        source_digest: sha256
-  - name: Pub002CoverageCoverageUnknownProjectionV1
-    kind: object
-    additional_properties: false
-    required:
-    - summary
-    - status
-    - facts
-    - as_of
-    - provenance
-    fields:
-      summary: string[1..4096]
-      status: AVAILABLE|EMPTY|PARTIAL|STALE|RESTRICTED|UNAVAILABLE
-      facts: array<Pub002CoverageCoverageUnknownProjectionV1FactV1>[0..256]
-      as_of: datetime
-      provenance: Pub002CoverageCoverageUnknownProjectionV1ProvenanceV1
-    fact_item:
-      name: Pub002CoverageCoverageUnknownProjectionV1FactV1
-      kind: object
-      additional_properties: false
-      required:
-      - label
-      - value
-      - source_revision
-      - uncertainty
-      fields:
-        label: string[1..160]
-        value: string[0..4096]
-        unit: string[1..64]|null
-        source_revision: string[1..256]
-        locator: string[1..2048]|null
-        uncertainty: CONFIRMED|ESTIMATED|DISPUTED|UNKNOWN|NOT_APPLICABLE
-        href: same-origin-authorized-uri-reference|null
-    provenance_type:
-      name: Pub002CoverageCoverageUnknownProjectionV1ProvenanceV1
-      kind: object
-      additional_properties: false
-      required:
-      - operation_id
-      - projection_version
-      - source_digest
-      fields:
-        operation_id: operation-id
-        projection_version: int64>=1
-        source_digest: sha256
   - name: Pub002QueryQueryNextActionProjectionV1
     kind: object
     additional_properties: false
@@ -40454,6 +40263,94 @@ screens:
         href: same-origin-authorized-uri-reference|null
     provenance_type:
       name: Pub002QueryQueryObjectProjectionV1ProvenanceV1
+      kind: object
+      additional_properties: false
+      required:
+      - operation_id
+      - projection_version
+      - source_digest
+      fields:
+        operation_id: operation-id
+        projection_version: int64>=1
+        source_digest: sha256
+  - name: Pub002ResultsCoverageEvidenceProjectionV1
+    kind: object
+    additional_properties: false
+    required:
+    - summary
+    - status
+    - facts
+    - as_of
+    - provenance
+    fields:
+      summary: string[1..4096]
+      status: AVAILABLE|EMPTY|PARTIAL|STALE|RESTRICTED|UNAVAILABLE
+      facts: array<Pub002ResultsCoverageEvidenceProjectionV1FactV1>[0..256]
+      as_of: datetime
+      provenance: Pub002ResultsCoverageEvidenceProjectionV1ProvenanceV1
+    fact_item:
+      name: Pub002ResultsCoverageEvidenceProjectionV1FactV1
+      kind: object
+      additional_properties: false
+      required:
+      - label
+      - value
+      - source_revision
+      - uncertainty
+      fields:
+        label: string[1..160]
+        value: string[0..4096]
+        unit: string[1..64]|null
+        source_revision: string[1..256]
+        locator: string[1..2048]|null
+        uncertainty: CONFIRMED|ESTIMATED|DISPUTED|UNKNOWN|NOT_APPLICABLE
+        href: same-origin-authorized-uri-reference|null
+    provenance_type:
+      name: Pub002ResultsCoverageEvidenceProjectionV1ProvenanceV1
+      kind: object
+      additional_properties: false
+      required:
+      - operation_id
+      - projection_version
+      - source_digest
+      fields:
+        operation_id: operation-id
+        projection_version: int64>=1
+        source_digest: sha256
+  - name: Pub002ResultsCoverageUnknownProjectionV1
+    kind: object
+    additional_properties: false
+    required:
+    - summary
+    - status
+    - facts
+    - as_of
+    - provenance
+    fields:
+      summary: string[1..4096]
+      status: AVAILABLE|EMPTY|PARTIAL|STALE|RESTRICTED|UNAVAILABLE
+      facts: array<Pub002ResultsCoverageUnknownProjectionV1FactV1>[0..256]
+      as_of: datetime
+      provenance: Pub002ResultsCoverageUnknownProjectionV1ProvenanceV1
+    fact_item:
+      name: Pub002ResultsCoverageUnknownProjectionV1FactV1
+      kind: object
+      additional_properties: false
+      required:
+      - label
+      - value
+      - source_revision
+      - uncertainty
+      fields:
+        label: string[1..160]
+        value: string[0..4096]
+        unit: string[1..64]|null
+        source_revision: string[1..256]
+        locator: string[1..2048]|null
+        uncertainty: CONFIRMED|ESTIMATED|DISPUTED|UNKNOWN|NOT_APPLICABLE
+        href: same-origin-authorized-uri-reference|null
+    provenance_type:
+      name: Pub002ResultsCoverageUnknownProjectionV1ProvenanceV1
       kind: object
       additional_properties: false
       required:
@@ -40552,13 +40449,23 @@ screens:
         operation_id: operation-id
         projection_version: int64>=1
         source_digest: sha256
-  state_profile: public-data
+  state_profile: public-search
   state_profile_resolution:
-    canonical_profile: public-data
+    canonical_profile: public-search
     canonical_source: specs/ui/screen-catalog.yaml#screens[].state_profile
-    canonical_states: *id021
+    canonical_states:
+    - awaiting-query
+    - initial-loading
+    - refreshing
+    - empty
+    - filtered-empty
+    - partial
+    - stale
+    - error
+    - offline
+    - success
     selection_rule: An explicit screen state_profile is authoritative; archetype profile is a default only.
-    screen_specific_reason: PUB-002 (통합 검색) uses its explicit public-data profile for the task ‘공개 객체를 이름·계약번호·키워드로 찾아 정확한
+    screen_specific_reason: PUB-002 (통합 검색) uses its explicit public-search profile for the task ‘공개 객체를 이름·계약번호·키워드로 찾아 정확한
       상세 화면으로 이동한다.’; layout archetype SEARCH_INDEX does not replace it.
     archetype_default_resolution:
       archetype: SEARCH_INDEX
@@ -40568,6 +40475,7 @@ screens:
         contract.
     build_manifest_resolution:
       manifest_states:
+      - awaiting-query
       - loading
       - success
       - empty
@@ -40576,36 +40484,51 @@ screens:
       - error
       disposition: GENERIC_ACCEPTANCE_VOCABULARY_REFINED
       state_map:
+      - manifest_state: awaiting-query
+        disposition: DIRECT_CANONICAL_STATE
+        canonical_states:
+        - awaiting-query
+        orthogonal_signal_path: null
+        reason: The build-manifest state is identical to one canonical runtime state.
       - manifest_state: loading
         disposition: REFINED_CANONICAL_STATES
-        canonical_states: *id022
+        canonical_states:
+        - initial-loading
+        - refreshing
         orthogonal_signal_path: null
         reason: The build-manifest state is intentionally split so loading source, empty scope, failure recovery, or saved
           outcome is not collapsed.
       - manifest_state: success
         disposition: DIRECT_CANONICAL_STATE
-        canonical_states: *id023
+        canonical_states:
+        - success
         orthogonal_signal_path: null
         reason: The build-manifest state is identical to one canonical runtime state.
       - manifest_state: empty
         disposition: REFINED_CANONICAL_STATES
-        canonical_states: *id024
+        canonical_states:
+        - empty
+        - filtered-empty
         orthogonal_signal_path: null
         reason: The build-manifest state is intentionally split so loading source, empty scope, failure recovery, or saved
           outcome is not collapsed.
       - manifest_state: partial
         disposition: DIRECT_CANONICAL_STATE
-        canonical_states: *id025
+        canonical_states:
+        - partial
         orthogonal_signal_path: null
         reason: The build-manifest state is identical to one canonical runtime state.
       - manifest_state: stale
         disposition: DIRECT_CANONICAL_STATE
-        canonical_states: *id026
+        canonical_states:
+        - stale
         orthogonal_signal_path: null
         reason: The build-manifest state is identical to one canonical runtime state.
       - manifest_state: error
         disposition: REFINED_CANONICAL_STATES
-        canonical_states: *id027
+        canonical_states:
+        - error
+        - offline
         orthogonal_signal_path: null
         reason: The build-manifest state is intentionally split so loading source, empty scope, failure recovery, or saved
           outcome is not collapsed.
@@ -40622,6 +40545,96 @@ screens:
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
   operation_field_contracts:
+  - operation_id: downloadPublicSearchRecords
+    source: specs/ui/screen-data-contracts.yaml
+    kind: QUERY
+    api: public-api
+    method: GET
+    path: /v1/search/download
+    request_schema: downloadPublicSearchRecordsQuery
+    request_field_set:
+    - name: format
+      type: enum:CSV,JSONL
+      required: true
+      in: query
+    - name: q
+      type: string
+      required: true
+      in: query
+    - name: types
+      type: array:string
+      required: false
+      in: query
+    - name: publicationState
+      type: array:string
+      required: false
+      in: query
+    - name: agencyId
+      type: uuid
+      required: false
+      in: query
+    - name: sidoCode
+      type: string
+      required: false
+      in: query
+    - name: sigunguCode
+      type: string
+      required: false
+      in: query
+    - name: dateFrom
+      type: date
+      required: false
+      in: query
+    - name: dateTo
+      type: date
+      required: false
+      in: query
+    - name: sort
+      type: enum:relevance,updated_desc,title_asc
+      required: false
+      in: query
+    server_only_request_field_set: []
+    response_schema: PublicSearchDownload
+    response_field_set:
+    - name: id
+      type: string
+      required: true
+    - name: status
+      type: enum:READY
+      required: true
+    - name: version
+      type: integer
+      required: true
+    - name: filename
+      type: string
+      required: true
+    - name: mediaType
+      type: string
+      required: true
+    - name: byteLength
+      type: integer
+      required: true
+    - name: contentSha256
+      type: sha256
+      required: true
+    - name: contentBase64
+      type: string
+      required: true
+    - name: format
+      type: enum:CSV,JSONL
+      required: true
+    - name: rowCount
+      type: integer(0..5000)
+      required: true
+    - name: appliedFilters
+      type: PublicRecordsSearchResultAppliedFilters
+      required: true
+    - name: generatedAt
+      type: date-time
+      required: true
+    server_only_response_field_set: []
+    browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
+    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: searchPublicRecords
     source: specs/ui/screen-data-contracts.yaml
     kind: QUERY
@@ -40692,10 +40705,10 @@ screens:
   - 'PUB-002.next_action: searchPublicRecords.$projection.query_next_action must be added to the closed BFF projection.'
   - 'PUB-002.query: searchPublicRecords.$projection.query_next_action must be implemented as Pub002QueryQueryNextActionProjectionV1.'
   - 'PUB-002.query: searchPublicRecords.$projection.query_object must be implemented as Pub002QueryQueryObjectProjectionV1.'
+  - 'PUB-002.results: searchPublicRecords.$projection.coverage_evidence must be implemented as Pub002ResultsCoverageEvidenceProjectionV1.'
+  - 'PUB-002.results: searchPublicRecords.$projection.coverage_unknown must be implemented as Pub002ResultsCoverageUnknownProjectionV1.'
   - 'PUB-002.results: searchPublicRecords.$projection.results_answer must be implemented as Pub002ResultsResultsAnswerProjectionV1.'
   - 'PUB-002.results: searchPublicRecords.$projection.results_state must be implemented as Pub002ResultsResultsStateProjectionV1.'
-  - 'PUB-002.coverage: searchPublicRecords.$projection.coverage_evidence must be implemented as Pub002CoverageCoverageEvidenceProjectionV1.'
-  - 'PUB-002.coverage: searchPublicRecords.$projection.coverage_unknown must be implemented as Pub002CoverageCoverageUnknownProjectionV1.'
   design_contract_status: DECISION_FINAL
   runtime_implementation_status: OPEN_IMPLEMENTATION
   dto_rendering_forbidden: true
@@ -40760,7 +40773,7 @@ screens:
     state:
       section_id: results
       test_id: pub_003__section__results
-      component: StatusAndRevisionHeader
+      component: DataCollection
       view_model_path: sections.results.state
       required_view_model_fields:
       - results_state
@@ -40770,17 +40783,17 @@ screens:
         view_model_field: results_state
       copy:
         heading: 결과
-        explanation: 관찰 사실·미확인·상태·freshness를 포함한다.
+        explanation: 관찰 사실·미확인·상태·자료 기준일을 포함한 사례 대장.
         sources:
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: StatusAndRevisionHeader
-      component_variant: public-case
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     answer:
       section_id: results
       test_id: pub_003__section__results
-      component: StatusAndRevisionHeader
+      component: DataCollection
       view_model_path: sections.results.answer
       required_view_model_fields:
       - results_answer
@@ -40791,13 +40804,13 @@ screens:
       copy:
         heading: 결과
         prompt: 어떤 사건이 공개되어 있는가?
-        explanation: 관찰 사실·미확인·상태·freshness를 포함한다.
+        explanation: 관찰 사실·미확인·상태·자료 기준일을 포함한 사례 대장.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: StatusAndRevisionHeader
-      component_variant: public-case
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
       section_id: scope
@@ -40812,7 +40825,7 @@ screens:
         view_model_field: scope_evidence
       copy:
         heading: 목록 범위
-        explanation: 공개된 revision만 포함함을 설명한다.
+        explanation: 공개 확정 개정본 한정 사례 범위.
         sources:
         - screen-catalog.sections.scope
       binding_status: OPEN_IMPLEMENTATION
@@ -40835,7 +40848,7 @@ screens:
         prompts:
         - 설명·정정·철회된 기록도 볼 수 있는가?
         - 내 필터를 공유할 수 있는가?
-        explanation: 공개된 revision만 포함함을 설명한다.
+        explanation: 공개 확정 개정본 한정 사례 범위.
         sources:
         - screen-catalog.user_questions[1:]
         - screen-catalog.sections.scope
@@ -40870,7 +40883,7 @@ screens:
   - section_id: scope
     order: 1
     title: 목록 범위
-    purpose: 공개된 revision만 포함함을 설명한다.
+    purpose: 공개 확정 개정본 한정 사례 범위.
     priority: primary
     test_id: pub_003__section__scope
     semantic_roles:
@@ -40988,7 +41001,7 @@ screens:
   - section_id: filters
     order: 2
     title: 필터
-    purpose: 상태·기관 유형·지역·방법론·기간·소명 상태.
+    purpose: 공개 상태·기관·업체·방법론·기간·소명·정정 조건.
     priority: primary
     test_id: pub_003__section__filters
     semantic_roles:
@@ -41044,16 +41057,16 @@ screens:
   - section_id: results
     order: 3
     title: 결과
-    purpose: 관찰 사실·미확인·상태·freshness를 포함한다.
+    purpose: 관찰 사실·미확인·상태·자료 기준일을 포함한 사례 대장.
     priority: primary
     test_id: pub_003__section__results
     semantic_roles:
     - answer
     - state
     component:
-      authority_component: StatusAndRevisionHeader
-      component: StatusAndRevisionHeader
-      variant: public-case
+      authority_component: DataCollection
+      component: DataCollection
+      variant: cards
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -41515,81 +41528,103 @@ screens:
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
   operation_field_contracts:
-  - operation_id: createSubscription
+  - operation_id: downloadPublicCases
     source: specs/ui/screen-data-contracts.yaml
-    kind: COMMAND
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
+    kind: QUERY
+    api: public-api
+    method: GET
+    path: /v1/cases/download
+    request_schema: downloadPublicCasesQuery
     request_field_set:
-    - name: email
-      type: email
+    - name: format
+      type: enum:CSV,JSONL
       required: true
-      in: body
-    - name: scopeType
-      type: enum:GLOBAL,QUERY,CASE,AGENCY,SUPPLIER,CORRECTIONS
-      required: true
-      in: body
-    - name: scopeRef
-      type: string
+      in: query
+    - name: publicationState
+      type: array:string
       required: false
-      in: body
-    - name: query
-      type: SubscriptionQuery
-      required: false
-      in: body
-    - name: frequency
-      type: enum:IMMEDIATE,DAILY,WEEKLY
-      required: true
-      in: body
-    - name: locale
-      type: string
-      required: true
-      in: body
-    - name: consent
-      type: boolean
-      required: true
-      in: body
-    server_only_request_field_set:
-    - name: abuseProof
-      type: AbuseProof
-      required: true
-      in: body
-    response_schema: createSubscriptionReceipt
-    response_field_set:
-    - name: operationId
-      type: string
-      required: true
-    - name: requestId
+      in: query
+    - name: agencyId
       type: uuid
+      required: false
+      in: query
+    - name: sidoCode
+      type: string
+      required: false
+      in: query
+    - name: sigunguCode
+      type: string
+      required: false
+      in: query
+    - name: supplierId
+      type: uuid
+      required: false
+      in: query
+    - name: ruleId
+      type: string
+      required: false
+      in: query
+    - name: publishedFrom
+      type: date
+      required: false
+      in: query
+    - name: publishedTo
+      type: date
+      required: false
+      in: query
+    - name: hasResponse
+      type: boolean
+      required: false
+      in: query
+    - name: hasCorrection
+      type: boolean
+      required: false
+      in: query
+    - name: sort
+      type: enum:updated_desc,published_desc,title_asc
+      required: false
+      in: query
+    server_only_request_field_set: []
+    response_schema: PublicCasesDownload
+    response_field_set:
+    - name: id
+      type: string
       required: true
     - name: status
-      type: enum:accepted,completed,rejected
+      type: enum:READY
       required: true
-    - name: aggregateId
-      type: uuid-or-string
-      required: false
-    - name: aggregateVersion
+    - name: version
       type: integer
-      required: false
-    - name: auditEventId
-      type: uuid
-      required: false
-    - name: acceptedAt
+      required: true
+    - name: filename
+      type: string
+      required: true
+    - name: mediaType
+      type: string
+      required: true
+    - name: byteLength
+      type: integer
+      required: true
+    - name: contentSha256
+      type: sha256
+      required: true
+    - name: contentBase64
+      type: string
+      required: true
+    - name: format
+      type: enum:CSV,JSONL
+      required: true
+    - name: rowCount
+      type: integer(0..5000)
+      required: true
+    - name: appliedFilters
+      type: PublicCasesAppliedFilters
+      required: true
+    - name: generatedAt
       type: date-time
       required: true
-    - name: links
-      type: array:Link
-      required: true
-    - name: verificationDispatched
-      type: boolean
-      required: true
-    server_only_response_field_set:
-    - name: pendingSession
-      type: SubmissionSessionDescriptor
-      required: true
-    browser_boundary: BFF_PROJECTED
+    server_only_response_field_set: []
+    browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: listPublicCases
     source: specs/ui/screen-data-contracts.yaml
@@ -41665,8 +41700,6 @@ screens:
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   integration_dependencies:
-  - createSubscription fields ['abuseProof', 'pendingSession'] are BFF/session-boundary only and must never enter the browser
-    view-model.
   - 'PUB-003.object: listPublicCases.$projection.scope_object must be added to the closed BFF projection.'
   - 'PUB-003.state: listPublicCases.$projection.results_state must be added to the closed BFF projection.'
   - 'PUB-003.answer: listPublicCases.$projection.results_answer must be added to the closed BFF projection.'
@@ -41775,7 +41808,7 @@ screens:
         view_model_field: freshness
       copy:
         heading: 상태·개정·최신성
-        explanation: 정정·철회와 최신성을 가장 먼저 표시한다.
+        explanation: 최신 공개 상태·정정·개정 기준.
         sources:
         - screen-catalog.sections.status
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -41896,7 +41929,7 @@ screens:
   - section_id: status
     order: 1
     title: 상태·개정·최신성
-    purpose: 정정·철회와 최신성을 가장 먼저 표시한다.
+    purpose: 최신 공개 상태·정정·개정 기준.
     priority: primary
     test_id: pub_004__section__status
     semantic_roles:
@@ -42318,9 +42351,13 @@ screens:
         item_type: PublicEvidence
         allowed_item_fields:
         - contentSha256
+        - documentTitle
         - evidenceType
         - id
+        - pageAnchor
         - publicExcerpt
+        - publishedAt
+        - publisher
         - restriction
         - sourceLocator
         - sourceUrl
@@ -42513,82 +42550,6 @@ screens:
     consequence_status: AUTHORED
     server_ack_required: false
   operation_field_contracts:
-  - operation_id: createSubscription
-    source: specs/ui/screen-data-contracts.yaml
-    kind: COMMAND
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    request_field_set:
-    - name: email
-      type: email
-      required: true
-      in: body
-    - name: scopeType
-      type: enum:GLOBAL,QUERY,CASE,AGENCY,SUPPLIER,CORRECTIONS
-      required: true
-      in: body
-    - name: scopeRef
-      type: string
-      required: false
-      in: body
-    - name: query
-      type: SubscriptionQuery
-      required: false
-      in: body
-    - name: frequency
-      type: enum:IMMEDIATE,DAILY,WEEKLY
-      required: true
-      in: body
-    - name: locale
-      type: string
-      required: true
-      in: body
-    - name: consent
-      type: boolean
-      required: true
-      in: body
-    server_only_request_field_set:
-    - name: abuseProof
-      type: AbuseProof
-      required: true
-      in: body
-    response_schema: createSubscriptionReceipt
-    response_field_set:
-    - name: operationId
-      type: string
-      required: true
-    - name: requestId
-      type: uuid
-      required: true
-    - name: status
-      type: enum:accepted,completed,rejected
-      required: true
-    - name: aggregateId
-      type: uuid-or-string
-      required: false
-    - name: aggregateVersion
-      type: integer
-      required: false
-    - name: auditEventId
-      type: uuid
-      required: false
-    - name: acceptedAt
-      type: date-time
-      required: true
-    - name: links
-      type: array:Link
-      required: true
-    - name: verificationDispatched
-      type: boolean
-      required: true
-    server_only_response_field_set:
-    - name: pendingSession
-      type: SubmissionSessionDescriptor
-      required: true
-    browser_boundary: BFF_PROJECTED
-    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: getCaseReproducibility
     source: specs/ui/screen-data-contracts.yaml
     kind: QUERY
@@ -42766,9 +42727,7 @@ screens:
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
-  integration_dependencies:
-  - createSubscription fields ['abuseProof', 'pendingSession'] are BFF/session-boundary only and must never enter the browser
-    view-model.
+  integration_dependencies: []
   design_contract_status: DECISION_FINAL
   runtime_implementation_status: OPEN_IMPLEMENTATION
   dto_rendering_forbidden: true
@@ -42870,7 +42829,7 @@ screens:
         view_model_field: superseded_by_revision
       copy:
         heading: 개정본 안내
-        explanation: 과거본 여부와 최신본 링크.
+        explanation: 지정 개정본의 기준 시점과 최신본 연결.
         sources:
         - screen-catalog.sections.revision-banner
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -42978,7 +42937,7 @@ screens:
   - section_id: revision-banner
     order: 1
     title: 개정본 안내
-    purpose: 과거본 여부와 최신본 링크.
+    purpose: 지정 개정본의 기준 시점과 최신본 연결.
     priority: primary
     test_id: pub_005__section__revision-banner
     semantic_roles:
@@ -43107,16 +43066,20 @@ screens:
       - path: fixed_content
         type: PublicCaseSnapshot
         allowed_fields:
+        - agencyName
+        - amount
         - case
         - claims
         - comparison
         - confirmedFacts
+        - contractName
         - corrections
         - counterEvidence
         - criticalUnknowns
         - evidence
         - freshness
         - limitations
+        - nonConclusion
         - partyResponses
         - signals
         - timeline
@@ -43488,7 +43451,7 @@ screens:
         view_model_field: result_digest
       copy:
         heading: 재현 요약
-        explanation: rule/version/result.
+        explanation: 적용 규칙·개정본·계산 결과 요약.
         sources:
         - screen-catalog.sections.summary
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -43600,7 +43563,7 @@ screens:
   - section_id: summary
     order: 1
     title: 재현 요약
-    purpose: rule/version/result.
+    purpose: 적용 규칙·개정본·계산 결과 요약.
     priority: primary
     test_id: pub_006__section__summary
     semantic_roles:
@@ -44247,12 +44210,10 @@ screens:
         additional_properties: false
         required:
         - search
-        - filters
         - results
         - coverage
         fields:
           search: Pub007SearchSectionVmV1
-          filters: Pub007FiltersSectionVmV1
           results: Pub007ResultsSectionVmV1
           coverage: Pub007CoverageSectionVmV1
       primary_action: Pub007ScreenVmPrimaryActionV1
@@ -44264,10 +44225,14 @@ screens:
       view_model_path: sections.search.object
       required_view_model_fields:
       - search_object
+      - agency_filters
       operation_bindings:
       - operation_id: listAgencies
         operation_field_path: $projection.search_object
         view_model_field: search_object
+      - operation_id: listAgencies
+        operation_field_path: appliedFilters
+        view_model_field: agency_filters
       copy:
         heading: 기관
         explanation: 공식 기관을 이름·지역·유형으로 찾는다.
@@ -44301,7 +44266,7 @@ screens:
     answer:
       section_id: results
       test_id: pub_007__section__results
-      component: CoverageStatement
+      component: DataCollection
       view_model_path: sections.results.answer
       required_view_model_fields:
       - results_answer
@@ -44312,13 +44277,13 @@ screens:
       copy:
         heading: 기관 목록
         prompt: 특정 기관 페이지가 있는가?
-        explanation: 기관 identity·관할·coverage.
+        explanation: 기관명·유형·관할·자료 범위를 포함한 기관 대장.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: CoverageStatement
-      component_variant: summary
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
       section_id: coverage
@@ -44390,7 +44355,7 @@ screens:
   - section_id: search
     order: 1
     title: 기관 검색
-    purpose: 공식 명칭과 과거 명칭.
+    purpose: 공식·과거 기관명과 기관 유형·관할 파셋.
     priority: primary
     test_id: pub_007__section__search
     semantic_roles:
@@ -44407,9 +44372,18 @@ screens:
       kind: object
       additional_properties: false
       required:
+      - agency_filters
       - search_next_action
       - search_object
       fields:
+      - name: agency_filters
+        type: AgenciesAppliedFilters
+        required: true
+        nullable: false
+        source:
+          operation_id: listAgencies
+          field_path: appliedFilters
+          status: CURRENT_CLOSED_OPERATION_FIELD
       - name: search_next_action
         type: Pub007SearchSearchNextActionProjectionV1
         required: true
@@ -44428,9 +44402,17 @@ screens:
           status: RUNTIME_PROJECTION_REQUIRED
     browser_projection_allowlist:
       top_level_fields:
+      - agency_filters
       - search_next_action
       - search_object
       nested_object_fields:
+      - path: agency_filters
+        type: AgenciesAppliedFilters
+        allowed_fields:
+        - agencyType
+        - jurisdiction
+        - q
+        additional_properties: false
       - path: search_next_action
         type: Pub007SearchSearchNextActionProjectionV1
         allowed_fields:
@@ -44474,60 +44456,18 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: filters
-    order: 2
-    title: 지역·유형
-    purpose: coverage-aware filter.
-    priority: primary
-    test_id: pub_007__section__filters
-    semantic_roles: []
-    component:
-      authority_component: UnifiedSearch
-      component: UnifiedSearch
-      variant: home
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Pub007FiltersSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - agency_filters
-      fields:
-      - name: agency_filters
-        type: AgenciesAppliedFilters
-        required: true
-        nullable: false
-        source:
-          operation_id: listAgencies
-          field_path: appliedFilters
-          status: CURRENT_CLOSED_OPERATION_FIELD
-    browser_projection_allowlist:
-      top_level_fields:
-      - agency_filters
-      nested_object_fields:
-      - path: agency_filters
-        type: AgenciesAppliedFilters
-        allowed_fields:
-        - agencyType
-        - jurisdiction
-        - q
-        additional_properties: false
-      array_item_fields: []
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: results
-    order: 3
+    order: 2
     title: 기관 목록
-    purpose: 기관 identity·관할·coverage.
+    purpose: 기관명·유형·관할·자료 범위를 포함한 기관 대장.
     priority: primary
     test_id: pub_007__section__results
     semantic_roles:
     - answer
     component:
-      authority_component: CoverageStatement
-      component: CoverageStatement
-      variant: summary
+      authority_component: DataCollection
+      component: DataCollection
+      variant: cards
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -44573,7 +44513,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: coverage
-    order: 4
+    order: 3
     title: 수집 범위
     purpose: 미포함 기관 설명.
     priority: primary
@@ -45281,7 +45221,7 @@ screens:
   - section_id: identity
     order: 1
     title: 기관 식별 정보
-    purpose: 공식명·유형·관할·변경 이력.
+    purpose: 기관 공식명·유형·관할·변경 이력.
     priority: primary
     test_id: pub_008__section__identity
     semantic_roles:
@@ -45720,82 +45660,6 @@ screens:
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
   operation_field_contracts:
-  - operation_id: createSubscription
-    source: specs/ui/screen-data-contracts.yaml
-    kind: COMMAND
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    request_field_set:
-    - name: email
-      type: email
-      required: true
-      in: body
-    - name: scopeType
-      type: enum:GLOBAL,QUERY,CASE,AGENCY,SUPPLIER,CORRECTIONS
-      required: true
-      in: body
-    - name: scopeRef
-      type: string
-      required: false
-      in: body
-    - name: query
-      type: SubscriptionQuery
-      required: false
-      in: body
-    - name: frequency
-      type: enum:IMMEDIATE,DAILY,WEEKLY
-      required: true
-      in: body
-    - name: locale
-      type: string
-      required: true
-      in: body
-    - name: consent
-      type: boolean
-      required: true
-      in: body
-    server_only_request_field_set:
-    - name: abuseProof
-      type: AbuseProof
-      required: true
-      in: body
-    response_schema: createSubscriptionReceipt
-    response_field_set:
-    - name: operationId
-      type: string
-      required: true
-    - name: requestId
-      type: uuid
-      required: true
-    - name: status
-      type: enum:accepted,completed,rejected
-      required: true
-    - name: aggregateId
-      type: uuid-or-string
-      required: false
-    - name: aggregateVersion
-      type: integer
-      required: false
-    - name: auditEventId
-      type: uuid
-      required: false
-    - name: acceptedAt
-      type: date-time
-      required: true
-    - name: links
-      type: array:Link
-      required: true
-    - name: verificationDispatched
-      type: boolean
-      required: true
-    server_only_response_field_set:
-    - name: pendingSession
-      type: SubmissionSessionDescriptor
-      required: true
-    browser_boundary: BFF_PROJECTED
-    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: getAgency
     source: specs/ui/screen-data-contracts.yaml
     kind: QUERY
@@ -45940,9 +45804,7 @@ screens:
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
-  integration_dependencies:
-  - createSubscription fields ['abuseProof', 'pendingSession'] are BFF/session-boundary only and must never enter the browser
-    view-model.
+  integration_dependencies: []
   design_contract_status: DECISION_FINAL
   runtime_implementation_status: OPEN_IMPLEMENTATION
   dto_rendering_forbidden: true
@@ -45973,12 +45835,10 @@ screens:
         additional_properties: false
         required:
         - search
-        - filters
         - results
         - identity-note
         fields:
           search: Pub009SearchSectionVmV1
-          filters: Pub009FiltersSectionVmV1
           results: Pub009ResultsSectionVmV1
           identity-note: Pub009IdentityNoteSectionVmV1
       primary_action: Pub009ScreenVmPrimaryActionV1
@@ -45990,10 +45850,14 @@ screens:
       view_model_path: sections.search.object
       required_view_model_fields:
       - search_object
+      - supplier_filters
       operation_bindings:
       - operation_id: listSuppliers
         operation_field_path: $projection.search_object
         view_model_field: search_object
+      - operation_id: listSuppliers
+        operation_field_path: appliedFilters
+        view_model_field: supplier_filters
       copy:
         heading: 업체
         explanation: 공공계약 업체를 공식 명칭과 구분 정보로 찾는다.
@@ -46027,7 +45891,7 @@ screens:
     answer:
       section_id: results
       test_id: pub_009__section__results
-      component: CoverageStatement
+      component: DataCollection
       view_model_path: sections.results.answer
       required_view_model_fields:
       - results_answer
@@ -46038,13 +45902,13 @@ screens:
       copy:
         heading: 업체 목록
         prompt: 동명이 업체를 어떻게 구분하는가?
-        explanation: 구분 정보와 coverage.
+        explanation: 업체명·영업 상태·식별 한계·자료 범위를 포함한 업체 대장.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: CoverageStatement
-      component_variant: summary
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
       section_id: identity-note
@@ -46116,7 +45980,7 @@ screens:
   - section_id: search
     order: 1
     title: 업체 검색
-    purpose: 공식·과거 명칭.
+    purpose: 공식·과거 업체명과 영업·식별 상태 파셋.
     priority: primary
     test_id: pub_009__section__search
     semantic_roles:
@@ -46135,6 +45999,7 @@ screens:
       required:
       - search_next_action
       - search_object
+      - supplier_filters
       fields:
       - name: search_next_action
         type: Pub009SearchSearchNextActionProjectionV1
@@ -46152,10 +46017,19 @@ screens:
           operation_id: listSuppliers
           field_path: $projection.search_object
           status: RUNTIME_PROJECTION_REQUIRED
+      - name: supplier_filters
+        type: SuppliersAppliedFilters
+        required: true
+        nullable: false
+        source:
+          operation_id: listSuppliers
+          field_path: appliedFilters
+          status: CURRENT_CLOSED_OPERATION_FIELD
     browser_projection_allowlist:
       top_level_fields:
       - search_next_action
       - search_object
+      - supplier_filters
       nested_object_fields:
       - path: search_next_action
         type: Pub009SearchSearchNextActionProjectionV1
@@ -46174,6 +46048,13 @@ screens:
         - facts
         - as_of
         - provenance
+        additional_properties: false
+      - path: supplier_filters
+        type: SuppliersAppliedFilters
+        allowed_fields:
+        - businessStatus
+        - identityStatus
+        - q
         additional_properties: false
       array_item_fields:
       - path: search_next_action.facts[]
@@ -46200,60 +46081,18 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: filters
-    order: 2
-    title: 지역·업종
-    purpose: 공개 가능한 범위.
-    priority: primary
-    test_id: pub_009__section__filters
-    semantic_roles: []
-    component:
-      authority_component: UnifiedSearch
-      component: UnifiedSearch
-      variant: home
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Pub009FiltersSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - supplier_filters
-      fields:
-      - name: supplier_filters
-        type: SuppliersAppliedFilters
-        required: true
-        nullable: false
-        source:
-          operation_id: listSuppliers
-          field_path: appliedFilters
-          status: CURRENT_CLOSED_OPERATION_FIELD
-    browser_projection_allowlist:
-      top_level_fields:
-      - supplier_filters
-      nested_object_fields:
-      - path: supplier_filters
-        type: SuppliersAppliedFilters
-        allowed_fields:
-        - businessStatus
-        - identityStatus
-        - q
-        additional_properties: false
-      array_item_fields: []
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: results
-    order: 3
+    order: 2
     title: 업체 목록
-    purpose: 구분 정보와 coverage.
+    purpose: 업체명·영업 상태·식별 한계·자료 범위를 포함한 업체 대장.
     priority: primary
     test_id: pub_009__section__results
     semantic_roles:
     - answer
     component:
-      authority_component: CoverageStatement
-      component: CoverageStatement
-      variant: summary
+      authority_component: DataCollection
+      component: DataCollection
+      variant: cards
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -46299,7 +46138,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: identity-note
-    order: 4
+    order: 3
     title: 식별 한계
     purpose: 미확정 merge를 설명.
     priority: primary
@@ -47007,7 +46846,7 @@ screens:
   - section_id: identity
     order: 1
     title: 업체 식별 정보
-    purpose: 공식명·식별·변경 이력·확인 한계.
+    purpose: 업체 공식명·식별 정보·변경 이력·확인 한계.
     priority: primary
     test_id: pub_010__section__identity
     semantic_roles:
@@ -47447,82 +47286,6 @@ screens:
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
   operation_field_contracts:
-  - operation_id: createSubscription
-    source: specs/ui/screen-data-contracts.yaml
-    kind: COMMAND
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    request_field_set:
-    - name: email
-      type: email
-      required: true
-      in: body
-    - name: scopeType
-      type: enum:GLOBAL,QUERY,CASE,AGENCY,SUPPLIER,CORRECTIONS
-      required: true
-      in: body
-    - name: scopeRef
-      type: string
-      required: false
-      in: body
-    - name: query
-      type: SubscriptionQuery
-      required: false
-      in: body
-    - name: frequency
-      type: enum:IMMEDIATE,DAILY,WEEKLY
-      required: true
-      in: body
-    - name: locale
-      type: string
-      required: true
-      in: body
-    - name: consent
-      type: boolean
-      required: true
-      in: body
-    server_only_request_field_set:
-    - name: abuseProof
-      type: AbuseProof
-      required: true
-      in: body
-    response_schema: createSubscriptionReceipt
-    response_field_set:
-    - name: operationId
-      type: string
-      required: true
-    - name: requestId
-      type: uuid
-      required: true
-    - name: status
-      type: enum:accepted,completed,rejected
-      required: true
-    - name: aggregateId
-      type: uuid-or-string
-      required: false
-    - name: aggregateVersion
-      type: integer
-      required: false
-    - name: auditEventId
-      type: uuid
-      required: false
-    - name: acceptedAt
-      type: date-time
-      required: true
-    - name: links
-      type: array:Link
-      required: true
-    - name: verificationDispatched
-      type: boolean
-      required: true
-    server_only_response_field_set:
-    - name: pendingSession
-      type: SubmissionSessionDescriptor
-      required: true
-    browser_boundary: BFF_PROJECTED
-    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: getSupplier
     source: specs/ui/screen-data-contracts.yaml
     kind: QUERY
@@ -47664,9 +47427,7 @@ screens:
     server_only_response_field_set: []
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
-  integration_dependencies:
-  - createSubscription fields ['abuseProof', 'pendingSession'] are BFF/session-boundary only and must never enter the browser
-    view-model.
+  integration_dependencies: []
   design_contract_status: DECISION_FINAL
   runtime_implementation_status: OPEN_IMPLEMENTATION
   dto_rendering_forbidden: true
@@ -47741,7 +47502,7 @@ screens:
         view_model_field: results_state
       copy:
         heading: 계약 결과
-        explanation: 금액·기간·source·related case.
+        explanation: 계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.
         sources:
         - screen-catalog.sections.results
       binding_status: OPEN_IMPLEMENTATION
@@ -47762,7 +47523,7 @@ screens:
       copy:
         heading: 계약 결과
         prompt: 특정 계약이 수집됐는가?
-        explanation: 금액·기간·source·related case.
+        explanation: 계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.results
@@ -47783,7 +47544,7 @@ screens:
         view_model_field: scope_evidence
       copy:
         heading: 계약 관측 범위
-        explanation: 사건 여부와 무관한 관측 범위.
+        explanation: 사건 공개 여부와 무관한 계약 관측 범위.
         sources:
         - screen-catalog.sections.scope
       binding_status: OPEN_IMPLEMENTATION
@@ -47841,7 +47602,7 @@ screens:
   - section_id: scope
     order: 1
     title: 계약 관측 범위
-    purpose: 사건 여부와 무관한 관측 범위.
+    purpose: 사건 공개 여부와 무관한 계약 관측 범위.
     priority: primary
     test_id: pub_011__section__scope
     semantic_roles:
@@ -47984,7 +47745,7 @@ screens:
   - section_id: results
     order: 3
     title: 계약 결과
-    purpose: 금액·기간·source·related case.
+    purpose: 계약번호·제목·상태·금액·기관·업체를 포함한 계약 대장.
     priority: primary
     test_id: pub_011__section__results
     semantic_roles:
@@ -48619,7 +48380,6 @@ screens:
         - identity
         - terms
         - changes
-        - procurement
         - provenance
         - related
         - limitations
@@ -48627,7 +48387,6 @@ screens:
           identity: Pub012IdentitySectionVmV1
           terms: Pub012TermsSectionVmV1
           changes: Pub012ChangesSectionVmV1
-          procurement: Pub012ProcurementSectionVmV1
           provenance: Pub012ProvenanceSectionVmV1
           related: Pub012RelatedSectionVmV1
           limitations: Pub012LimitationsSectionVmV1
@@ -48691,6 +48450,7 @@ screens:
       - title
       - current_amount
       - line_items
+      - procurement_method
       operation_bindings:
       - operation_id: getContract
         operation_field_path: title
@@ -48701,6 +48461,9 @@ screens:
       - operation_id: getContract
         operation_field_path: lineItems
         view_model_field: line_items
+      - operation_id: getContract
+        operation_field_path: contractMethod
+        view_model_field: procurement_method
       copy:
         heading: 계약 조건
         prompt: 원본 계약에는 무엇이 기재됐는가?
@@ -48724,8 +48487,8 @@ screens:
         operation_field_path: sourceDocuments
         view_model_field: source_documents
       copy:
-        heading: 필드 출처 이력
-        explanation: raw locator·parser version.
+        heading: 원문 출처
+        explanation: 공개 원문 링크와 수집 기준.
         sources:
         - screen-catalog.sections.provenance
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -48768,7 +48531,7 @@ screens:
         operation_field_path: relatedCases
         view_model_field: related_cases
       copy:
-        heading: 필드 출처 이력
+        heading: 원문 출처
         action_label: 원문 보기
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
@@ -48783,7 +48546,7 @@ screens:
   - section_id: identity
     order: 1
     title: 계약 식별 정보
-    purpose: source ID·기관·업체·상태.
+    purpose: 계약 원문 식별자·기관·업체·현재 상태.
     priority: primary
     test_id: pub_012__section__identity
     semantic_roles:
@@ -48864,6 +48627,14 @@ screens:
           operation_id: getContract
           field_path: lineItems
           status: CURRENT_CLOSED_OPERATION_FIELD
+      - name: procurement_method
+        type: string
+        required: false
+        nullable: true
+        source:
+          operation_id: getContract
+          field_path: contractMethod
+          status: CURRENT_CLOSED_OPERATION_FIELD
       - name: title
         type: string
         required: true
@@ -48876,6 +48647,7 @@ screens:
       top_level_fields:
       - current_amount
       - line_items
+      - procurement_method
       - title
       nested_object_fields:
       - path: current_amount
@@ -48966,88 +48738,10 @@ screens:
         additional_properties: false
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
-  - section_id: procurement
-    order: 4
-    title: 입찰·낙찰 연결
-    purpose: 가능한 source 연결.
-    priority: primary
-    test_id: pub_012__section__procurement
-    semantic_roles: []
-    component:
-      authority_component: StructuredContentSection
-      component: StructuredContentSection
-      variant: default
-      resolution_source: AUTHORITY_COMPONENT
-      reason: The authority component supports this screen surface and section purpose.
-    typed_slice:
-      name: Pub012ProcurementSectionVmV1
-      kind: object
-      additional_properties: false
-      required:
-      - procurement_changes
-      - procurement_sources
-      fields:
-      - name: procurement_changes
-        type: array:ContractChange
-        required: true
-        nullable: false
-        source:
-          operation_id: getContract
-          field_path: changes
-          status: CURRENT_CLOSED_OPERATION_FIELD
-      - name: procurement_method
-        type: string
-        required: false
-        nullable: true
-        source:
-          operation_id: getContract
-          field_path: contractMethod
-          status: CURRENT_CLOSED_OPERATION_FIELD
-      - name: procurement_sources
-        type: array:SourceDocumentRef
-        required: true
-        nullable: false
-        source:
-          operation_id: getContract
-          field_path: sourceDocuments
-          status: CURRENT_CLOSED_OPERATION_FIELD
-    browser_projection_allowlist:
-      top_level_fields:
-      - procurement_changes
-      - procurement_method
-      - procurement_sources
-      nested_object_fields: []
-      array_item_fields:
-      - path: procurement_changes[]
-        item_type: ContractChange
-        allowed_item_fields:
-        - changedAt
-        - id
-        - newAmount
-        - newEndAt
-        - previousAmount
-        - previousEndAt
-        - reason
-        - sequence
-        - sourceDocumentId
-        additional_properties: false
-      - path: procurement_sources[]
-        item_type: SourceDocumentRef
-        allowed_item_fields:
-        - canonicalUrl
-        - contentSha256
-        - externalId
-        - id
-        - locator
-        - retrievedAt
-        - sourceId
-        additional_properties: false
-      deny_unlisted_at_every_depth: true
-      unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: provenance
-    order: 5
-    title: 필드 출처 이력
-    purpose: raw locator·parser version.
+    order: 4
+    title: 원문 출처
+    purpose: 공개 원문 링크와 수집 기준.
     priority: primary
     test_id: pub_012__section__provenance
     semantic_roles:
@@ -49116,18 +48810,18 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: related
-    order: 6
+    order: 5
     title: 관련 공개 사건
-    purpose: 내부 signal count는 숨김.
+    purpose: 공개된 관련 사건과 현재 공개 상태.
     priority: primary
     test_id: pub_012__section__related
     semantic_roles: []
     component:
-      authority_component: SignalTriagePanel
+      authority_component: DataCollection
       component: DataCollection
       variant: cards
-      resolution_source: SURFACE_COMPATIBILITY_OVERRIDE
-      reason: 공개 사건 링크는 내부 triage control 없이 공개 카드 모음으로 표시한다.
+      resolution_source: AUTHORITY_COMPONENT
+      reason: The authority component supports this screen surface and section purpose.
     typed_slice:
       name: Pub012RelatedSectionVmV1
       kind: object
@@ -49164,7 +48858,7 @@ screens:
       deny_unlisted_at_every_depth: true
       unknown_field_behavior: FAIL_CLOSED_BEFORE_SSR
   - section_id: limitations
-    order: 7
+    order: 6
     title: 데이터 한계
     purpose: 누락·bundle·unit.
     priority: primary
@@ -49572,7 +49266,7 @@ screens:
   - section_id: overview
     order: 1
     title: 방법론 개요
-    purpose: 발견과 판정 분리.
+    purpose: 탐지·조사·공개 절차와 판정 한계.
     priority: primary
     test_id: pub_013__section__overview
     semantic_roles:
@@ -50403,7 +50097,7 @@ screens:
   - section_id: purpose
     order: 1
     title: 목적
-    purpose: 찾는 패턴과 비목표.
+    purpose: 탐지 대상 유형과 비대상 범위.
     priority: primary
     test_id: pub_014__section__purpose
     semantic_roles:
@@ -51130,7 +50824,7 @@ screens:
       copy:
         heading: 수집 범위 요약
         prompt: 어떤 데이터를 언제부터 포함하는가?
-        explanation: 전체 범위와 current status.
+        explanation: 수집 대상·제외 범위·기준일별 최신 상태.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.summary
@@ -51209,7 +50903,7 @@ screens:
   - section_id: summary
     order: 1
     title: 수집 범위 요약
-    purpose: 전체 범위와 current status.
+    purpose: 수집 대상·제외 범위·기준일별 최신 상태.
     priority: primary
     test_id: pub_015__section__summary
     semantic_roles:
@@ -51768,7 +51462,7 @@ screens:
         view_model_field: status_state
       copy:
         heading: 출처 상태 요약
-        explanation: healthy/stale/incident.
+        explanation: 공식 데이터 출처별 정상·지연·장애 상태.
         sources:
         - screen-catalog.sections.status
       binding_status: OPEN_IMPLEMENTATION
@@ -51867,7 +51561,7 @@ screens:
   - section_id: status
     order: 1
     title: 출처 상태 요약
-    purpose: healthy/stale/incident.
+    purpose: 공식 데이터 출처별 정상·지연·장애 상태.
     priority: primary
     test_id: pub_016__section__status
     semantic_roles:
@@ -52733,7 +52427,7 @@ screens:
   - section_id: identity
     order: 1
     title: 출처 설명
-    purpose: owner·접근 방식.
+    purpose: 출처 운영 기관·공식 접근 경로.
     priority: primary
     test_id: pub_017__section__identity
     semantic_roles:
@@ -53301,7 +52995,7 @@ screens:
     state:
       section_id: records
       test_id: pub_018__section__records
-      component: RevisionAndCorrectionPanel
+      component: DataCollection
       view_model_path: sections.records.state
       required_view_model_fields:
       - records_state
@@ -53311,17 +53005,17 @@ screens:
         view_model_field: records_state
       copy:
         heading: 정정 목록
-        explanation: 대상·before/after·reason·date.
+        explanation: 대상·변경 요약·이유·공개일을 포함한 정정 대장.
         sources:
         - screen-catalog.sections.records
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: RevisionAndCorrectionPanel
-      component_variant: revision-list
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     answer:
       section_id: records
       test_id: pub_018__section__records
-      component: RevisionAndCorrectionPanel
+      component: DataCollection
       view_model_path: sections.records.answer
       required_view_model_fields:
       - records_answer
@@ -53332,13 +53026,13 @@ screens:
       copy:
         heading: 정정 목록
         prompt: 최근 무엇이 바뀌었는가?
-        explanation: 대상·before/after·reason·date.
+        explanation: 대상·변경 요약·이유·공개일을 포함한 정정 대장.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.records
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: RevisionAndCorrectionPanel
-      component_variant: revision-list
+      authority_component: DataCollection
+      component_variant: cards
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
       section_id: feed
@@ -53375,7 +53069,7 @@ screens:
         heading: 정정 정책
         prompts:
         - 왜 바뀌었고 어떤 페이지에 영향을 줬는가?
-        explanation: 오류를 숨기지 않는 원칙.
+        explanation: 공개 기록의 정정·철회·변경 공개 원칙.
         sources:
         - screen-catalog.user_questions[1:]
         - screen-catalog.sections.principle
@@ -53410,7 +53104,7 @@ screens:
   - section_id: principle
     order: 1
     title: 정정 정책
-    purpose: 오류를 숨기지 않는 원칙.
+    purpose: 공개 기록의 정정·철회·변경 공개 원칙.
     priority: primary
     test_id: pub_018__section__principle
     semantic_roles:
@@ -53553,16 +53247,16 @@ screens:
   - section_id: records
     order: 3
     title: 정정 목록
-    purpose: 대상·before/after·reason·date.
+    purpose: 대상·변경 요약·이유·공개일을 포함한 정정 대장.
     priority: primary
     test_id: pub_018__section__records
     semantic_roles:
     - answer
     - state
     component:
-      authority_component: RevisionAndCorrectionPanel
-      component: RevisionAndCorrectionPanel
-      variant: revision-list
+      authority_component: DataCollection
+      component: DataCollection
+      variant: cards
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -54026,82 +53720,6 @@ screens:
     consequence_status: OPEN_IMPLEMENTATION
     server_ack_required: false
   operation_field_contracts:
-  - operation_id: createSubscription
-    source: specs/ui/screen-data-contracts.yaml
-    kind: COMMAND
-    api: submission-api
-    method: POST
-    path: /v1/subscription-session
-    request_schema: createSubscriptionRequest
-    request_field_set:
-    - name: email
-      type: email
-      required: true
-      in: body
-    - name: scopeType
-      type: enum:GLOBAL,QUERY,CASE,AGENCY,SUPPLIER,CORRECTIONS
-      required: true
-      in: body
-    - name: scopeRef
-      type: string
-      required: false
-      in: body
-    - name: query
-      type: SubscriptionQuery
-      required: false
-      in: body
-    - name: frequency
-      type: enum:IMMEDIATE,DAILY,WEEKLY
-      required: true
-      in: body
-    - name: locale
-      type: string
-      required: true
-      in: body
-    - name: consent
-      type: boolean
-      required: true
-      in: body
-    server_only_request_field_set:
-    - name: abuseProof
-      type: AbuseProof
-      required: true
-      in: body
-    response_schema: createSubscriptionReceipt
-    response_field_set:
-    - name: operationId
-      type: string
-      required: true
-    - name: requestId
-      type: uuid
-      required: true
-    - name: status
-      type: enum:accepted,completed,rejected
-      required: true
-    - name: aggregateId
-      type: uuid-or-string
-      required: false
-    - name: aggregateVersion
-      type: integer
-      required: false
-    - name: auditEventId
-      type: uuid
-      required: false
-    - name: acceptedAt
-      type: date-time
-      required: true
-    - name: links
-      type: array:Link
-      required: true
-    - name: verificationDispatched
-      type: boolean
-      required: true
-    server_only_response_field_set:
-    - name: pendingSession
-      type: SubmissionSessionDescriptor
-      required: true
-    browser_boundary: BFF_PROJECTED
-    rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   - operation_id: listCorrections
     source: specs/ui/screen-data-contracts.yaml
     kind: QUERY
@@ -54156,8 +53774,6 @@ screens:
     browser_boundary: BROWSER_SAFE_PROJECTION_REQUIRED
     rendering_rule: DTO 전체 렌더링 금지; 이 화면의 명시적 view-model mapper만 필요한 필드를 복사한다.
   integration_dependencies:
-  - createSubscription fields ['abuseProof', 'pendingSession'] are BFF/session-boundary only and must never enter the browser
-    view-model.
   - 'PUB-018.object: listCorrections.$projection.principle_object must be added to the closed BFF projection.'
   - 'PUB-018.state: listCorrections.$projection.records_state must be added to the closed BFF projection.'
   - 'PUB-018.answer: listCorrections.$projection.records_answer must be added to the closed BFF projection.'
@@ -54256,7 +53872,7 @@ screens:
         view_model_field: correction_version
       copy:
         heading: 정정 유형·시각
-        explanation: correction/retraction과 effective time.
+        explanation: 정정·철회 유형과 적용 시각.
         sources:
         - screen-catalog.sections.status
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -54360,7 +53976,7 @@ screens:
   - section_id: status
     order: 1
     title: 정정 유형·시각
-    purpose: correction/retraction과 effective time.
+    purpose: 정정·철회 유형과 적용 시각.
     priority: primary
     test_id: pub_019__section__status
     semantic_roles:
@@ -54885,7 +54501,7 @@ screens:
     object:
       section_id: datasets
       test_id: pub_020__section__datasets
-      component: RevisionAndCorrectionPanel
+      component: GuidedFormSection
       view_model_path: sections.datasets.object
       required_view_model_fields:
       - datasets_object
@@ -54900,8 +54516,8 @@ screens:
         - screen-catalog.title
         - screen-catalog.primary_job
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: RevisionAndCorrectionPanel
-      component_variant: revision-list
+      authority_component: GuidedFormSection
+      component_variant: response
       component_resolution_source: AUTHORITY_COMPONENT
     state:
       section_id: snapshots
@@ -54926,7 +54542,7 @@ screens:
     answer:
       section_id: datasets
       test_id: pub_020__section__datasets
-      component: RevisionAndCorrectionPanel
+      component: GuidedFormSection
       view_model_path: sections.datasets.answer
       required_view_model_fields:
       - datasets_answer
@@ -54937,13 +54553,13 @@ screens:
       copy:
         heading: 데이터셋
         prompt: 어떤 데이터를 내려받을 수 있는가?
-        explanation: cases/contracts/corrections/methods.
+        explanation: 공개 데이터셋과 이용 가능한 형식.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.datasets
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: RevisionAndCorrectionPanel
-      component_variant: revision-list
+      authority_component: GuidedFormSection
+      component_variant: response
       component_resolution_source: AUTHORITY_COMPONENT
     evidence:
       section_id: license
@@ -54992,7 +54608,7 @@ screens:
     next_action:
       section_id: datasets
       test_id: pub_020__section__datasets
-      component: RevisionAndCorrectionPanel
+      component: GuidedFormSection
       view_model_path: sections.datasets.next_action
       required_view_model_fields:
       - datasets_next_action
@@ -55002,21 +54618,21 @@ screens:
         view_model_field: datasets_next_action
       copy:
         heading: 데이터셋
-        action_label: 데이터 다운로드
+        action_label: 데이터 내려받기
         consequence: null
         consequence_status: OPEN_IMPLEMENTATION
         sources:
         - screen-catalog.actions.download-dataset.label
         - screen-catalog.sections.datasets
       binding_status: OPEN_IMPLEMENTATION
-      authority_component: RevisionAndCorrectionPanel
-      component_variant: revision-list
+      authority_component: GuidedFormSection
+      component_variant: response
       component_resolution_source: AUTHORITY_COMPONENT
   sections:
   - section_id: datasets
     order: 1
     title: 데이터셋
-    purpose: cases/contracts/corrections/methods.
+    purpose: 공개 데이터셋과 이용 가능한 형식.
     priority: primary
     test_id: pub_020__section__datasets
     semantic_roles:
@@ -55024,9 +54640,9 @@ screens:
     - next_action
     - object
     component:
-      authority_component: RevisionAndCorrectionPanel
-      component: RevisionAndCorrectionPanel
-      variant: revision-list
+      authority_component: GuidedFormSection
+      component: GuidedFormSection
+      variant: response
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -55826,10 +55442,10 @@ screens:
   - snapshot-superseded
   primary_action:
     action_id: download-dataset
-    label: 데이터 다운로드
+    label: 데이터 내려받기
     consequence: null
     consequence_status: OPEN_IMPLEMENTATION
-    server_ack_required: false
+    server_ack_required: true
   operation_field_contracts:
   - operation_id: createDatasetExport
     source: specs/ui/screen-data-contracts.yaml
@@ -56148,7 +55764,7 @@ screens:
   - section_id: getting-started
     order: 1
     title: 시작
-    purpose: base URL·auth/rate.
+    purpose: 공개 자료 조회 주소·접근 조건·호출 한도.
     priority: primary
     test_id: pub_021__section__getting-started
     semantic_roles:
@@ -56742,7 +56358,7 @@ screens:
       copy:
         heading: 운영 목적
         prompt: 누가 왜 운영하는가?
-        explanation: 제품 정의.
+        explanation: 구린네의 운영 목적과 공개 범위.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.mission
@@ -56821,7 +56437,7 @@ screens:
   - section_id: mission
     order: 1
     title: 운영 목적
-    purpose: 제품 정의.
+    purpose: 구린네의 운영 목적과 공개 범위.
     priority: primary
     test_id: pub_022__section__mission
     semantic_roles:
@@ -57452,7 +57068,7 @@ screens:
   - section_id: principles
     order: 1
     title: 독립성 원칙
-    purpose: 돈과 편집의 방화벽.
+    purpose: 후원·수익과 편집 독립성의 분리 원칙.
     priority: primary
     test_id: pub_023__section__principles
     semantic_roles:
@@ -58236,7 +57852,7 @@ screens:
   - section_id: structure
     order: 1
     title: 운영 구조
-    purpose: 책임과 위원회.
+    purpose: 운영 책임·의사결정·외부 감독 구조.
     priority: primary
     test_id: pub_024__section__structure
     semantic_roles:
@@ -58819,7 +58435,7 @@ screens:
   - section_id: states
     order: 1
     title: 상태
-    purpose: public lifecycle.
+    purpose: 탐지·검토·공개·정정·철회 상태 기준.
     priority: primary
     test_id: pub_025__section__states
     semantic_roles:
@@ -59492,7 +59108,7 @@ screens:
       copy:
         heading: 문의 유형
         prompt: 정정·소명·보안·일반 문의 중 어디로 가야 하는가?
-        explanation: 정정/소명/보안/언론/일반.
+        explanation: 정정·소명·보안·언론·일반 문의 경로.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.routing
@@ -59535,7 +59151,7 @@ screens:
         heading: 문의 유형
         prompts:
         - 민감자료를 어떻게 보내야 하는가?
-        explanation: 정정/소명/보안/언론/일반.
+        explanation: 정정·소명·보안·언론·일반 문의 경로.
         sources:
         - screen-catalog.user_questions[1:]
         - screen-catalog.sections.routing
@@ -59570,7 +59186,7 @@ screens:
   - section_id: routing
     order: 1
     title: 문의 유형
-    purpose: 정정/소명/보안/언론/일반.
+    purpose: 정정·소명·보안·언론·일반 문의 경로.
     priority: primary
     test_id: pub_026__section__routing
     semantic_roles:
@@ -60162,7 +59778,7 @@ screens:
   - section_id: intro
     order: 1
     title: 절차·긴급 안내
-    purpose: 일반/긴급 경로.
+    purpose: 정정 요청 절차와 긴급 사안 경로.
     priority: primary
     test_id: pub_027__section__intro
     semantic_roles:
@@ -60253,9 +59869,9 @@ screens:
     test_id: pub_027__section__issue
     semantic_roles: []
     component:
-      authority_component: StructuredContentSection
-      component: StructuredContentSection
-      variant: default
+      authority_component: GuidedFormSection
+      component: GuidedFormSection
+      variant: response
       resolution_source: AUTHORITY_COMPONENT
       reason: The authority component supports this screen surface and section purpose.
     typed_slice:
@@ -60958,7 +60574,7 @@ screens:
         view_model_field: receipt_version
       copy:
         heading: 접수 결과
-        explanation: ID·시각·상태.
+        explanation: 접수 번호·시각·처리 상태.
         sources:
         - screen-catalog.sections.receipt
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -61004,7 +60620,7 @@ screens:
         view_model_field: receipt_records
       copy:
         heading: 접수 결과
-        explanation: ID·시각·상태.
+        explanation: 접수 번호·시각·처리 상태.
         sources:
         - screen-catalog.sections.receipt
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
@@ -61062,7 +60678,7 @@ screens:
   - section_id: receipt
     order: 1
     title: 접수 결과
-    purpose: ID·시각·상태.
+    purpose: 접수 번호·시각·처리 상태.
     priority: primary
     test_id: pub_028__section__receipt
     semantic_roles:
@@ -61538,7 +61154,7 @@ screens:
       copy:
         heading: 구독 대상
         prompt: 무엇을 구독하는가?
-        explanation: case/agency/supplier/corrections.
+        explanation: 사건·기관·업체·정정별 구독 범위.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.topic
@@ -61610,14 +61226,14 @@ screens:
         - screen-catalog.actions.request-verification.label
         - screen-catalog.sections.email
       binding_status: CURRENT_OPERATION_FIELDS_BOUND
-      authority_component: AgentSuggestionPanel
-      component_variant: subscription
-      component_resolution_source: SURFACE_COMPATIBILITY_OVERRIDE
+      authority_component: CheckAnswers
+      component_variant: response
+      component_resolution_source: AUTHORITY_COMPONENT
   sections:
   - section_id: topic
     order: 1
     title: 구독 대상
-    purpose: case/agency/supplier/corrections.
+    purpose: 사건·기관·업체·정정별 구독 범위.
     priority: primary
     test_id: pub_029__section__topic
     semantic_roles:
@@ -61801,17 +61417,17 @@ screens:
   - section_id: email
     order: 4
     title: 이메일
-    purpose: verification.
+    purpose: 이메일 확인과 구독 신청.
     priority: primary
     test_id: pub_029__section__email
     semantic_roles:
     - next_action
     component:
-      authority_component: AgentSuggestionPanel
+      authority_component: CheckAnswers
       component: CheckAnswers
-      variant: subscription
-      resolution_source: SURFACE_COMPATIBILITY_OVERRIDE
-      reason: 구독 이메일과 verification 선택을 공개 구독 입력으로 확인한다.
+      variant: response
+      resolution_source: AUTHORITY_COMPONENT
+      reason: The authority component supports this screen surface and section purpose.
     typed_slice:
       name: Pub029EmailSectionVmV1
       kind: object
@@ -62365,7 +61981,7 @@ screens:
   - section_id: identity
     order: 1
     title: 구독 확인
-    purpose: 마스킹 이메일.
+    purpose: 가림 처리된 이메일과 구독 대상 확인.
     priority: primary
     test_id: pub_030__section__identity
     semantic_roles:
@@ -63322,7 +62938,7 @@ screens:
   - section_id: controller
     order: 1
     title: 처리자
-    purpose: 법인·연락처.
+    purpose: 개인정보 처리 주체와 연락처.
     priority: primary
     test_id: pub_031__section__controller
     semantic_roles:
@@ -64308,7 +63924,7 @@ screens:
   - section_id: service
     order: 1
     title: 서비스 조건
-    purpose: availability.
+    purpose: 서비스 제공 범위와 이용 조건.
     priority: primary
     test_id: pub_032__section__service
     semantic_roles:
@@ -64883,7 +64499,7 @@ screens:
       copy:
         heading: 접근성 약속
         prompt: 어떤 기준을 따르는가?
-        explanation: WCAG/KWCAG.
+        explanation: 적용 접근성 기준과 지원 약속.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.commitment
@@ -64962,7 +64578,7 @@ screens:
   - section_id: commitment
     order: 1
     title: 접근성 약속
-    purpose: WCAG/KWCAG.
+    purpose: 적용 접근성 기준과 지원 약속.
     priority: primary
     test_id: pub_033__section__commitment
     semantic_roles:
@@ -65427,7 +65043,7 @@ screens:
       copy:
         heading: 상황
         prompt: 무슨 일이 발생했는가?
-        explanation: 구체적이되 민감정보 없음.
+        explanation: 민감정보를 제외한 오류·점검·장애 현황.
         sources:
         - screen-catalog.user_questions[0]
         - screen-catalog.sections.message
@@ -65506,7 +65122,7 @@ screens:
   - section_id: message
     order: 1
     title: 상황
-    purpose: 구체적이되 민감정보 없음.
+    purpose: 민감정보를 제외한 오류·점검·장애 현황.
     priority: primary
     test_id: pub_034__section__message
     semantic_roles:
@@ -70528,7 +70144,7 @@ screens:
         prompts:
         - 질문별로 무엇을 작성해야 하는가?
         - 공개 가능한 부분을 구분할 수 있는가?
-        explanation: FULL/REDACTED/SUMMARY/NO_CONSENT.
+        explanation: 전체 공개·가림 공개·요약 공개·공개 비동의.
         sources:
         - screen-catalog.user_questions[1:]
         - screen-catalog.sections.consent
@@ -70720,7 +70336,7 @@ screens:
   - section_id: consent
     order: 4
     title: 공개 동의
-    purpose: FULL/REDACTED/SUMMARY/NO_CONSENT.
+    purpose: 전체 공개·가림 공개·요약 공개·공개 비동의.
     priority: primary
     test_id: rsp_003__section__consent
     semantic_roles:

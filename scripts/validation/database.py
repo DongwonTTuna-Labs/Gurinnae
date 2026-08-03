@@ -163,7 +163,7 @@ def validate(root: Path, result: Validation) -> None:
     result.require(re.search(r'(?<!NO)\bBYPASSRLS\b', combined, re.I) is None, 'runtime role must not receive BYPASSRLS')
 
     result.require(privilege['status'] == 'FINAL', 'privilege matrix must be FINAL')
-    result.require(matrix['operation_count'] == 215 and len(matrix['operations']) == 215, 'operation-table matrix must cover 215 operations')
+    result.require(matrix['operation_count'] == 217 and len(matrix['operations']) == 217, 'operation-table matrix must cover 217 operations')
     runtime_additive_migrations = [
         path
         for path in sorted((root / 'db/migrations').glob('*.sql'))

@@ -35,7 +35,7 @@ export const screen = {
       id: "consent",
       title: "공개 동의",
       component: "StructuredContentSection",
-      purpose: "FULL/REDACTED/SUMMARY/NO_CONSENT.",
+      purpose: "전체 공개·가림 공개·요약 공개·공개 비동의.",
       test_id: "rsp_003__section__consent",
     },
     {

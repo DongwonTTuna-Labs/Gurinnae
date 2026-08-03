@@ -122,10 +122,7 @@ async fn process_provider_preflight_claim(
     Ok(())
 }
 
-async fn process_provider_poll_claim(
-    state: &State,
-    job: &ClaimedJob,
-) -> Result<(), WorkerError> {
+async fn process_provider_poll_claim(state: &State, job: &ClaimedJob) -> Result<(), WorkerError> {
     if let Err(error) = process_provider_poll_job(state, job).await {
         let (error_code, error_detail, retryable) = match error {
             WorkerError::Delivery => (
@@ -172,8 +169,8 @@ async fn process_provider_preflight_job(
 ) -> Result<(), WorkerError> {
     let test_id = pointer_uuid(&job.payload, "/providerConnectionTestId")
         .map_err(|_| WorkerError::Contract)?;
-    let config_id = pointer_uuid(&job.payload, "/providerConfigId")
-        .map_err(|_| WorkerError::Contract)?;
+    let config_id =
+        pointer_uuid(&job.payload, "/providerConfigId").map_err(|_| WorkerError::Contract)?;
     let row = sqlx::query!(
         "SELECT pc.version, btrim(pc.configuration_digest::text) AS configuration_digest \
            FROM ops.provider_connection_tests t \
@@ -192,9 +189,7 @@ async fn process_provider_preflight_job(
     let revision = ProviderRevision {
         config_id,
         config_version: row.version,
-        configuration_digest: row
-            .configuration_digest
-            .ok_or(WorkerError::Database)?,
+        configuration_digest: row.configuration_digest.ok_or(WorkerError::Database)?,
     };
     let receipt = state
         .delivery
@@ -442,152 +437,4 @@ async fn process_projection_applied(
     Ok(())
 }
 
-async fn process_publication_created(
-    state: &State,
-    job: &ClaimedJob,
-    event: &ClaimedEvent,
-) -> Result<(), WorkerError> {
-    let case = sqlx::query!(
-        "SELECT public_slug,title FROM editorial.cases WHERE id=$1",
-        event.aggregate_id,
-    )
-        .fetch_optional(&state.pool)
-        .await
-        .map_err(|_| WorkerError::Database)?
-        .ok_or(WorkerError::Database)?;
-    let slug = case.public_slug;
-    let title = case.title;
-    let subscriptions = sqlx::query!(
-        "SELECT id,email_encrypted,locale FROM intake.subscriptions \
-         WHERE status='ACTIVE' AND frequency='IMMEDIATE' ORDER BY id",
-    )
-    .fetch_all(&state.pool)
-    .await
-    .map_err(|_| WorkerError::Database)?;
-    let url = format!(
-        "{}/cases/{}",
-        state.public_base_url,
-        slug.unwrap_or_else(|| event.aggregate_id.to_string())
-    );
-    let mut delivered = 0_u64;
-    for subscription in subscriptions {
-        match deliver_publication_subscriber(
-            state,
-            job,
-            event,
-            &title,
-            &url,
-            subscription.id,
-            &subscription.email_encrypted,
-        )
-        .await?
-        {
-            Some(count) => delivered += count,
-            None => return Ok(()),
-        }
-    }
-    let changed = sqlx::query!(
-        "UPDATE ops.inbox SET processed_at=clock_timestamp(),result='SUCCEEDED' \
-         WHERE consumer=$1 AND event_id=$2 AND processed_at IS NULL",
-        &event.consumer_id,
-        event.id,
-    )
-    .execute(&state.pool)
-    .await
-    .map_err(|_| WorkerError::Database)?
-    .rows_affected();
-    if changed != 1 {
-        return Err(WorkerError::Database);
-    }
-    state
-        .worker
-        .complete(
-            &state.pool,
-            job,
-            serde_json::json!({"deliveredSubscribers":delivered}),
-        )
-        .await
-        .map_err(WorkerError::Job)?;
-    tracing::info!(event_id=%event.id,case_id=%event.aggregate_id,delivered,"publication notification fanout completed");
-    Ok(())
-}
-
-async fn deliver_publication_subscriber(
-    state: &State,
-    job: &ClaimedJob,
-    event: &ClaimedEvent,
-    title: &str,
-    url: &str,
-    subscription_id: Uuid,
-    encrypted: &[u8],
-) -> Result<Option<u64>, WorkerError> {
-    let to = decrypt_email(
-        state,
-        "intake.subscriptions",
-        "email_encrypted",
-        subscription_id,
-        encrypted,
-    )?;
-    let recipient_hash = sha256_hex(to.as_bytes());
-    let row = sqlx::query!(
-            "INSERT INTO ops.email_deliveries(message_type,recipient_hash,template_version, \
-             object_type,object_id,status,attempt_count) \
-             VALUES($1,$2,'v1','publication',$3,'SENDING',1) \
-             ON CONFLICT(message_type,object_id,recipient_hash) WHERE object_id IS NOT NULL \
-             DO UPDATE SET status=CASE WHEN ops.email_deliveries.status='DELIVERED' \
-               THEN 'DELIVERED' ELSE 'SENDING' END, \
-               attempt_count=CASE WHEN ops.email_deliveries.status='DELIVERED' \
-                 THEN ops.email_deliveries.attempt_count ELSE ops.email_deliveries.attempt_count+1 END, \
-               last_error_code=NULL RETURNING id,status",
-            &event.event_type,
-            recipient_hash,
-            event.aggregate_id,
-        )
-        .fetch_one(&state.pool)
-        .await
-        .map_err(|_| WorkerError::Database)?;
-    let delivery_id = row.id;
-    let status = row.status;
-    if status == "DELIVERED" {
-        return Ok(Some(1));
-    }
-    let message = EmailMessage {
-        from: state.from_email.clone(),
-        to,
-        subject: format!("구린네 새 공개: {title}"),
-        text_body: format!("새 사건 공개가 게시되었습니다: {title}\n{url}"),
-        html_body: format!(
-            "<p>새 사건 공개가 게시되었습니다: {title}</p><p><a href=\"{url}\">내용 보기</a></p>"
-        ),
-    };
-    match state.delivery.send(&message).await {
-        Ok(provider_id) => {
-            sqlx::query!(
-                "UPDATE ops.email_deliveries SET status='DELIVERED',provider_message_id=$2, \
-                     delivered_at=clock_timestamp() WHERE id=$1 AND status='SENDING'",
-                delivery_id,
-                provider_id,
-            )
-            .execute(&state.pool)
-            .await
-            .map_err(|_| WorkerError::Database)?;
-            Ok(Some(1))
-        }
-        Err(_) => {
-            mark_failed(state, delivery_id, "CHANNEL_DELIVERY_FAILED").await?;
-            state
-                .worker
-                .fail(
-                    &state.pool,
-                    job,
-                    "SMTP_DELIVERY_FAILED",
-                    "publication subscriber delivery failed",
-                    true,
-                    serde_json::json!({"deliveryId":delivery_id}),
-                )
-                .await
-                .map_err(WorkerError::Job)?;
-            Ok(None)
-        }
-    }
-}
+include!("publication_fanout.rs");

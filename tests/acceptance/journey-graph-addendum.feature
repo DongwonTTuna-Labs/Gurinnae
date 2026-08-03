@@ -1,13 +1,13 @@
 @hard-gate @final @supplemental @journey-graph @browser @postgresql
-Feature: 12개 업무 여정은 명시적 129-edge graph와 실제 영수증으로 끝까지 실행된다
+Feature: 12개 업무 여정은 명시적 132-edge graph와 실제 영수증으로 끝까지 실행된다
 
   Background:
-    Given canonical 12개 journey와 129개 explicit edge가 같은 source digest로 컴파일돼 있다
+    Given canonical 12개 journey와 132개 explicit edge가 같은 source digest로 컴파일돼 있다
     And Rust 1.97.0 서비스와 PostgreSQL 18.4 전체 migration과 SvelteKit production build가 실행 중이다
     And fixture는 입력에만 사용되고 action handler receipt와 browser destination은 실제 runtime 경계를 통과한다
 
   # scenario-id: AC-JOURNEY_GRAPH-001
-  Scenario: product와 UI와 runtime edge registry는 정확히 12 journey 129 edge다
+  Scenario: product와 UI와 runtime edge registry는 정확히 12 journey 132 edge다
     When 네 registry의 edge identity와 tuple을 양방향 비교한다
     Then missing extra positional synthetic edge는 모두 0건이다
 
@@ -15,6 +15,7 @@ Feature: 12개 업무 여정은 명시적 129-edge graph와 실제 영수증으�
   Scenario: 모든 journey entry는 closed branch와 cross return을 거쳐 terminal에 도달한다
     When 12개 entry에서 success nonvalue recovery terminal을 탐색한다
     Then unreachable terminal과 무한 비소비 cycle은 0건이다
+    And J-01의 PUB-004 구독 분기는 persisted verification receipt 뒤 같은 caseSlug의 PUB-004로 복귀하고 기존 PUB-006::locator-understood terminal에 도달한다
 
   # scenario-id: AC-JOURNEY_GRAPH-003
   Scenario: 모든 nonterminal node에는 실행 가능한 outgoing edge가 있다
@@ -22,7 +23,7 @@ Feature: 12개 업무 여정은 명시적 129-edge graph와 실제 영수증으�
     Then handler가 없거나 selector가 비어 있는 nonterminal node는 0건이다
 
   # scenario-id: AC-JOURNEY_GRAPH-004
-  Scenario: 129 edge resolver와 handler와 acceptance identity가 정확히 같다
+  Scenario: 132 edge resolver와 handler와 acceptance identity가 정확히 같다
     When compiled resolver registry와 runtime handler와 edge receipt를 비교한다
     Then 모든 edge는 정확히 하나의 typed resolver와 실행 receipt를 가진다
 

@@ -292,7 +292,7 @@ export type SubscriptionResponse = {
 };
 
 export type SubscriptionScope = {
-    scopeType: 'GLOBAL' | 'QUERY' | 'CASE' | 'AGENCY' | 'SUPPLIER' | 'CORRECTIONS';
+    scopeType: 'GLOBAL' | 'QUERY' | 'CASE' | 'AGENCY' | 'SUPPLIER' | 'REGION' | 'CORRECTIONS';
     scopeRef?: string;
     query?: SubscriptionQuery;
 };
@@ -430,7 +430,7 @@ export type CreateSubscriptionReceipt = {
 
 export type CreateSubscriptionRequest = {
     email: string;
-    scopeType: 'GLOBAL' | 'QUERY' | 'CASE' | 'AGENCY' | 'SUPPLIER' | 'CORRECTIONS';
+    scopeType: 'GLOBAL' | 'QUERY' | 'CASE' | 'AGENCY' | 'SUPPLIER' | 'REGION' | 'CORRECTIONS';
     scopeRef?: string;
     query?: SubscriptionQuery;
     frequency: 'IMMEDIATE' | 'DAILY' | 'WEEKLY';

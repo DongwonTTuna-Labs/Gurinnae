@@ -8,7 +8,7 @@ def validate(root: Path, result: Validation) -> None:
     operations={o['operation_id']:o for o in load_yaml(root/'specs/api/operation-contracts.yaml')['operations']}
     persistence={o['operation_id']:o for o in load_yaml(root/'specs/api/operation-persistence.yaml')['operations']}
     screens={s['id']:s for s in load_yaml(root/'specs/ui/screen-catalog.yaml')['screens']}
-    expected={'screens':94,'operations':215,'query_operations':108,'command_operations':107,'http_write_operations':104,'database_tables':107,'database_migrations':24,'roles':15,'capabilities':31,'events':99,'acceptance_scenarios':271,'public_operations':41,'submission_operations':34,'control_operations':134,'identity_operations':6,'commands':107,'queries':108}
+    expected={'screens':94,'operations':217,'query_operations':110,'command_operations':107,'http_write_operations':104,'database_tables':107,'database_migrations':24,'roles':15,'capabilities':31,'events':99,'acceptance_scenarios':271,'public_operations':43,'submission_operations':34,'control_operations':134,'identity_operations':6,'commands':107,'queries':110}
     result.require(trace['counts']==expected,f'traceability counts differ: {trace["counts"]}')
     result.require({s['screen_id'] for s in trace['screens']}==set(screens),'traceability screen set differs')
     traced={o['operation_id']:o for o in trace['operations']}; result.require(set(traced)==set(operations),'traceability operation set differs')

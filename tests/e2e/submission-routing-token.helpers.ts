@@ -11,8 +11,12 @@ test("magic-link exchanges use no-referrer while canonical forms retain a same-o
       canonical: "http://127.0.0.1:29103/respond/access",
     },
     {
-      exchange: "http://127.0.0.1:29101/correction-request/receipt",
+      exchange: "http://127.0.0.1:29101/correction-request/receipt/exchange",
       canonical: "http://127.0.0.1:29101/correction-request/receipt",
+    },
+    {
+      exchange: "http://127.0.0.1:29101/subscription/manage/exchange",
+      canonical: "http://127.0.0.1:29101/subscription/manage",
     },
   ]) {
     const response = await request.get(
@@ -48,13 +52,15 @@ for (const contract of [
   },
   {
     name: "correction receipt",
-    url: "http://127.0.0.1:29101/correction-request/receipt",
+    url: "http://127.0.0.1:29101/correction-request/receipt/exchange",
+    canonicalUrl: "http://127.0.0.1:29101/correction-request/receipt",
     exchangePath: "/v1/submission-session/correction-receipt:exchange",
     readPath: "/v1/correction-receipt",
   },
   {
     name: "subscription management",
-    url: "http://127.0.0.1:29101/subscription/manage",
+    url: "http://127.0.0.1:29101/subscription/manage/exchange",
+    canonicalUrl: "http://127.0.0.1:29101/subscription/manage",
     exchangePath: "/v1/submission-session/subscription-management:exchange",
     readPath: "/v1/subscription-session",
   },
@@ -70,7 +76,9 @@ for (const contract of [
         waitUntil: "networkidle",
       },
     );
-    expect(page.url()).toBe(contract.url);
+    expect(page.url()).toBe(
+      "canonicalUrl" in contract ? contract.canonicalUrl : contract.url,
+    );
     const observed = await state(request);
     expect(observed.submissionExchanges).toContainEqual(
       expect.objectContaining({
@@ -104,7 +112,8 @@ for (const retryContract of [
   },
   {
     name: "public web",
-    url: "http://127.0.0.1:29101/correction-request/receipt",
+    url: "http://127.0.0.1:29101/correction-request/receipt/exchange",
+    canonicalUrl: "http://127.0.0.1:29101/correction-request/receipt",
   },
 ]) {
   test(`${retryContract.name} one-time token retries use a fresh idempotency scope`, async ({
@@ -115,7 +124,11 @@ for (const retryContract of [
     const oneTimeToken = `${retryContract.name}-one-time-${randomUUID()}`;
     const target = `${retryContract.url}?token=${encodeURIComponent(oneTimeToken)}`;
     await page.goto(target, { waitUntil: "networkidle" });
-    expect(page.url()).toBe(retryContract.url);
+    expect(page.url()).toBe(
+      "canonicalUrl" in retryContract
+        ? retryContract.canonicalUrl
+        : retryContract.url,
+    );
 
     const secondContext = await browser.newContext();
     try {

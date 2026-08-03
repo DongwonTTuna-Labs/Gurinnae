@@ -209,6 +209,17 @@ state_profiles:
   - error
   - offline
   - success
+  public-search:
+  - awaiting-query
+  - initial-loading
+  - refreshing
+  - empty
+  - filtered-empty
+  - partial
+  - stale
+  - error
+  - offline
+  - success
   collection:
   - initial-loading
   - refreshing

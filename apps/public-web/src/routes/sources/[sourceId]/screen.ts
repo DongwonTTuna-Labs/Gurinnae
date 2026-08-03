@@ -11,7 +11,7 @@ export const screen = {
       id: "identity",
       title: "출처 설명",
       component: "StructuredContentSection",
-      purpose: "owner·접근 방식.",
+      purpose: "출처 운영 기관·공식 접근 경로.",
       test_id: "pub_017__section__identity",
     },
     {

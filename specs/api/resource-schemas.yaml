@@ -257,6 +257,20 @@ resources:
           anyOf:
           - type: string
           - type: 'null'
+        sidoCode:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{2}$
+          - type: 'null'
+        sigunguCode:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{5}$
+          - type: 'null'
+        regionCodeVersion:
+          anyOf:
+          - type: string
+          - type: 'null'
         caseCounts:
           $ref: '#/components/schemas/CaseStateCounts'
         coverage:
@@ -268,6 +282,9 @@ resources:
       - id
       - name
       - agencyType
+      - sidoCode
+      - sigunguCode
+      - regionCodeVersion
       - caseCounts
       - coverage
       - href
@@ -386,6 +403,20 @@ resources:
           type: string
         jurisdiction:
           type: string
+        sidoCode:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{2}$
+          - type: 'null'
+        sigunguCode:
+          anyOf:
+          - type: string
+            pattern: ^[0-9]{5}$
+          - type: 'null'
+        regionCodeVersion:
+          anyOf:
+          - type: string
+          - type: 'null'
         identifiers:
           type: array
           items:
@@ -416,6 +447,9 @@ resources:
       - id
       - name
       - agencyType
+      - sidoCode
+      - sigunguCode
+      - regionCodeVersion
       - identifiers
       - coverage
       - metrics
@@ -5963,6 +5997,20 @@ resources:
           format: date-time
         summary:
           type: string
+        agencyName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        contractName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        amount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        nonConclusion:
+          type: string
         confirmedFacts:
           type: array
           items:
@@ -6017,6 +6065,10 @@ resources:
       - publishedAt
       - updatedAt
       - summary
+      - agencyName
+      - contractName
+      - amount
+      - nonConclusion
       - confirmedFacts
       - criticalUnknowns
       - partyResponses
@@ -6075,6 +6127,20 @@ resources:
       properties:
         case:
           $ref: '#/components/schemas/CaseCard'
+        agencyName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        contractName:
+          anyOf:
+          - type: string
+          - type: 'null'
+        amount:
+          anyOf:
+          - $ref: '#/components/schemas/Money'
+          - type: 'null'
+        nonConclusion:
+          type: string
         confirmedFacts:
           type: array
           items:
@@ -6123,6 +6189,10 @@ resources:
             type: string
       required:
       - case
+      - agencyName
+      - contractName
+      - amount
+      - nonConclusion
       - confirmedFacts
       - criticalUnknowns
       - partyResponses
@@ -6149,6 +6219,12 @@ resources:
         agencyId:
           type: string
           format: uuid
+        sidoCode:
+          type: string
+          pattern: ^[0-9]{2}$
+        sigunguCode:
+          type: string
+          pattern: ^[0-9]{5}$
         supplierId:
           type: string
           format: uuid
@@ -6164,6 +6240,76 @@ resources:
           type: boolean
         hasCorrection:
           type: boolean
+        sort:
+          type: string
+          enum:
+          - updated_desc
+          - published_desc
+          - title_asc
+    apis:
+    - public-api
+  PublicCasesDownload:
+    schema:
+      type: object
+      additionalProperties: false
+      description: |-
+        최대 5,000개 사건 레코드의 동기 내려받기 결과. CSV는
+        `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
+        이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
+        rowCount는 고지 레코드를 제외한다.
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+          - READY
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        filename:
+          type: string
+          minLength: 1
+        mediaType:
+          type: string
+        byteLength:
+          type: integer
+          format: int64
+          minimum: 0
+        contentSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentBase64:
+          type: string
+        format:
+          type: string
+          enum:
+          - CSV
+          - JSONL
+        rowCount:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 5000
+        appliedFilters:
+          $ref: '#/components/schemas/PublicCasesAppliedFilters'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - status
+      - version
+      - filename
+      - mediaType
+      - byteLength
+      - contentSha256
+      - contentBase64
+      - format
+      - rowCount
+      - appliedFilters
+      - generatedAt
     apis:
     - public-api
   PublicCasesItem:
@@ -6315,10 +6461,27 @@ resources:
           type: string
         evidenceType:
           type: string
+        documentTitle:
+          anyOf:
+          - type: string
+          - type: 'null'
+        publisher:
+          anyOf:
+          - type: string
+          - type: 'null'
+        publishedAt:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
         sourceUrl:
           anyOf:
           - type: string
             format: uri-reference
+          - type: 'null'
+        pageAnchor:
+          anyOf:
+          - type: string
           - type: 'null'
         sourceLocator:
           type: string
@@ -6337,6 +6500,11 @@ resources:
       - id
       - title
       - evidenceType
+      - documentTitle
+      - publisher
+      - publishedAt
+      - sourceUrl
+      - pageAnchor
       - sourceLocator
       - contentSha256
     apis:
@@ -6357,12 +6525,91 @@ resources:
           type: array
           items:
             type: string
+        agencyId:
+          type: string
+          format: uuid
+        sidoCode:
+          type: string
+          pattern: ^[0-9]{2}$
+        sigunguCode:
+          type: string
+          pattern: ^[0-9]{5}$
         dateFrom:
           type: string
           format: date
         dateTo:
           type: string
           format: date
+        sort:
+          type: string
+          enum:
+          - relevance
+          - updated_desc
+          - title_asc
+    apis:
+    - public-api
+  PublicSearchDownload:
+    schema:
+      type: object
+      additionalProperties: false
+      description: |-
+        최대 5,000개 검색 결과 레코드의 동기 내려받기 결과. CSV는
+        `이상 징후 기록이며 위법·부패의 확정이 아님` 한 셀 레코드 뒤에 헤더와 데이터가
+        이어지고, JSONL은 같은 문구를 notice 값으로 가진 첫 객체 뒤에 데이터가 이어진다.
+        rowCount는 고지 레코드를 제외한다.
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+          - READY
+        version:
+          type: integer
+          format: int64
+          minimum: 1
+        filename:
+          type: string
+          minLength: 1
+        mediaType:
+          type: string
+        byteLength:
+          type: integer
+          format: int64
+          minimum: 0
+        contentSha256:
+          type: string
+          pattern: ^[a-f0-9]{64}$
+        contentBase64:
+          type: string
+        format:
+          type: string
+          enum:
+          - CSV
+          - JSONL
+        rowCount:
+          type: integer
+          format: int64
+          minimum: 0
+          maximum: 5000
+        appliedFilters:
+          $ref: '#/components/schemas/PublicRecordsSearchResultAppliedFilters'
+        generatedAt:
+          type: string
+          format: date-time
+      required:
+      - id
+      - status
+      - version
+      - filename
+      - mediaType
+      - byteLength
+      - contentSha256
+      - contentBase64
+      - format
+      - rowCount
+      - appliedFilters
+      - generatedAt
     apis:
     - public-api
   PublicRecordsSearchResultItem:
@@ -9475,6 +9722,7 @@ resources:
           - CASE
           - AGENCY
           - SUPPLIER
+          - REGION
           - CORRECTIONS
         scopeRef:
           type: string
@@ -12263,6 +12511,7 @@ resources:
           - CASE
           - AGENCY
           - SUPPLIER
+          - REGION
           - CORRECTIONS
         scopeRef:
           type: string

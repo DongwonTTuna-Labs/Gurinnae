@@ -46,6 +46,7 @@ describe("screen chrome", () => {
     expect(stateTone("stale")).toBe("caution");
     expect(stateTone("success")).toBe("status");
     expect(stateTone("loading")).toBe("neutral");
+    expect(stateTone("awaiting-query")).toBe("neutral");
   });
 
   it("keeps stale context guidance to one complete safety sentence", () => {

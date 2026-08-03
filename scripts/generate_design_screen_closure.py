@@ -116,6 +116,28 @@ def section_for(screen: dict[str, Any], terms: tuple[str, ...]) -> str:
     return str(sections[0]["id"])
 
 
+PUB_012_EVIDENCE_SECTION = "identity"
+EVIDENCE_SECTION_TERMS = (
+    "evidence",
+    "source",
+    "reference",
+    "citation",
+    "comparison",
+    "record",
+    "body",
+)
+
+
+def evidence_section_for(screen: dict[str, Any]) -> str:
+    """Keep the published PUB-012 evidence role stable across copy translation."""
+    if screen["id"] == "PUB-012":
+        section_ids = {str(section["id"]) for section in screen.get("sections", [])}
+        if PUB_012_EVIDENCE_SECTION not in section_ids:
+            raise ValueError("PUB-012 published evidence section is missing: identity")
+        return PUB_012_EVIDENCE_SECTION
+    return section_for(screen, EVIDENCE_SECTION_TERMS)
+
+
 def operation_sources(screen: dict[str, Any], schemas: dict[str, dict[str, Any]]) -> list[str]:
     sources: list[str] = []
     for requirement in screen.get("data_requirements", []):
@@ -439,10 +461,7 @@ def main() -> None:
             )
 
         state_section = section_for(screen, ("status", "state", "header", "current", "identity"))
-        evidence_section = section_for(
-            screen,
-            ("evidence", "source", "reference", "citation", "comparison", "record", "body"),
-        )
+        evidence_section = evidence_section_for(screen)
         unknown_section = section_for(
             screen,
             ("unknown", "block", "gap", "limitation", "response", "risk", "coverage", "impact"),

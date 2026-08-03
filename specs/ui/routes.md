@@ -35,13 +35,15 @@
 | `PUB-025` | `/editorial-policy` | 편집·공개 정책 | `anonymous` | `POLICY` |
 | `PUB-026` | `/contact` | 문의 | `anonymous` | `GUIDED_FORM` |
 | `PUB-027` | `/correction-request` | 정정 요청 | `anonymous` | `GUIDED_FORM` |
-| `PUB-028` | `/correction-request/receipt/{receiptId}` | 정정 요청 접수 | `receipt-token` | `GUIDED_FORM` |
+| `PUB-028` | `/correction-request/receipt` | 정정 요청 접수 | `receipt-token` | `GUIDED_FORM` |
 | `PUB-029` | `/subscribe` | 업데이트 구독 | `anonymous` | `GUIDED_FORM` |
-| `PUB-030` | `/subscription/manage/{token}` | 구독 관리 | `magic-link` | `GUIDED_FORM` |
+| `PUB-030` | `/subscription/manage` | 구독 관리 | `magic-link` | `GUIDED_FORM` |
 | `PUB-031` | `/privacy` | 개인정보 처리방침 | `anonymous` | `POLICY` |
 | `PUB-032` | `/terms` | 이용약관 | `anonymous` | `POLICY` |
 | `PUB-033` | `/accessibility` | 접근성 안내 | `anonymous` | `POLICY` |
 | `PUB-034` | `/{systemPath}` | 오류·시스템 상태 | `anonymous` | `AUTH_SYSTEM` |
+
+PUB-028과 PUB-030의 일회용 token은 exchange 요청 입력으로만 사용한다. 교환 성공과 실패 모두 위 token-free canonical URL로 이동하며 URL에 token을 남기지 않는다.
 
 ## Response Portal — 8개
 

@@ -11,7 +11,7 @@ export const screen = {
       id: "routing",
       title: "문의 유형",
       component: "KnownUnknownResponse",
-      purpose: "정정/소명/보안/언론/일반.",
+      purpose: "정정·소명·보안·언론·일반 문의 경로.",
       test_id: "pub_026__section__routing",
     },
     {

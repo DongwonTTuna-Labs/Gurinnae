@@ -11,7 +11,7 @@ export const screen = {
       id: "status",
       title: "정정 유형·시각",
       component: "StatusAndRevisionHeader",
-      purpose: "correction/retraction과 effective time.",
+      purpose: "정정·철회 유형과 적용 시각.",
       test_id: "pub_019__section__status",
     },
     {

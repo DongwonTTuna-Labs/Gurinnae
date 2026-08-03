@@ -44,6 +44,21 @@ let { section, runtime, projection }: ScreenSectionProps = $props();
     line-height: 1.45;
   }
 
+  @media (min-width: 621px) {
+    :global(#comparison .table-scroll th:first-child) {
+      width: 18%;
+    }
+
+    :global(#comparison .projection-record > div:has(> dd > .projection-record)) {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(6rem, 20%) minmax(0, 1fr);
+    }
+
+    :global(#comparison .projection-record .projection-record) {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    }
+  }
+
   @media (max-width: 620px) {
     .comparison-criteria {
       grid-template-columns: 1fr;

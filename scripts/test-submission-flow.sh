@@ -41,6 +41,26 @@ dump_log() {
   fi
 }
 
+assert_submission_role_denied() {
+  local operation="$1"
+  local statement="$2"
+  local output=""
+  local status=0
+
+  set +e
+  output="$(docker exec "$container" psql -X -v ON_ERROR_STOP=1 -v VERBOSITY=verbose \
+    -U postgres -d "$database" -c \
+    "SET ROLE gurine_submission_api; $statement" 2>&1)"
+  status=$?
+  set -e
+  if [[ $status -eq 0 || "$output" != *"ERROR:  42501:"* ]]; then
+    printf 'expected submission role %s denial with SQLSTATE 42501, status=%s\n%s\n' \
+      "$operation" "$status" "$output" >&2
+    return 1
+  fi
+  printf 'submission role direct case_revisions %s: SQLSTATE 42501\n' "$operation"
+}
+
 wait_http() {
   local label="$1"
   local pid="$2"
@@ -153,6 +173,35 @@ docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
    ALTER ROLE gurine_scheduler LOGIN PASSWORD 'scheduler_test';
    INSERT INTO editorial.cases(id,public_slug,title)
    VALUES('22222222-2222-4222-8222-222222222222','integration-case','Integration Case');
+   INSERT INTO public.cases(
+     id,slug,title,public_state,latest_revision,summary,
+     published_at,updated_at,source_freshness
+   ) VALUES (
+     '22222222-2222-4222-8222-222222222222','integration-case','통합 검증 공개 사건',
+     'PUBLISHED_ANOMALY',1,'공개 개정본에 연결된 정정 요청 검증 사건',
+     '2026-07-12T00:00:00Z','2026-07-12T00:00:00Z',
+     '{\"asOf\":\"2026-07-12T00:00:00Z\",\"status\":\"CURRENT\"}'::jsonb
+   ),(
+     '22222222-2222-4222-8222-222222222223','binding-control-case','정정 연결 대조 사건',
+     'PUBLISHED_EXPLAINED',2,'다른 사건의 개정본과 섞인 요청을 차단하기 위한 대조 사건',
+     '2026-07-13T00:00:00Z','2026-07-13T00:00:00Z',
+     '{\"asOf\":\"2026-07-13T00:00:00Z\",\"status\":\"CURRENT\"}'::jsonb
+   );
+   INSERT INTO public.case_revisions(
+     case_id,revision,state,payload,payload_sha256,published_at
+   ) VALUES (
+     '22222222-2222-4222-8222-222222222222',1,'PUBLISHED_ANOMALY',
+     '{\"caseSlug\":\"integration-case\",\"summary\":\"공개 개정본 연결 검증\"}'::jsonb,
+     repeat('1',64),'2026-07-12T00:00:00Z'
+   ),(
+     '22222222-2222-4222-8222-222222222223',1,'PUBLISHED_EXPLAINED',
+     '{\"caseSlug\":\"binding-control-case\",\"summary\":\"대조 사건 최초 개정본\"}'::jsonb,
+     repeat('2',64),'2026-07-12T00:00:00Z'
+   ),(
+     '22222222-2222-4222-8222-222222222223',2,'PUBLISHED_EXPLAINED',
+     '{\"caseSlug\":\"binding-control-case\",\"summary\":\"대조 사건 최신 개정본\"}'::jsonb,
+     repeat('3',64),'2026-07-13T00:00:00Z'
+   );
    INSERT INTO editorial.response_requests(
      id,case_id,party_type,party_name,recipient_email_hash,recipient_email_encrypted,
      questions,requested_publication_scope,due_at,sent_at,status,created_by
@@ -177,6 +226,11 @@ docker exec "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" -c \
      clock_timestamp()+interval '1 hour',20,'response-access-otp-v2',
      '$magic_verifier_hmac','response-portal-submission-hmac-v1'
    );" >/dev/null
+
+assert_submission_role_denied \
+  "SELECT" "SELECT 1 FROM public.case_revisions LIMIT 1;"
+assert_submission_role_denied \
+  "UPDATE" "UPDATE public.case_revisions SET case_id=case_id WHERE false;"
 
 postgres_port="$(docker port "$container" 5432/tcp | sed -n '1s/.*://p')"
 

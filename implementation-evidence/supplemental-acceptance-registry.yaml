@@ -23,13 +23,13 @@
     },
     {
       "path": "tests/acceptance/supplemental-executable-mapping.yaml",
-      "sha256": "fc1b75b50cc1c20dd14f634c00725d3fff3cdc4b69acf1ebd9f2abbeabaccf3f",
+      "sha256": "9e0b0379d51396bb630a1849123db0c6b98af8feeff6688701a25b565764d972",
       "size": 114015
     },
     {
       "path": "tests/acceptance/effective-execution-registry.yaml",
-      "sha256": "15e6088e3bc22e7e52e3a92cb62a0ad796614ebaaaf75786ae6ec300419971f8",
-      "size": 11746928
+      "sha256": "7b0a3d3b7defa9dd6f7c3c11a950c84b394f9a215cd6745bba8f94942f2057bf",
+      "size": 11752348
     }
   ],
   "execution_contract": {
@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "01c1857c09d10792af83fba61b281be382d8af67989ff37cb30598d45a855552",
-      "size": 8323
+      "sha256": "86ff8eaf8a89c89d2a432394b1af9d29c503968f8338f5c60a228b6e52c17214",
+      "size": 8396
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -107,13 +107,18 @@
     },
     {
       "path": "scripts/generate_acceptance_design_registry.py",
-      "sha256": "143bbb89b4c63783fc6ac162c900fac300699c14b5abf5664acc629303eae9de",
-      "size": 8096
+      "sha256": "d507f5e379334e45513f15078253c70cb2d6db74c7b0a69d8f3d08869a2f44d0",
+      "size": 8140
     },
     {
       "path": "scripts/generate_effective_execution_registry.py",
       "sha256": "7802cde83b2665607e2c39956b0c2b109be2641a15a10349bb5cd046b512f5b3",
       "size": 25055
+    },
+    {
+      "path": "scripts/generate_journey_registry.py",
+      "sha256": "13f8ddabe11ec7e1ed619122ba87899a8d105b49c421c33ec0ccd58dcb6380ca",
+      "size": 10379
     },
     {
       "path": "scripts/generate_supplemental_execution_mapping.py",
@@ -166,11 +171,11 @@
     "exact_scenario_identity_required": true,
     "example_row_and_expansion_digest_required": true,
     "gherkin_example_count": 80,
-    "gherkin_instance_count": 2465,
+    "gherkin_instance_count": 2466,
     "gherkin_outline_count": 11,
-    "gherkin_scenario_bound_clause_count": 2019,
-    "gherkin_source_step_count": 1645,
-    "scenario_set_sha256": "df3c2f0ce1c87d45c095234f6803ee7b0751e970cc08efd16cb15e225ebaedc0"
+    "gherkin_scenario_bound_clause_count": 2020,
+    "gherkin_source_step_count": 1646,
+    "scenario_set_sha256": "8f7528b4dc4093df30aa0c91cdd58cc439939243ffb4e567a955ef60172bff26"
   },
   "schema_version": 2,
   "schemas": [
@@ -191,7 +196,7 @@
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "aca145c617a8d2c02d577a5b3170bf37004466dcb9715979a22ea3a2b9ac7b59",
+      "sha256": "cf03068c47bbc0bde493958bdf80d2fff54730caefeefe89b1b7d69d53ea97ff",
       "size": 11218
     }
   ],

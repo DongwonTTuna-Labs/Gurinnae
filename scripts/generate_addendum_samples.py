@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 
 from materialize_application import (
+    biome_format,
     operation_catalog,
     operation_response_samples,
     operation_sample_evidence,
@@ -32,11 +33,12 @@ def generated_outputs() -> tuple[dict[Path, str], int]:
         extras = sorted(set(sources) - RUST_MODULES)
         raise ValueError(f"unexpected Rust operation modules: missing={missing}, extras={extras}")
 
+    sample_path = ROOT / "verification/generated-operation-samples.json"
     outputs = {
-        ROOT / "verification/generated-operation-samples.json": json.dumps(
-            operation_sample_evidence(samples), ensure_ascii=False, indent=2
+        sample_path: biome_format(
+            sample_path.relative_to(ROOT),
+            json.dumps(operation_sample_evidence(samples), ensure_ascii=False, indent=2),
         )
-        + "\n"
     }
     outputs.update(
         {

@@ -1,4 +1,9 @@
 import type { ScreenRuntime } from "./index";
+import {
+  type PresentedProjectionValue,
+  presentProjectionValue,
+} from "./projection-value";
+import { safeProjectionValue } from "./screen-projection-values";
 
 export type SemanticRecord = {
   record: Record<string, unknown>;
@@ -75,53 +80,38 @@ export function visibleEntries(
     .map(([key, value]) => [key, redact(key, value)]);
 }
 
-export function display(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "boolean") return value ? "예" : "아니오";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "목록 없음";
-    const preview = value
-      .slice(0, 4)
-      .map((item) => displayStructured(item))
-      .join(" · ");
-    return value.length > 4 ? `${preview} · 외 ${value.length - 4}건` : preview;
-  }
-  if (typeof value === "object") {
-    return displayStructured(value);
-  }
-  return String(value);
+/** Build the same typed value tree consumed by `ProjectionValue.svelte`. */
+export function displayValue(
+  fieldName: string,
+  value: unknown,
+): PresentedProjectionValue | null {
+  return presentProjectionValue(
+    fieldName,
+    safeProjectionValue(value, fieldName),
+  );
 }
 
-function displayStructured(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value === "boolean") return value ? "예" : "아니오";
-  if (typeof value === "number" || typeof value === "string")
-    return String(value);
-  if (Array.isArray(value)) {
-    return value.slice(0, 4).map(displayStructured).join(" · ") || "목록 없음";
-  }
-  if (isRecord(value)) {
-    const entries = Object.entries(value)
-      .filter(([key]) => !sensitive.test(key))
-      .slice(0, 6)
-      .map(([key, item]) => `${key}: ${displayStructured(item)}`);
-    return entries.join(" · ") || "세부 정보 없음";
-  }
-  return "확인 필요";
+/** Scalar-only compatibility helper. Structured values must use the renderer. */
+export function display(value: unknown, fieldName = "value"): string | null {
+  const presented = displayValue(fieldName, value);
+  if (presented?.kind !== "scalar") return null;
+  return presented.secondary
+    ? `${presented.text} · ${presented.secondary}`
+    : presented.text;
 }
 
 export function firstValue(
   record: Record<string, unknown>,
   candidates: readonly string[],
-): string {
+): string | null {
   for (const candidate of candidates) {
     const entry = Object.entries(record).find(
       ([key]) => key.toLowerCase() === candidate.toLowerCase(),
     );
     if (entry && entry[1] !== null && entry[1] !== undefined)
-      return display(entry[1]);
+      return display(entry[1], entry[0]);
   }
-  return "확인 필요";
+  return null;
 }
 
 function redact(key: string, value: unknown): unknown {

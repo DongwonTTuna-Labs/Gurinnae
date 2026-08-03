@@ -11,7 +11,7 @@ export const screen = {
       id: "board",
       title: "가설 현황판",
       component: "StructuredContentSection",
-      purpose: "OPEN/SUPPORTED/CONTRADICTED/RESOLVED.",
+      purpose: "열림·근거로 뒷받침됨·반박됨·해결됨.",
       test_id: "cas_007__section__board",
     },
     {

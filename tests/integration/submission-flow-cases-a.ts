@@ -200,7 +200,7 @@ export async function runCorrectionFlow(): Promise<void> {
   await clearCapturedMessages();
   deliverNotifications();
   const correctionReceiptToken = await capturedToken(
-    "/correction-request/receipt?token",
+    "/correction-request/receipt/exchange?token",
   );
   const correctionExchanged = await invoke(
     "POST",

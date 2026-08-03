@@ -11,7 +11,7 @@ export const screen = {
       id: "overview",
       title: "방법론 개요",
       component: "LongFormArticle",
-      purpose: "발견과 판정 분리.",
+      purpose: "탐지·조사·공개 절차와 판정 한계.",
       test_id: "pub_013__section__overview",
     },
     {

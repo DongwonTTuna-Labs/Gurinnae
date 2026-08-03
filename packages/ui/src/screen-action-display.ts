@@ -1,3 +1,5 @@
+import { projectionScalarText } from "./projection-value";
+
 type ReadonlyFieldDisplayInput = {
   readonly name: string;
   readonly value?: string | number | boolean;
@@ -12,6 +14,20 @@ const QUERY_SORT_LABELS: Readonly<Record<string, string>> = {
   published_desc: "최근 공개순",
   title_asc: "제목순",
 };
+
+export function autocompleteForField(name: string) {
+  const normalized = name.toLowerCase();
+  if (normalized.includes("email")) return "email";
+  if (normalized.includes("phone") || normalized.includes("tel")) return "tel";
+  if (normalized.includes("first") && normalized.includes("name"))
+    return "given-name";
+  if (normalized.includes("last") && normalized.includes("name"))
+    return "family-name";
+  if (normalized === "name" || normalized.endsWith("name")) return "name";
+  if (normalized.includes("locale") || normalized.includes("language"))
+    return "language";
+  return "off";
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -67,5 +83,5 @@ export function displayReadonlyFieldValue(
   if (field.value === undefined) return "—";
   return field.name === "query"
     ? subscriptionQuerySummary(field.value)
-    : String(field.value);
+    : (projectionScalarText(field.name, field.value) ?? "—");
 }

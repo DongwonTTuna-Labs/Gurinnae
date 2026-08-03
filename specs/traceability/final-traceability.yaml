@@ -3,8 +3,8 @@ specification_version: 13.0.0
 status: FINAL
 counts:
   screens: 94
-  operations: 215
-  query_operations: 108
+  operations: 217
+  query_operations: 110
   command_operations: 107
   http_write_operations: 104
   database_tables: 107
@@ -13,12 +13,12 @@ counts:
   capabilities: 31
   events: 99
   acceptance_scenarios: 271
-  public_operations: 41
+  public_operations: 43
   submission_operations: 34
   control_operations: 134
   identity_operations: 6
   commands: 107
-  queries: 108
+  queries: 110
 screens:
 - screen_id: PUB-001
   surface: public
@@ -43,6 +43,7 @@ screens:
   view_model: apps/public-web/src/lib/view-models/pub-002.ts
   query_operations:
   - searchPublicRecords
+  - downloadPublicSearchRecords
   command_operations: []
   e2e_test: tests/e2e/screens/pub-002.spec.ts
   visual_test: tests/visual/pub-002.spec.ts
@@ -54,6 +55,7 @@ screens:
   view_model: apps/public-web/src/lib/view-models/pub-003.ts
   query_operations:
   - listPublicCases
+  - downloadPublicCases
   - createSubscription
   command_operations:
   - createSubscription
@@ -355,9 +357,9 @@ screens:
   visual_test: tests/visual/pub-027.spec.ts
 - screen_id: PUB-028
   surface: public
-  route: /correction-request/receipt/{receiptId}
-  page_file: apps/public-web/src/routes/correction-request/receipt/[receiptId]/+page.svelte
-  server_file: apps/public-web/src/routes/correction-request/receipt/[receiptId]/+page.server.ts
+  route: /correction-request/receipt
+  page_file: apps/public-web/src/routes/correction-request/receipt/+page.svelte
+  server_file: apps/public-web/src/routes/correction-request/receipt/+page.server.ts
   view_model: apps/public-web/src/lib/view-models/pub-028.ts
   query_operations:
   - getCorrectionReceipt
@@ -379,9 +381,9 @@ screens:
   visual_test: tests/visual/pub-029.spec.ts
 - screen_id: PUB-030
   surface: public
-  route: /subscription/manage/{token}
-  page_file: apps/public-web/src/routes/subscription/manage/[token]/+page.svelte
-  server_file: apps/public-web/src/routes/subscription/manage/[token]/+page.server.ts
+  route: /subscription/manage
+  page_file: apps/public-web/src/routes/subscription/manage/+page.svelte
+  server_file: apps/public-web/src/routes/subscription/manage/+page.server.ts
   view_model: apps/public-web/src/lib/view-models/pub-030.ts
   query_operations:
   - getSubscription
@@ -3714,6 +3716,51 @@ operations:
     conditions: []
     step_up_possible: false
   assurance_level: NONE
+- operation_id: downloadPublicCases
+  api: public-api
+  method: GET
+  path: /v1/cases/download
+  kind: QUERY
+  capability: public.read
+  request_schema: downloadPublicCasesQuery
+  response_schema: PublicCasesDownload
+  success_status: 200
+  consuming_screens:
+  - PUB-003
+  handler: services/public-api/src/routes/mod.rs
+  application: services/public-api/src/service/exports.rs
+  integration_test: tests/integration/public-flow.py
+  generated_client: packages/api-client-public/src/generated/
+  contract_test: services/public-api/src/service/exports.rs
+  repository_methods: []
+  statements:
+  - verb: SELECT
+    relation: public.cases
+    purpose: count and export cases matching the current public case filters
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.case_revisions
+    purpose: bind exported rows and filter inputs to the latest frozen public revision
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.corrections
+    purpose: evaluate the current correction-presence filter
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.agencies
+    purpose: evaluate agency and administrative-region filters
+    expected_rows: zero-or-many
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+  auth: anonymous
+  assurance_policy:
+    mode: STATIC
+    default: NONE
+    conditions: []
+    step_up_possible: false
+  assurance_level: NONE
 - operation_id: downloadPublicOpenApi
   api: public-api
   method: GET
@@ -3732,6 +3779,71 @@ operations:
   contract_test: tests/contract/public-api/download_public_open_api.spec.ts
   repository_methods: []
   statements: []
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+  auth: anonymous
+  assurance_policy:
+    mode: STATIC
+    default: NONE
+    conditions: []
+    step_up_possible: false
+  assurance_level: NONE
+- operation_id: downloadPublicSearchRecords
+  api: public-api
+  method: GET
+  path: /v1/search/download
+  kind: QUERY
+  capability: public.read
+  request_schema: downloadPublicSearchRecordsQuery
+  response_schema: PublicSearchDownload
+  success_status: 200
+  consuming_screens:
+  - PUB-002
+  handler: services/public-api/src/routes/mod.rs
+  application: services/public-api/src/service/exports.rs
+  integration_test: tests/integration/public-flow.py
+  generated_client: packages/api-client-public/src/generated/
+  contract_test: services/public-api/src/service/exports.rs
+  repository_methods: []
+  statements:
+  - verb: SELECT
+    relation: public.cases
+    purpose: count and export matching public case records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.case_revisions
+    purpose: bind case and correction results to the latest frozen public revision
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.agencies
+    purpose: export matching agency records and evaluate agency and region filters
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.suppliers
+    purpose: export matching supplier records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.contracts
+    purpose: export matching contract records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.rules
+    purpose: export matching public rule records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.corrections
+    purpose: export matching correction records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.datasets
+    purpose: export matching public dataset records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.source_status
+    purpose: export matching public source status records
+    expected_rows: zero-or-many
   domain_events: []
   integration_events: []
   audit_action: read.access
@@ -10814,7 +10926,9 @@ capabilities:
   operations:
   - downloadCaseReproducibility
   - downloadContracts
+  - downloadPublicCases
   - downloadPublicOpenApi
+  - downloadPublicSearchRecords
   - getAboutContent
   - getAccessibilityStatement
   - getAgency

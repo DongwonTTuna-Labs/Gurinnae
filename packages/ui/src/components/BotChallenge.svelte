@@ -54,7 +54,7 @@ function syntheticProof() {
       issuedAt: Math.floor(Date.now() / 1000),
     }),
   );
-  status = "테스트 환경의 자동 제출 방지 검증을 완료했습니다.";
+  status = "자동 제출 방지 검증을 완료했습니다.";
 }
 
 function reset() {

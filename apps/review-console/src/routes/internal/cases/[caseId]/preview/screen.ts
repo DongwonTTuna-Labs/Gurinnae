@@ -11,7 +11,7 @@ export const screen = {
       id: "watermark",
       title: "미리보기 상태",
       component: "StatusAndRevisionHeader",
-      purpose: "DRAFT·snapshot hash.",
+      purpose: "초안·미리보기 무결성 식별값.",
       test_id: "cas_014__section__watermark",
     },
     {

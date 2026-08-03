@@ -1,5 +1,5 @@
 schema_version: 2
-specification_version: 13.0.0+owner-ui-journeys.3
+specification_version: 13.0.0+owner-ui-journeys.4
 status: OPEN_IMPLEMENTATION
 authority_mode: DERIVED_FROM_EXPLICIT_PRODUCT_REGISTRY
 sources:
@@ -25,14 +25,15 @@ rules:
 - J-12 stages other than QUALIFIED are read projections. No commercial stage row or stage event is created.
 - J-11 communication edges E19 through E23 remain five separate physical milestones: intent, delivery claim, provider observation,
     reconciliation, and origin receipt return.
-- The 94 route set is byte-for-byte unchanged. New work is a section/action/view-model refinement on an existing route.
+- The 94-screen route set remains closed. PUB-028 and PUB-030 use token-free canonical browser routes; one-time tokens are
+  exchange-request inputs only.
 counts:
   journeys: 12
-  edges: 129
+  edges: 132
   branches: 17
   cross_journey_arcs: 12
   reachable_outcomes: 12
-  via_resolved: 129
+  via_resolved: 132
 edge_tuple_fields:
 - edge_id
 - edge_name
@@ -51,8 +52,8 @@ edge_tuple_fields:
 - authority_status
 - handler_status
 via_set_equality:
-  edge_ids: 129
-  resolved_edge_ids: 129
+  edge_ids: 132
+  resolved_edge_ids: 132
   missing: 0
   extra: 0
   identity_rule: product edge IDs are copied, never positionally synthesized
@@ -62,22 +63,22 @@ reachability_receipt:
     entry: PUB-002
     success: PUB-006::locator-understood
     reachable: true
-    reachable_node_count: 12
+    reachable_node_count: 14
   J-02: &id002
     entry: PUB-004
     success: PUB-018::reproduction-bundle-receipt
     reachable: true
-    reachable_node_count: 12
+    reachable_node_count: 14
   J-03: &id003
     entry: CAS-009
     success: CAS-008::submission-owned
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
   J-04: &id004
     entry: PUB-027
     success: PUB-019::request-linked-decision
     reachable: true
-    reachable_node_count: 18
+    reachable_node_count: 20
   J-05: &id005
     entry: SIG-001
     success: CAS-002::triage-receipt-owned
@@ -87,37 +88,37 @@ reachability_receipt:
     entry: CAS-002
     success: REV-002::review-ready-snapshot
     reachable: true
-    reachable_node_count: 146
+    reachable_node_count: 148
   J-07: &id007
     entry: REV-001
     success: PUB-004::public-smoke-receipt
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
   J-08: &id008
     entry: COR-001
     success: PUB-018::correction-visible-and-notified
     reachable: true
-    reachable_node_count: 16
+    reachable_node_count: 18
   J-09: &id009
     entry: SRC-005
     success: OPS-001::freshness-restored-or-degraded
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
   J-10: &id010
     entry: CAS-010
     success: CAS-004::promoted-evidence-visible
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
   J-11: &id011
     entry: J-11::ORIGIN
     success: J-11::SUCCEEDED
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
   J-12: &id012
     entry: OPS-004
     success: AUD-001::paid-retention-audit-verified
     reachable: true
-    reachable_node_count: 144
+    reachable_node_count: 146
 journeys:
 - journey_id: J-01
   entry_node: PUB-002
@@ -264,6 +265,101 @@ journeys:
           type: public-slug
       safe_query_keys: []
       focus_test_id: pub_006__journey_outcome__j_01_e04__heading
+    failure_outcome: typed recovery, nonvalue, or terminal receipt from the closed branch contract
+  - edge_id: J-01-E05
+    edge_name: OPEN_CASE_SUBSCRIPTION
+    from: PUB-004
+    from_node_kind: SCREEN
+    to: PUB-029
+    to_node_kind: SCREEN
+    kind: NAVIGATION
+    source_screen_expression: PUB-004
+    source_screens:
+    - PUB-004
+    destination_screen_expression: PUB-029
+    destination_screens:
+    - PUB-029
+    terminal_class: NONTERMINAL
+    cross_journey_return: preserve the exact case slug as safe return context; this optional branch does not replace the J-01
+      durable outcome
+    via_binding:
+      resolver_kind: VISIBLE_ACTION
+      authority_key: PUB-004.subscribe-case
+      handler_id: ui__pub_004__subscribe_case
+      source_action_keys:
+      - PUB-004.subscribe-case
+      authority_status: EXISTING
+      implementation_status: DECLARED_RUNTIME_OPEN
+    destinations:
+    - screen_id: PUB-029
+      route: /subscribe
+      required_object_bindings: {}
+      safe_query_keys: []
+      focus_test_id: pub_029__heading
+    failure_outcome: typed recovery, nonvalue, or terminal receipt from the closed branch contract
+  - edge_id: J-01-E06
+    edge_name: REQUEST_CASE_SUBSCRIPTION_VERIFICATION
+    from: PUB-029
+    from_node_kind: SCREEN
+    to: PUB-029::subscription-verification-requested
+    to_node_kind: MILESTONE
+    kind: APPLICATION_COMMAND
+    source_screen_expression: PUB-029
+    source_screens:
+    - PUB-029
+    destination_screen_expression: PUB-029
+    destination_screens:
+    - PUB-029
+    terminal_class: NONTERMINAL
+    cross_journey_return: only a persisted verification-dispatched receipt continues; rejection or failure remains on PUB-029
+    via_binding:
+      resolver_kind: OPERATION_RESULT
+      authority_key: createSubscription#verificationDispatched=true
+      handler_id: handle__j01__create_subscription_verification_receipt_v1
+      source_action_keys:
+      - PUB-029.request-verification
+      authority_status: EXISTING
+      implementation_status: DECLARED_RUNTIME_OPEN
+    destinations:
+    - screen_id: PUB-029
+      route: /subscribe
+      required_object_bindings: {}
+      safe_query_keys: []
+      focus_test_id: pub_029__journey_outcome__j_01_e06__heading
+    failure_outcome: typed recovery, nonvalue, or terminal receipt from the closed branch contract
+  - edge_id: J-01-E07
+    edge_name: RETURN_TO_CASE_AFTER_SUBSCRIPTION
+    from: PUB-029::subscription-verification-requested
+    from_node_kind: MILESTONE
+    to: PUB-004
+    to_node_kind: SCREEN
+    kind: RECEIPT_NAVIGATION
+    source_screen_expression: PUB-029
+    source_screens:
+    - PUB-029
+    destination_screen_expression: PUB-004
+    destination_screens:
+    - PUB-004
+    terminal_class: NONTERMINAL
+    cross_journey_return: resume J-01 at PUB-004 with the same case slug; J-01-E02 through E04 retain the existing durable
+      outcome
+    via_binding:
+      resolver_kind: RECEIPT_ROUTER
+      authority_key: createSubscription#verificationDispatched=true+safeReturn
+      handler_id: route__j01__return_after_subscription_v1
+      source_action_keys:
+      - PUB-029.request-verification
+      authority_status: EXISTING
+      implementation_status: DECLARED_RUNTIME_OPEN
+    destinations:
+    - screen_id: PUB-004
+      route: /cases/{caseSlug}
+      required_object_bindings:
+        caseSlug:
+          source: journey_context.caseSlug
+          type: public-slug
+      safe_query_keys: []
+      focus_test_id: pub_004__heading
     failure_outcome: typed recovery, nonvalue, or terminal receipt from the closed branch contract
   reachability_oracle: *id001
 - journey_id: J-02
@@ -997,7 +1093,8 @@ journeys:
       resolver_kind: OPERATION
       authority_key: decideJourneyHandoff#ACKNOWLEDGE[HS-03|HS-04]
       handler_id: route__j05__owned_handoff_ack_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.decide-journey-handoff
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3041,7 +3138,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#APPROVE+QUORUM_INCOMPLETE
       handler_id: route__j11__approve_quorum_incomplete_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3070,7 +3168,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#APPROVE+POLICY_BLOCKED
       handler_id: route__j11__approve_policy_blocked_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3099,7 +3198,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#APPROVE+FINAL_QUORUM+QUEUED
       handler_id: route__j11__approve_final_queued_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3131,7 +3231,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#REJECT
       handler_id: route__j11__reject_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3169,7 +3270,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#CHANGES_REQUIRED
       handler_id: route__j11__changes_required_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -3273,7 +3375,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#RECUSE+action.review_vacancy_filled.v1
       handler_id: route__j11__recuse_replacement_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -4160,7 +4263,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: decideJourneyHandoff#ACKNOWLEDGE[HS-15]
       handler_id: route__j12__ack_commercial_remediation_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.decide-journey-handoff
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -4651,7 +4755,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#APPROVE
       handler_id: route__j12__approve_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -4688,7 +4793,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#CHANGES_REQUIRED
       handler_id: route__j12__changes_required_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -4720,7 +4826,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: submitActionDecision#RECUSE+action.review_vacancy_filled.v1
       handler_id: route__j12__recuse_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -4750,7 +4857,8 @@ journeys:
       resolver_kind: OPERATION_OR_EVENT_VARIANT
       authority_key: submitActionDecision#REJECT|action.proposal_updated.v1#EXPIRED
       handler_id: route__j12__reject_or_expire_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.submit-action-decision
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -5014,7 +5122,8 @@ journeys:
       resolver_kind: OPERATION_VARIANT
       authority_key: decideJourneyHandoff#ACKNOWLEDGE[HS-16]
       handler_id: route__j12__ack_retention_watch_v1
-      source_action_keys: []
+      source_action_keys:
+      - INT-002.decide-journey-handoff
       authority_status: EXISTING
       implementation_status: NEW_REQUIRED
     destinations:
@@ -6058,7 +6167,7 @@ compiled_registry_decisions:
   resolver_registry:
     name: journey_edge_resolver_registry_v1
     key: edge_id
-    row_count: 129
+    row_count: 132
     required_fields:
     - edge_id
     - resolver_kind
@@ -6088,4 +6197,4 @@ implementation_requirements:
 - Persist the eight journey instance fields and require receiver acknowledgement before handoff completion.
 - Exercise every success, recovery, nonvalue, reconciliation, and terminal selector against real PostgreSQL, services, and
   browser routes.
-navigation_contract_count: 102
+navigation_contract_count: 108

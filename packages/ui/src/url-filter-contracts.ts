@@ -1,4 +1,15 @@
-export type UrlFilterScreenId = "PUB-002" | "PUB-003" | "INT-003" | "CAS-012";
+export type PublicLedgerFilterScreenId =
+  | "PUB-002"
+  | "PUB-003"
+  | "PUB-007"
+  | "PUB-009"
+  | "PUB-011"
+  | "PUB-018";
+
+export type UrlFilterScreenId =
+  | PublicLedgerFilterScreenId
+  | "INT-003"
+  | "CAS-012";
 
 export type UrlFilterContract = {
   readonly actionId: string;
@@ -13,7 +24,17 @@ const URL_FILTER_CONTRACTS: Readonly<
   "PUB-002": {
     actionId: "submit-search",
     actionLabel: "검색",
-    queryKeys: ["q", "types", "publicationState", "dateFrom", "dateTo", "sort"],
+    queryKeys: [
+      "q",
+      "types",
+      "publicationState",
+      "agencyId",
+      "sidoCode",
+      "sigunguCode",
+      "dateFrom",
+      "dateTo",
+      "sort",
+    ],
     arrayKeys: ["types", "publicationState"],
   },
   "PUB-003": {
@@ -24,12 +45,49 @@ const URL_FILTER_CONTRACTS: Readonly<
       "agencyId",
       "supplierId",
       "ruleId",
+      "sidoCode",
+      "sigunguCode",
       "publishedFrom",
       "publishedTo",
       "hasResponse",
       "hasCorrection",
       "sort",
     ],
+    arrayKeys: ["publicationState"],
+  },
+  "PUB-007": {
+    actionId: "apply-filter",
+    actionLabel: "필터 적용",
+    queryKeys: ["q", "agencyType", "jurisdiction", "sort"],
+    arrayKeys: ["agencyType"],
+  },
+  "PUB-009": {
+    actionId: "apply-filter",
+    actionLabel: "필터 적용",
+    queryKeys: ["q", "businessStatus", "identityStatus", "sort"],
+    arrayKeys: ["businessStatus", "identityStatus"],
+  },
+  "PUB-011": {
+    actionId: "apply-filter",
+    actionLabel: "필터 적용",
+    queryKeys: [
+      "q",
+      "agencyId",
+      "supplierId",
+      "contractStatus",
+      "procurementMethod",
+      "signedFrom",
+      "signedTo",
+      "amountMin",
+      "amountMax",
+      "sort",
+    ],
+    arrayKeys: ["contractStatus", "procurementMethod"],
+  },
+  "PUB-018": {
+    actionId: "apply-filter",
+    actionLabel: "필터 적용",
+    queryKeys: ["publicationState", "publishedFrom", "publishedTo", "sort"],
     arrayKeys: ["publicationState"],
   },
   "INT-003": {
@@ -45,6 +103,21 @@ const URL_FILTER_CONTRACTS: Readonly<
     arrayKeys: ["eventType"],
   },
 };
+
+const PUBLIC_LEDGER_FILTER_SCREENS: ReadonlySet<string> = new Set([
+  "PUB-002",
+  "PUB-003",
+  "PUB-007",
+  "PUB-009",
+  "PUB-011",
+  "PUB-018",
+]);
+
+export function isPublicLedgerFilterScreen(
+  screenId: string,
+): screenId is PublicLedgerFilterScreenId {
+  return PUBLIC_LEDGER_FILTER_SCREENS.has(screenId);
+}
 
 export function urlFilterContractFor(
   screenId: string,

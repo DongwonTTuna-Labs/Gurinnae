@@ -490,10 +490,10 @@ def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
         and counts.get("supplemental_scenarios") == 168
         and counts.get("effective_features") == 40
         and counts.get("effective_scenarios") == 439
-        and counts.get("gherkin_source_steps") == 1645
+        and counts.get("gherkin_source_steps") == 1646
         and counts.get("gherkin_outlines") == 11
         and counts.get("gherkin_examples") == 80
-        and counts.get("gherkin_clause_instances") == 2465,
+        and counts.get("gherkin_clause_instances") == 2466,
         "effective_acceptance_counts",
         EFFECTIVE_REGISTRY,
         {
@@ -503,10 +503,10 @@ def validate_static(root: Path) -> tuple[Checks, dict[str, Any]]:
             "supplemental_scenarios": 168,
             "effective_features": 40,
             "effective_scenarios": 439,
-            "gherkin_source_steps": 1645,
+            "gherkin_source_steps": 1646,
             "gherkin_outlines": 11,
             "gherkin_examples": 80,
-            "gherkin_clause_instances": 2465,
+            "gherkin_clause_instances": 2466,
         },
         counts,
     )

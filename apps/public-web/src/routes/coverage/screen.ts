@@ -11,7 +11,7 @@ export const screen = {
       id: "summary",
       title: "수집 범위 요약",
       component: "StatusAndRevisionHeader",
-      purpose: "전체 범위와 current status.",
+      purpose: "수집 대상·제외 범위·기준일별 최신 상태.",
       test_id: "pub_015__section__summary",
     },
     {

@@ -54,6 +54,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
   const errors: string[] = [];
   let firstErrorStatus: number | undefined;
   const session = readSubmissionSession(event);
+  const initialAccessMissing = screen.id === "RSP-001" && !session;
   const attachmentUpload =
     session?.sessionKind === "RESPONSE_ACTIVE" &&
     hasOperation(screen, "createResponseAttachmentUpload") &&
@@ -247,21 +248,23 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
       ? { oneTimeToken: event.url.searchParams.get("token") ?? "" }
       : {}),
   };
-  const forms = Object.fromEntries(
-    screen.actions.map((action) => {
-      const operationId = stringProperty(action, "operation_id");
-      const indexed = operationId ? operations.get(operationId) : undefined;
-      const preset = formPreset(
-        data,
-        recordProperty(action, "preset"),
-        responseDraftVersion,
+  const forms = initialAccessMissing
+    ? {}
+    : Object.fromEntries(
+        screen.actions.map((action) => {
+          const operationId = stringProperty(action, "operation_id");
+          const indexed = operationId ? operations.get(operationId) : undefined;
+          const preset = formPreset(
+            data,
+            recordProperty(action, "preset"),
+            responseDraftVersion,
+          );
+          return [
+            action.id,
+            indexed ? operationFields(indexed, routeValues, preset) : [],
+          ];
+        }),
       );
-      return [
-        action.id,
-        indexed ? operationFields(indexed, routeValues, preset) : [],
-      ];
-    }),
-  );
   const runtime: ScreenRuntime = {
     state:
       firstErrorStatus === 403
@@ -289,7 +292,7 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
     errors,
     forms,
     idempotencyKeys: {
-      ...actionIdempotencyKeys(screen),
+      ...(initialAccessMissing ? {} : actionIdempotencyKeys(screen)),
       ...(attachmentUpload ? { "select-file": randomUUID() } : {}),
     },
     ...(attachmentUpload
@@ -312,16 +315,23 @@ export async function loadScreen(event: RequestEvent, screen: ScreenViewModel) {
         }
       : {}),
     ...(Object.keys(downloads).length > 0 ? { downloads } : {}),
-    ...(blockedActionIds.size > 0
-      ? {
-          allowedActionIds: screen.actions
-            .filter((action) => !blockedActionIds.has(action.id))
-            .map((action) => action.id),
-        }
-      : {}),
+    ...(initialAccessMissing
+      ? { allowedActionIds: [] }
+      : blockedActionIds.size > 0
+        ? {
+            allowedActionIds: screen.actions
+              .filter((action) => !blockedActionIds.has(action.id))
+              .map((action) => action.id),
+          }
+        : {}),
     ...(event.url.searchParams.get("notice")
       ? { notice: event.url.searchParams.get("notice") ?? "" }
-      : {}),
+      : initialAccessMissing
+        ? {
+            notice:
+              "보안 링크의 발신자를 확인하고 링크와 인증 정보를 공유하지 마세요.",
+          }
+        : {}),
   };
   return { screen, runtime };
 }

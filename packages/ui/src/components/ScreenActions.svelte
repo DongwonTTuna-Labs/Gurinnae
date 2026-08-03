@@ -1,7 +1,13 @@
 <script lang="ts">
+import { presentEnumValue } from "../enum-presentation";
 import type { ScreenField, ScreenRuntime, ScreenViewModel } from "../index";
 import { localActionHref } from "../local-actions";
-import { displayReadonlyFieldValue } from "../screen-action-display";
+import { projectionScalarText } from "../projection-value";
+import { publicSearchDownloadVisible } from "../public-search-actions";
+import {
+  autocompleteForField,
+  displayReadonlyFieldValue,
+} from "../screen-action-display";
 import {
   formFieldId,
   humanFieldLabel,
@@ -11,8 +17,20 @@ import BotChallenge from "./BotChallenge.svelte";
 import RowSelectionNavigation from "./RowSelectionNavigation.svelte";
 import StructuredJsonField from "./StructuredJsonField.svelte";
 
-let { screen, runtime }: { screen: ScreenViewModel; runtime: ScreenRuntime } =
-  $props();
+type ActionContext = "page" | "header" | "section";
+let {
+  screen,
+  runtime,
+  actionIds,
+  attachments = true,
+  context = "page",
+}: {
+  screen: ScreenViewModel;
+  runtime: ScreenRuntime;
+  actionIds?: readonly string[];
+  attachments?: boolean;
+  context?: ActionContext;
+} = $props();
 const fieldsFor = (actionId: string): readonly ScreenField[] =>
   runtime.forms[actionId] ?? [];
 const operationId = (action: ScreenViewModel["actions"][number]) =>
@@ -23,19 +41,6 @@ const interactionKind = (action: ScreenViewModel["actions"][number]) =>
   typeof action.interaction_kind === "string"
     ? action.interaction_kind
     : "NAVIGATION";
-const autocompleteFor = (name: string) => {
-  const normalized = name.toLowerCase();
-  if (normalized.includes("email")) return "email";
-  if (normalized.includes("phone") || normalized.includes("tel")) return "tel";
-  if (normalized.includes("first") && normalized.includes("name"))
-    return "given-name";
-  if (normalized.includes("last") && normalized.includes("name"))
-    return "family-name";
-  if (normalized === "name" || normalized.endsWith("name")) return "name";
-  if (normalized.includes("locale") || normalized.includes("language"))
-    return "language";
-  return "off";
-};
 const hrefFor = (action: ScreenViewModel["actions"][number]) =>
   localActionHref(screen, runtime, action);
 const optionsFor = (actionId: string) =>
@@ -47,8 +52,7 @@ const formAction = (actionId: string) => {
     .split("&")
     .filter((part) => part && !part.startsWith("/") && !part.startsWith("%2F"))
     .join("&");
-  // SvelteKit resolves a named action from the first query key (`/`). Keep it first
-  // when preserving queries; putting it after `proposalId=...` makes the POST unnamed.
+  // Named SvelteKit actions must remain the first query key.
   return query ? `?/${actionId}&${query}` : `?/${actionId}`;
 };
 const formCaption = (action: ScreenViewModel["actions"][number]) =>
@@ -58,8 +62,13 @@ let challengeReady = $state<Record<string, boolean>>({});
 let challengeProof = $state<Record<string, string>>({});
 const challengeField = (actionId: string) =>
   fieldsFor(actionId).find((field) => field.name === "abuseProof");
-const attachmentUpload = $derived(runtime.attachmentUpload);
-const attachmentRemoval = $derived(runtime.attachmentRemoval);
+const requestedActionIds = $derived(actionIds ? new Set(actionIds) : undefined);
+const attachmentUpload = $derived(
+  attachments ? runtime.attachmentUpload : undefined,
+);
+const attachmentRemoval = $derived(
+  attachments ? runtime.attachmentRemoval : undefined,
+);
 const hasValidationError = $derived(
   ["validation-error", "error", "conflict"].includes(runtime.state),
 );
@@ -77,7 +86,9 @@ const invalidField = (actionId: string, field: ScreenField): boolean => {
 };
 const primaryActionId = $derived(typedScreenViewModel(screen).primaryActionId);
 const actionButtonClass = (actionId: string) =>
-  actionId === primaryActionId && !screen.route.startsWith("/internal")
+  context !== "header" &&
+  actionId === primaryActionId &&
+  !screen.route.startsWith("/internal")
     ? "primary-button"
     : "secondary-button";
 function appendChallengeProof(actionId: string, event: FormDataEvent) {
@@ -93,8 +104,8 @@ const supportsLocalCommand = (action: ScreenViewModel["actions"][number]) => {
 };
 const visibleActions = $derived(
   screen.actions
-    // DecisionReviewPanel owns the single approval dialog and form. Keeping decision
-    // mutations out of this rail prevents bypassing the required reason/step-up UX.
+    .filter((action) => requestedActionIds?.has(action.id) ?? true)
+    // Keep decision mutations in the single DecisionReviewPanel approval dialog.
     .filter(
       (action) =>
         ![
@@ -106,8 +117,7 @@ const visibleActions = $derived(
           "reject-suggestion",
         ].includes(action.id),
     )
-    // INT-002 owns its decision mutation in ApprovalDecisionDialog. Other destructive
-    // routes still need their server-bound form; hiding all made publishing impossible.
+    // INT-002 owns its decision mutation; other destructive routes keep this form.
     .filter(
       (action) =>
         !(
@@ -120,6 +130,14 @@ const visibleActions = $derived(
     .filter((action) => action.id !== "select-file")
     .filter(
       (action) => !(screen.id === "RSP-003" && action.id === "save-draft"),
+    )
+    .filter((action) =>
+      publicSearchDownloadVisible(
+        screen.id,
+        interactionKind(action),
+        runtime.publicLedger?.rows.length ?? 0,
+        runtime.state,
+      ),
     )
     .filter((action) => {
       if (runtime.allowedActionIds)
@@ -142,11 +160,14 @@ function runLocalCommand(action: ScreenViewModel["actions"][number]) {
   if (action.id.startsWith("copy-")) {
     const evidence = runtime.projection
       ? Object.values(runtime.projection.sections)
-          .flatMap((section) => Object.values(section.fields))
-          .filter((field) => field.known && field.value !== null)
-          .map((field) => `${field.value} (${field.source})`)
+          .flatMap((section) => Object.entries(section.fields))
+          .filter(([, field]) => field.known && field.value !== null)
+          .map(
+            ([name, field]) =>
+              `${projectionScalarText(name, field.value) ?? "구조화 자료"} (${field.source})`,
+          )
           .join("\n")
-      : "서버 권위 투영값을 확인할 수 없습니다.";
+      : "확인 가능한 근거가 없습니다.";
     void navigator.clipboard.writeText(
       `${screen.title}\n${window.location.href}\n\n근거·식별자\n${evidence}`,
     );
@@ -187,13 +208,27 @@ function downloadHref(
     return "/api/openapi.json";
   }
   const encoded = runtime.downloads?.[action.id];
-  return encoded ? `data:${encoded.mime};base64,${encoded.binary}` : undefined;
+  return encoded
+    ? `data:${encoded.mime};base64,${encoded.binary}`
+    : hrefFor(action);
 }
 </script>
 {#if visibleActions.length > 0 || attachmentUpload || attachmentRemoval}
-  <section id="page-actions" class="command-panel" class:response-actions={screen.id.startsWith("RSP-")} aria-labelledby="command-heading" data-component="GuidedFormSection" data-testid="screen-actions">
+  <svelte:element
+    this={context === "page" ? "section" : "div"}
+    id={context === "page" ? "page-actions" : undefined}
+    class="command-panel"
+    class:context-actions={context !== "page"}
+    class:header-actions={context === "header"}
+    class:section-actions={context === "section"}
+    class:response-actions={context === "page" && screen.id.startsWith("RSP-")}
+    aria-labelledby={context === "page" ? "command-heading" : undefined}
+    aria-label={context === "header" ? "화면 동작" : context === "section" ? "섹션 동작" : undefined}
+    data-component={context === "page" ? "GuidedFormSection" : undefined}
+    data-testid={context === "page" ? "screen-actions" : undefined}
+  >
     <div class="section-content">
-      <p class="component-kicker">다음 단계</p><h2 id="command-heading">화면 작업</h2>
+      {#if context === "page"}<p class="component-kicker">다음 단계</p><h2 id="command-heading">처리</h2>{/if}
       <div class="action-grid">
         {#if attachmentUpload}
             <form id={`action-${attachmentUpload.actionId}`} method="POST" action={formAction(attachmentUpload.actionId)} enctype="multipart/form-data" data-action-id={attachmentUpload.actionId}>
@@ -219,8 +254,8 @@ function downloadHref(
                 <p>
                   {item.mediaType ?? "파일"}
                   {#if item.sizeBytes !== undefined} · {Math.ceil(item.sizeBytes / 1024).toLocaleString()} KiB{/if}
-                  {#if item.uploadStatus} · 업로드 {item.uploadStatus}{/if}
-                  {#if item.scanStatus} · 검사 {item.scanStatus}{/if}
+                  {#if item.uploadStatus} · 업로드 {projectionScalarText("uploadStatus", item.uploadStatus) ?? "확인 필요"}{/if}
+                  {#if item.scanStatus} · 검사 {projectionScalarText("scanStatus", item.scanStatus) ?? "확인 필요"}{/if}
                 </p>
                 {#if runtime.idempotencyKeys?.[attachmentRemoval.actionId]}<input type="hidden" name="idempotencyKey" value={runtime.idempotencyKeys[attachmentRemoval.actionId]} />{/if}
                 <input type="hidden" name="attachmentId" value={item.id} />
@@ -250,22 +285,22 @@ function downloadHref(
                   />
                 {:else}<label for={formFieldId(screen.id, action.id, field.name)}><span>{humanFieldLabel(field.name)}{field.required ? " (필수)" : ""}</span>
                   {#if field.readonly}<input id={formFieldId(screen.id, action.id, field.name)} type="hidden" name={field.name} value={field.value ?? ""} readonly /><output>{displayReadonlyFieldValue(field)}</output>
-                  {:else if field.type === "boolean" && !field.required}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>
+                  {:else if field.type === "boolean" && !field.required}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteForField(field.name)} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>
                     <option value="" selected={field.value === undefined}>변경 안 함</option>
                     <option value="true" selected={field.value === true}>예</option>
                     <option value="false" selected={field.value === false}>아니오</option>
                   </select>
                   {:else if field.type === "boolean"}<input id={formFieldId(screen.id, action.id, field.name)} type="checkbox" name={field.name} value="true" checked={field.value === true} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />
                   {:else if field.type === "json" && (field.name === "answers" || field.name.toLowerCase().includes("consent"))}<StructuredJsonField idPrefix={formFieldId(screen.id, action.id, field.name)} name={field.name} label={humanFieldLabel(field.name)} value={field.value} required={field.required} invalid={invalidField(action.id, field)} />
-                  {:else if field.type === "json"}<textarea id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} rows="4" aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{typeof field.value === "string" ? field.value : ""}</textarea>
-                  {:else if field.options}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{#if field.payloadPath && !field.required}<option value="" selected={field.value === undefined}>변경 안 함</option>{/if}{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{option}</option>{/each}</select>
-                  {:else}<input id={formFieldId(screen.id, action.id, field.name)} type={field.type} name={field.name} autocomplete={autocompleteFor(field.name)} required={field.required} readonly={field.readonly} value={field.value ?? ""} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />{/if}
+                  {:else if field.type === "json"}<textarea id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteForField(field.name)} required={field.required} rows="4" aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{typeof field.value === "string" ? field.value : ""}</textarea>
+                  {:else if field.options}<select id={formFieldId(screen.id, action.id, field.name)} name={field.name} autocomplete={autocompleteForField(field.name)} required={field.required} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`}>{#if field.payloadPath && !field.required}<option value="" selected={field.value === undefined}>변경 안 함</option>{/if}{#each field.options as option}<option value={option} selected={String(field.value ?? "") === option}>{presentEnumValue(option)}</option>{/each}</select>
+                  {:else}<input id={formFieldId(screen.id, action.id, field.name)} type={field.type} name={field.name} autocomplete={autocompleteForField(field.name)} required={field.required} readonly={field.readonly} value={field.value ?? ""} aria-invalid={invalidField(action.id, field) ? "true" : undefined} aria-describedby={`action-${action.id}-field-help`} />{/if}
                 </label>{/if}
               {/each}
               <button class={actionButtonClass(action.id)} type="submit" disabled={Boolean(challengeField(action.id)) && !challengeReady[action.id]}>{action.label}</button>
             </form>
           {:else if interactionKind(action) === "DOWNLOAD" && downloadHref(action)}
-            <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(action)} download={`${screen.id.toLowerCase()}-${action.id}`} data-action-id={action.id}>{action.label}</a>
+            <a id={`action-${action.id}`} class="secondary-button local-action" href={downloadHref(action)} download={downloadHref(action)?.startsWith("data:") ? `${screen.id.toLowerCase()}-${action.id}` : undefined} data-action-id={action.id}>{action.label}</a>
           {:else if interactionKind(action) === "DOWNLOAD"}
             <div class="download-unavailable" role="status" data-action-id={action.id}><span>{action.label}</span><small>현재 다운로드를 준비할 수 없습니다. 잠시 후 화면을 새로고침해 다시 시도하세요.</small></div>
           {:else if interactionKind(action) === "COMMAND"}
@@ -278,37 +313,19 @@ function downloadHref(
         {/each}
       </div>
     </div>
-  </section>
+  </svelte:element>
 {/if}
 <style>
-  .command-panel {
-    padding-block: 0.5rem 0;
-    border-top: 1px solid var(--paper-200);
-  }
-  .section-content {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    gap: 0.25rem 0.625rem;
-    align-items: baseline;
-  }
-  .component-kicker, h2, h3, p {
-    margin: 0;
-  }
-  .component-kicker {
-    color: var(--ink-500);
-    font-size: 0.75rem;
-    font-weight: 650;
-    letter-spacing: 0.04em;
-  }
+  .command-panel { padding-block: 0.5rem 0; border-top: 1px solid var(--paper-200); }
+  .header-actions { margin-block: 0.25rem 0.5rem; padding-block: 0; border-top: 0; }
+  .section-actions { margin-top: 0.5rem; }
+  .section-content { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.25rem 0.625rem; align-items: baseline; }
+  .component-kicker, h2, h3, p { margin: 0; }
+  .component-kicker { color: var(--ink-500); font-size: 0.75rem; font-weight: 650; letter-spacing: 0.04em; }
   h2, h3 { font-weight: 650; }
   h2 { font-size: 1.125rem; }
   h3 { font-size: 1rem; }
-  .action-grid {
-    display: grid;
-    grid-column: 1 / -1;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
-    gap: 0 1rem;
-  }
+  .action-grid { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 0 1rem; }
   .action-grid form,
   .data-card,
   .download-unavailable {
@@ -316,19 +333,9 @@ function downloadHref(
     padding-block: 0.5rem;
     border-top: 1px solid var(--paper-200);
   }
-  .action-grid form {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-    align-content: start;
-    gap: 0.375rem 0.75rem;
-  }
-  .action-grid form:has(> label:nth-of-type(4)) {
-    grid-column: 1 / -1;
-  }
-  .action-grid textarea {
-    height: var(--target-min);
-    min-height: var(--target-min);
-  }
+  .action-grid form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); align-content: start; gap: 0.375rem 0.75rem; }
+  .action-grid form:has(> label:nth-of-type(4)) { grid-column: 1 / -1; }
+  .action-grid textarea { height: var(--target-min); min-height: var(--target-min); }
   .action-grid form > h3, .action-grid form > p, .action-grid form > button,
   .action-grid form > :global(.bot-challenge),
   .action-grid form > :global(.structured-json-field) {
@@ -354,14 +361,13 @@ function downloadHref(
     background: var(--paper-50);
     overflow-wrap: anywhere;
   }
-  .field-help, .download-unavailable small {
-    font-size: 0.75rem;
-  }
-  .local-action, .action-grid form > button {
-    align-self: start;
-    justify-self: start;
-  }
+  .field-help, .download-unavailable small { font-size: 0.75rem; }
+  .local-action, .action-grid form > button { align-self: start; justify-self: start; }
   .local-action { margin-top: 0.625rem; }
+  .header-actions .section-content { display: block; }
+  .header-actions .action-grid { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.375rem; }
+  .header-actions .local-action { margin-top: 0; }
+  .header-actions .download-unavailable { padding-block: 0; border-top: 0; }
   .download-unavailable { display: grid; gap: 0.25rem; }
   .fragment-anchor { display: block; scroll-margin-top: 1.25rem; }
   .response-actions {
@@ -377,9 +383,7 @@ function downloadHref(
     .action-grid {
       grid-template-columns: minmax(0, 1fr);
     }
-    .action-grid form {
-      grid-template-columns: minmax(0, 1fr);
-    }
+    .action-grid form { grid-template-columns: minmax(0, 1fr); }
     .action-grid label,
     .local-action,
     .action-grid form > button {
@@ -387,10 +391,6 @@ function downloadHref(
     }
   }
   @media (forced-colors: active) {
-    .action-grid form, .data-card, .download-unavailable, output {
-      border-color: CanvasText;
-      background: Canvas;
-      color: CanvasText;
-    }
+    .action-grid form, .data-card, .download-unavailable, output { border-color: CanvasText; background: Canvas; color: CanvasText; }
   }
 </style>

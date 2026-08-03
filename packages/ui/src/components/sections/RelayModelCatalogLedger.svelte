@@ -3,6 +3,7 @@ import {
   RELAY_UNPRICED_CAPTION,
   type RelayModelCatalogViewModel,
 } from "../../relay-model-catalog";
+import ProjectionValue from "../ProjectionValue.svelte";
 
 let { catalog }: { catalog?: RelayModelCatalogViewModel } = $props();
 const yesNo = (value: boolean) => (value ? "예" : "아니오");
@@ -11,32 +12,36 @@ const yesNo = (value: boolean) => (value ? "예" : "아니오");
 <div class="relay-model-ledger" data-component="RelayModelCatalogLedger" data-testid="ops_005__model_catalog_ledger">
   <p class="catalog-caption">{RELAY_UNPRICED_CAPTION}</p>
   {#if catalog}
-    <div class="table-scroll" role="region" aria-label="relay 모델 대장">
-      <table>
-        <caption>relay 모델 대장</caption>
-        <thead><tr><th scope="col">모델 식별자</th><th scope="col">모델 계열</th><th scope="col">공개 시각</th><th scope="col">활성</th><th scope="col">현재 사용</th><th scope="col">신규</th><th scope="col">채택 기록</th></tr></thead>
-        <tbody>
-          {#each catalog.models as model (model.modelId)}
-            <tr><th scope="row"><code>{model.modelId}</code></th><td>{model.family ?? "확인 필요"}</td><td>{model.createdAt ?? "확인 필요"}</td><td>{yesNo(model.active)}</td><td>{yesNo(model.current)}</td><td>{yesNo(model.new)}</td><td>{model.adoption}</td></tr>
-          {:else}
-            <tr><td colspan="7">등록된 모델 없음</td></tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
-    <div class="table-scroll" role="region" aria-label="relay 공급자 모델 상태">
-      <table>
-        <caption>relay 공급자 모델 상태</caption>
-        <thead><tr><th scope="col">공급자</th><th scope="col">현재 모델</th><th scope="col">사용 상태</th><th scope="col">자동 업그레이드</th><th scope="col">자동 업그레이드 충돌</th><th scope="col">단가 상태</th></tr></thead>
-        <tbody>
-          {#each catalog.providers as provider (provider.providerId)}
-            <tr><th scope="row">{provider.name}</th><td>{provider.currentModel ?? "미선택"}</td><td>{provider.enabled ? "사용" : "중지"}</td><td>{provider.autoUpgrade ? "사용" : "중지"}</td><td>{provider.autoUpgradeConflict ? "충돌" : "없음"}</td><td>{provider.unpriced ? "미설정" : "설정"}</td></tr>
-          {:else}
-            <tr><td colspan="6">등록된 relay 공급자 없음</td></tr>
-          {/each}
-        </tbody>
-      </table>
-    </div>
+    {#if catalog.models.length > 0}
+      <div class="table-scroll" role="region" aria-label="relay 모델 대장">
+        <table>
+          <caption>relay 모델 대장</caption>
+          <thead><tr><th scope="col">모델 식별자</th><th scope="col">모델 계열</th><th scope="col">공개 시각</th><th scope="col">활성</th><th scope="col">현재 사용</th><th scope="col">신규</th><th scope="col">채택 기록</th></tr></thead>
+          <tbody>
+            {#each catalog.models as model (model.modelId)}
+              <tr><th scope="row"><ProjectionValue name="modelId" label="모델 식별자" value={model.modelId} /></th><td>{#if model.family}<ProjectionValue name="family" label="모델 계열" value={model.family} />{/if}</td><td>{#if model.createdAt}<ProjectionValue name="createdAt" label="공개 시각" value={model.createdAt} />{/if}</td><td>{yesNo(model.active)}</td><td>{yesNo(model.current)}</td><td>{yesNo(model.new)}</td><td><ProjectionValue name="adoption" label="채택 기록" value={model.adoption} /></td></tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <p class="catalog-empty" role="status">relay 모델 대장 · 등록된 모델 없음</p>
+    {/if}
+    {#if catalog.providers.length > 0}
+      <div class="table-scroll" role="region" aria-label="relay 공급자 모델 상태">
+        <table>
+          <caption>relay 공급자 모델 상태</caption>
+          <thead><tr><th scope="col">공급자</th><th scope="col">현재 모델</th><th scope="col">사용 상태</th><th scope="col">자동 업그레이드</th><th scope="col">자동 업그레이드 충돌</th><th scope="col">단가 상태</th></tr></thead>
+          <tbody>
+            {#each catalog.providers as provider (provider.providerId)}
+              <tr><th scope="row">{provider.name}</th><td>{#if provider.currentModel}<ProjectionValue name="currentModel" label="현재 모델" value={provider.currentModel} />{:else}미선택{/if}</td><td>{provider.enabled ? "사용" : "중지"}</td><td>{provider.autoUpgrade ? "사용" : "중지"}</td><td>{provider.autoUpgradeConflict ? "충돌" : "없음"}</td><td>{provider.unpriced ? "미설정" : "설정"}</td></tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {:else}
+      <p class="catalog-empty" role="status">relay 공급자 모델 상태 · 등록된 공급자 없음</p>
+    {/if}
   {:else}
     <p class="catalog-unavailable" role="status">모델 카탈로그 확인 필요</p>
   {/if}
@@ -50,6 +55,7 @@ const yesNo = (value: boolean) => (value ? "예" : "아니오");
   }
 
   .catalog-caption,
+  .catalog-empty,
   .catalog-unavailable {
     margin: 0;
     color: var(--ink-700);
@@ -88,10 +94,6 @@ const yesNo = (value: boolean) => (value ? "예" : "아니오");
   th {
     color: var(--ink-900);
     font-weight: 650;
-  }
-
-  code {
-    font: inherit;
   }
 
   @media (max-width: 620px) {

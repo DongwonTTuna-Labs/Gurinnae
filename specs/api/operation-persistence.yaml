@@ -1,7 +1,7 @@
 schema_version: 3
 specification_version: 13.0.0
 status: FINAL
-operation_count: 215
+operation_count: 217
 operations:
 - operation_id: acceptAgentSuggestion
   api: control-api
@@ -1633,12 +1633,86 @@ operations:
   integration_events: []
   audit_action: read.access
   concurrency: null
+- operation_id: downloadPublicCases
+  api: public-api
+  method: GET
+  operation_kind: QUERY
+  repository_methods: []
+  statements:
+  - verb: SELECT
+    relation: public.cases
+    purpose: count and export cases matching the current public case filters
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.case_revisions
+    purpose: bind exported rows and filter inputs to the latest frozen public revision
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.corrections
+    purpose: evaluate the current correction-presence filter
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.agencies
+    purpose: evaluate agency and administrative-region filters
+    expected_rows: zero-or-many
+  transaction: read-only
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
 - operation_id: downloadPublicOpenApi
   api: public-api
   method: GET
   operation_kind: QUERY
   repository_methods: []
   statements: []
+  transaction: read-only
+  domain_events: []
+  integration_events: []
+  audit_action: read.access
+  concurrency: null
+- operation_id: downloadPublicSearchRecords
+  api: public-api
+  method: GET
+  operation_kind: QUERY
+  repository_methods: []
+  statements:
+  - verb: SELECT
+    relation: public.cases
+    purpose: count and export matching public case records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.case_revisions
+    purpose: bind case and correction results to the latest frozen public revision
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.agencies
+    purpose: export matching agency records and evaluate agency and region filters
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.suppliers
+    purpose: export matching supplier records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.contracts
+    purpose: export matching contract records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.rules
+    purpose: export matching public rule records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.corrections
+    purpose: export matching correction records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.datasets
+    purpose: export matching public dataset records
+    expected_rows: zero-or-many
+  - verb: SELECT
+    relation: public.source_status
+    purpose: export matching public source status records
+    expected_rows: zero-or-many
   transaction: read-only
   domain_events: []
   integration_events: []

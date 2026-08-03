@@ -7,7 +7,7 @@ counts:
   final_active_tables: 240
   migrations: 32
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029 and 0032 through 0033, and the reviewed submission hardening is migration 0030.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029 and 0032 through 0033, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -163,6 +163,7 @@ canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
 - ops.incidents is the physical rename target of existing ops.source_incidents and is not counted as additive.
+- Migration 0034 alters core.agencies, public.agencies, editorial.evidence, and intake.create_correction_session without adding a product relation; its contract is specs/database/addendum/0034-public-monitoring-extensions.yaml.
 renames:
 - physical_from: ops.email_deliveries
   physical_to: ops.outbound_deliveries

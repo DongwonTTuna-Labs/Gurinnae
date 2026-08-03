@@ -10,8 +10,8 @@ export const screen = {
       order: 1,
       id: "datasets",
       title: "데이터셋",
-      component: "RevisionAndCorrectionPanel",
-      purpose: "cases/contracts/corrections/methods.",
+      component: "GuidedFormSection",
+      purpose: "공개 데이터셋과 이용 가능한 형식.",
       test_id: "pub_020__section__datasets",
     },
     {
@@ -58,13 +58,13 @@ export const screen = {
   actions: [
     {
       id: "download-dataset",
-      label: "데이터 다운로드",
+      label: "데이터 내려받기",
       capability: "none",
-      interaction_kind: "DOWNLOAD",
-      assurance_level: "NONE",
+      operation_id: "createDatasetExport",
+      interaction_kind: "COMMAND",
+      assurance_level: "ANONYMOUS_PROOF",
       step_up_required: false,
       confirmation_required: false,
-      local_only: true,
     },
     {
       id: "view-schema",

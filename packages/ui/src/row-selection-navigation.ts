@@ -15,6 +15,8 @@ const PUBLIC_DETAIL_PATHS = {
   case: /^\/cases\/[A-Za-z0-9._~-]+\/?$/,
   contract: /^\/contracts\/[A-Za-z0-9._~-]+\/?$/,
   correction: /^\/corrections\/[A-Za-z0-9._~-]+\/?$/,
+  dataset: /^\/data\/?$/,
+  rule: /^\/methodology\/rules\/[A-Za-z0-9._~-]+\/?$/,
   source: /^\/sources\/[A-Za-z0-9._~-]+\/?$/,
   supplier: /^\/suppliers\/[A-Za-z0-9._~-]+\/?$/,
 } as const;
@@ -39,10 +41,21 @@ const INTERNAL_PATHS = [
 const builders: Readonly<
   Record<string, Readonly<{ actionId: string; build: OptionBuilder }>>
 > = {
+  "PUB-001": {
+    actionId: "open-case",
+    build: (data) =>
+      hrefItems(data, "listPublicCases", "title", [PUBLIC_DETAIL_PATHS.case]),
+  },
+  "PUB-002": { actionId: "open-result", build: searchResultOptions },
+  "PUB-003": {
+    actionId: "open-case",
+    build: (data) =>
+      hrefItems(data, "listPublicCases", "title", [PUBLIC_DETAIL_PATHS.case]),
+  },
   "PUB-007": {
     actionId: "open-agency",
     build: (data) =>
-      hrefItems(data, "listAgencies", "name", PUBLIC_DETAIL_PATHS.agency),
+      hrefItems(data, "listAgencies", "name", [PUBLIC_DETAIL_PATHS.agency]),
   },
   "PUB-008": {
     actionId: "view-contract",
@@ -51,7 +64,7 @@ const builders: Readonly<
   "PUB-009": {
     actionId: "open-supplier",
     build: (data) =>
-      hrefItems(data, "listSuppliers", "name", PUBLIC_DETAIL_PATHS.supplier),
+      hrefItems(data, "listSuppliers", "name", [PUBLIC_DETAIL_PATHS.supplier]),
   },
   "PUB-010": {
     actionId: "view-contract",
@@ -68,12 +81,9 @@ const builders: Readonly<
   "PUB-018": {
     actionId: "open-correction",
     build: (data) =>
-      hrefItems(
-        data,
-        "listCorrections",
-        "summary",
+      hrefItems(data, "listCorrections", "summary", [
         PUBLIC_DETAIL_PATHS.correction,
-      ),
+      ]),
   },
   "PUB-019": { actionId: "open-case", build: correctionCaseOptions },
   "INT-001": { actionId: "open-task", build: dashboardTaskOptions },
@@ -108,13 +118,26 @@ function hrefItems(
   data: OperationData,
   operationId: string,
   labelField: string,
-  path: RegExp,
+  paths: readonly RegExp[],
 ) {
   return itemRecords(data, operationId).flatMap((item) => {
     const label = compactLabel([item[labelField]]);
-    const href = allowlistedPath(item.href, [path]);
+    const href = allowlistedPath(item.href, paths);
     return label && href ? [{ label, href }] : [];
   });
+}
+
+function searchResultOptions(data: OperationData) {
+  return hrefItems(data, "searchPublicRecords", "title", [
+    PUBLIC_DETAIL_PATHS.agency,
+    PUBLIC_DETAIL_PATHS.case,
+    PUBLIC_DETAIL_PATHS.contract,
+    PUBLIC_DETAIL_PATHS.correction,
+    PUBLIC_DETAIL_PATHS.dataset,
+    PUBLIC_DETAIL_PATHS.rule,
+    PUBLIC_DETAIL_PATHS.source,
+    PUBLIC_DETAIL_PATHS.supplier,
+  ]);
 }
 
 function sourceDocumentOptions(data: OperationData) {

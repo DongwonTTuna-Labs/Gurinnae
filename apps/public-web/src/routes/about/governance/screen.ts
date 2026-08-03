@@ -11,7 +11,7 @@ export const screen = {
       id: "structure",
       title: "운영 구조",
       component: "OperationsStatusPanel",
-      purpose: "책임과 위원회.",
+      purpose: "운영 책임·의사결정·외부 감독 구조.",
       test_id: "pub_024__section__structure",
     },
     {

@@ -110,10 +110,30 @@ async fn handle(
         Err(service::ServiceError::NotFound) => {
             problem("RESOURCE_NOT_FOUND", 404, &request_id, None)
         }
+        Err(service::ServiceError::PreconditionFailed) => export_limit_problem(&request_id),
         Err(service::ServiceError::Persistence) => {
             problem("STORAGE_FAILURE", 503, &request_id, None)
         }
     }
+}
+
+fn export_limit_problem(request_id: &str) -> HttpResponse {
+    HttpResponse::UnprocessableEntity()
+        .insert_header(("content-type", "application/problem+json"))
+        .insert_header(("cache-control", "no-store"))
+        .insert_header(("x-request-id", request_id))
+        .insert_header(("x-content-type-options", "nosniff"))
+        .insert_header((
+            "content-security-policy",
+            "default-src 'none'; frame-ancestors 'none'",
+        ))
+        .json(serde_json::json!({
+            "code": "PRECONDITION_FAILED",
+            "title": "작업 선행 조건을 충족하지 못했습니다",
+            "detail": "현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요.",
+            "status": 422,
+            "requestId": request_id,
+        }))
 }
 
 fn problem(
@@ -157,12 +177,30 @@ fn hex(bytes: &[u8]) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::etag_matches;
+    use actix_web::{body::to_bytes, http::StatusCode};
+    use serde_json::Value;
+
+    use super::{etag_matches, export_limit_problem};
 
     #[test]
     fn conditional_etag_lists_are_parsed_exactly() {
         assert!(etag_matches("\"first\", \"second\"", "\"second\""));
         assert!(etag_matches("*", "\"second\""));
         assert!(!etag_matches("W/\"second\"", "\"second\""));
+    }
+
+    #[actix_web::test]
+    async fn export_limit_maps_to_the_catalog_precondition_problem() {
+        let response = export_limit_problem("00000000-0000-0000-0000-000000000001");
+        assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let bytes = to_bytes(response.into_body()).await.expect("problem body");
+        let body: Value = serde_json::from_slice(&bytes).expect("problem JSON");
+        assert_eq!(body["code"], "PRECONDITION_FAILED");
+        assert_eq!(body["title"], "작업 선행 조건을 충족하지 못했습니다");
+        assert_eq!(
+            body["detail"],
+            "현재 조건의 결과가 5,000건을 초과합니다. 전체 자료는 데이터 내려받기에서 요청하세요."
+        );
+        assert_eq!(body["status"], 422);
     }
 }

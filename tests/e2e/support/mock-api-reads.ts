@@ -6,6 +6,10 @@ import {
 } from "./mock-api-action-reads";
 import { handleExchange } from "./mock-api-exchange";
 import { mockOperationId } from "./mock-api-openapi";
+import {
+  publicDownloadRead,
+  publicReadResponseBody,
+} from "./mock-api-public-export-reads";
 import { rowNavigationResponseBody } from "./mock-api-row-navigation";
 import { actionJourneyIds, problem, runtime } from "./mock-api-state";
 import { handleSubmissionRead } from "./mock-api-submission-reads";
@@ -28,6 +32,8 @@ export async function handleReadRoutes(
   if (submissionRead) return submissionRead;
 
   if (request.method === "GET") {
+    const publicDownload = publicDownloadRead(url);
+    if (publicDownload) return publicDownload;
     if (url.pathname === "/v1/openapi.json") {
       return Response.json({
         id: "public-openapi-v1",
@@ -215,7 +221,7 @@ export async function handleReadRoutes(
         updatedAt,
         title: "재원 공개",
         summary:
-          "재원·비용·이해상충 공개 상태와 편집 독립성 guardrail을 확인합니다.",
+          "재원·비용·이해상충 공개 상태와 편집 독립성 기준을 확인합니다.",
         data: {
           version: "1.0",
           title: "재원 공개",
@@ -230,19 +236,19 @@ export async function handleReadRoutes(
             {
               id: "income",
               heading: "재원",
-              body: "서명된 disclosure가 없어 금액대는 UNKNOWN입니다.",
+              body: "서명된 공개 자료가 없어 금액대를 확인할 수 없습니다.",
               links: [],
             },
             {
               id: "expenses",
               heading: "비용",
-              body: "인프라·법률 검토 비용은 UNKNOWN입니다.",
+              body: "인프라·법률 검토 비용은 아직 확인되지 않았습니다.",
               links: [],
             },
             {
               id: "donors",
               heading: "공개 기준",
-              body: "집중도 threshold와 독립 검토 기준을 적용합니다.",
+              body: "후원 집중도 기준과 독립 검토 기준을 적용합니다.",
               links: [],
             },
             {
@@ -291,6 +297,10 @@ export async function handleReadRoutes(
         publishedAt: "2026-07-12T00:00:00Z",
         updatedAt: "2026-07-13T00:00:00Z",
         summary: "원문에 연결된 확인 사실 요약입니다.",
+        agencyName: "가상해안시 도시정책국",
+        contractName: "가상 해안도시 통합계약",
+        amount: { amount: "1250000000", currency: "KRW" },
+        nonConclusion: "이 기록은 이상 징후이며 위법·부패의 확정이 아닙니다.",
         confirmedFacts: [
           {
             id: "fact-1",
@@ -391,7 +401,12 @@ export async function handleReadRoutes(
             id: "80000000-0000-4000-8000-000000000001",
             title: "원문 p.2",
             evidenceType: "DOCUMENT",
-            sourceUrl: null,
+            documentTitle: "가상 해안도시 통합계약 공고문",
+            publisher: "가상해안시 도시정책국",
+            publishedAt: "2026-07-11T09:00:00Z",
+            sourceUrl:
+              "https://records.example.test/contracts/synthetic-record.pdf",
+            pageAnchor: "#page=2",
             sourceLocator: "원문 p.2",
             contentSha256: "a".repeat(64),
             publicExcerpt: null,
@@ -457,8 +472,9 @@ export async function handleReadRoutes(
     const sample = operationId ? responseSamples[operationId] : undefined;
     if (!operationId || !sample)
       return problem(500, "MOCK_READ_RESPONSE_SAMPLE_MISSING");
+    const body = rowNavigationResponseBody(operationId, sample.body, url);
     return new Response(
-      JSON.stringify(rowNavigationResponseBody(operationId, sample.body)),
+      JSON.stringify(publicReadResponseBody(operationId, body, url)),
       {
         status: sample.status,
         headers: { "content-type": sample.mediaType },

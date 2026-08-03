@@ -2,6 +2,7 @@
 import { tick } from "svelte";
 import type { ScreenSectionProps } from "../../index";
 import OperationData from "../OperationData.svelte";
+import PublicEvidenceRows from "./PublicEvidenceRows.svelte";
 import RelayModelCatalogLedger from "./RelayModelCatalogLedger.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
@@ -17,6 +18,14 @@ const openEvidenceAction = $derived(
 );
 const isRelayModelCatalog = $derived(
   screen.id === "OPS-005" && section.id === "model-catalog",
+);
+const publicClaimProjection = $derived(
+  isPublicEvidence && projection
+    ? {
+        ...projection,
+        fields: projection.fields.filter((field) => field.name === "claims"),
+      }
+    : null,
 );
 
 function openEvidenceDrawer() {
@@ -66,7 +75,17 @@ function trapEvidenceFocus(event: KeyboardEvent) {
   }
 }
 </script>
-<SectionHeading {section} kicker="근거 원장" /><p class="evidence-note">보호 필드는 브라우저에 원문으로 표시하지 않습니다.</p>{#if isRelayModelCatalog}{#if runtime.relayModelCatalog}<RelayModelCatalogLedger catalog={runtime.relayModelCatalog} />{:else}<RelayModelCatalogLedger />{/if}{:else if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="현재 범위에 연결된 검증 근거가 없습니다." />{/if}
+
+{#snippet evidenceContent()}
+  {#if isPublicEvidence && runtime.publicEvidence}
+    {#if publicClaimProjection && publicClaimProjection.fields.length > 0}<OperationData {runtime} projection={publicClaimProjection} mode="cards" emptyLabel="연결된 공개 주장이 없습니다." />{/if}
+    <PublicEvidenceRows evidence={runtime.publicEvidence} />
+  {:else if projection}
+    <OperationData {runtime} {projection} mode="cards" emptyLabel="현재 범위에 연결된 검증 근거가 없습니다." />
+  {/if}
+{/snippet}
+
+<SectionHeading {section} kicker="근거 원장" /><p class="evidence-note">보호 필드는 브라우저에 원문으로 표시하지 않습니다.</p>{#if isRelayModelCatalog}{#if runtime.relayModelCatalog}<RelayModelCatalogLedger catalog={runtime.relayModelCatalog} />{:else}<RelayModelCatalogLedger />{/if}{:else}{@render evidenceContent()}{/if}
 {#if isPublicEvidence && openEvidenceAction}
   <div class="evidence-actions">
     <button
@@ -97,7 +116,7 @@ function trapEvidenceFocus(event: KeyboardEvent) {
         tabindex="-1"
       >{section.title}</h2>
       <div class="evidence-drawer__content">
-        {#if projection}<OperationData {runtime} {projection} mode="cards" emptyLabel="현재 범위에 연결된 검증 근거가 없습니다." />{/if}
+        {@render evidenceContent()}
       </div>
       <form method="dialog" class="evidence-drawer__actions">
         <button type="submit" value="close" class="secondary-button">닫기</button>

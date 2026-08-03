@@ -13,7 +13,6 @@ use uuid::Uuid;
 use crate::state::AppState;
 
 const PUBLIC_OPENAPI: &str = include_str!("../../../../specs/generated/public-api.openapi.json");
-
 pub struct Output {
     pub status: u16,
     pub media_type: &'static str,
@@ -26,6 +25,8 @@ pub enum ServiceError {
     InvalidRequest,
     #[error("public record was not found")]
     NotFound,
+    #[error("export row limit exceeded")]
+    PreconditionFailed,
     #[error("public projection is unavailable")]
     Persistence,
 }
@@ -132,6 +133,7 @@ async fn dispatch_query(
         | "listContractChanges"
         | "downloadContracts" => dispatch_entities(operation, request, state, query).await,
         "listPublicCases"
+        | "downloadPublicCases"
         | "getPublicCase"
         | "listCaseRevisions"
         | "getPublicCaseRevision"
@@ -146,6 +148,7 @@ async fn dispatch_query(
         "listSourceStatus"
         | "getSource"
         | "searchPublicRecords"
+        | "downloadPublicSearchRecords"
         | "getPublicSystemStatus"
         | "listTransparencyReports" => dispatch_public(operation, request, state, query).await,
         _ => Err(ServiceError::InvalidRequest),
@@ -215,6 +218,7 @@ async fn dispatch_cases(
 ) -> Result<Value, ServiceError> {
     match operation {
         "listPublicCases" => list_cases(&state.pool, query, None).await,
+        "downloadPublicCases" => download_public_cases(&state.pool, query).await,
         "getPublicCase" => get_case(&state.pool, path(request, "caseSlug")?).await,
         "listCaseRevisions" => list_revisions(&state.pool, query, path(request, "caseSlug")?).await,
         "getPublicCaseRevision" => {
@@ -261,6 +265,7 @@ async fn dispatch_public(
         "listSourceStatus" => list_sources(&state.pool, query).await,
         "getSource" => get_source(&state.pool, path(request, "sourceId")?).await,
         "searchPublicRecords" => search(&state.pool, query).await,
+        "downloadPublicSearchRecords" => download_public_search_records(&state.pool, query).await,
         "getPublicSystemStatus" => system_status(&state.pool).await,
         "listTransparencyReports" => list_reports(&state.pool, query).await,
         _ => Err(ServiceError::InvalidRequest),
@@ -467,35 +472,6 @@ fn content(id: &str, title: &str, summary: &str, sections: &[&str]) -> Value {
     })
 }
 
-struct CaseCardRow {
-    slug: String,
-    title: String,
-    public_state: String,
-    summary: String,
-    latest_revision: i32,
-    updated_at: OffsetDateTime,
-}
-
-fn case_card(row: CaseCardRow) -> Result<Value, ServiceError> {
-    let CaseCardRow {
-        slug,
-        title,
-        public_state,
-        summary,
-        latest_revision,
-        updated_at,
-    } = row;
-    Ok(json!({
-        "slug": slug,
-        "title": title,
-        "publicState": public_state,
-        "summary": summary,
-        "revision": latest_revision,
-        "updatedAt": timestamp(updated_at)?,
-        "href": format!("/cases/{slug}"),
-    }))
-}
-
 struct ContractSummaryRow {
     id: Uuid,
     contract_number: Option<String>,
@@ -592,3 +568,4 @@ include!("entities.rs");
 include!("cases.rs");
 include!("public_funding.rs");
 include!("public_tail.rs");
+include!("exports.rs");

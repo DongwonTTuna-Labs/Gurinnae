@@ -11,7 +11,7 @@ export const screen = {
       id: "intro",
       title: "절차·긴급 안내",
       component: "StatusAndRevisionHeader",
-      purpose: "일반/긴급 경로.",
+      purpose: "정정 요청 절차와 긴급 사안 경로.",
       test_id: "pub_027__section__intro",
     },
     {
@@ -26,7 +26,7 @@ export const screen = {
       order: 3,
       id: "issue",
       title: "오류 설명",
-      component: "StructuredContentSection",
+      component: "GuidedFormSection",
       purpose: "유형·설명·제안 수정.",
       test_id: "pub_027__section__issue",
     },

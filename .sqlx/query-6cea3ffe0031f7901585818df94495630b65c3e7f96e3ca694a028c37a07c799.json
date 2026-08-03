@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT c.public_slug,c.title,c.summary,s.snapshot_payload,CASE WHEN c.publication_state='NEVER_PUBLISHED' AND c.resolution_code='EXPLAINED' THEN 'PUBLISHED_EXPLAINED' WHEN c.publication_state='NEVER_PUBLISHED' THEN 'PUBLISHED_ANOMALY' ELSE c.publication_state::text END \"public_state!\" FROM editorial.cases c JOIN editorial.review_snapshots s ON s.case_id=c.id WHERE c.id=$1 AND s.id=$2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "public_slug",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "public_slug"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "summary",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "editorial.cases",
+            "name": "summary"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "snapshot_payload",
+        "type_info": "Jsonb",
+        "origin": {
+          "Table": {
+            "table": "editorial.review_snapshots",
+            "name": "snapshot_payload"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "public_state!",
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "6cea3ffe0031f7901585818df94495630b65c3e7f96e3ca694a028c37a07c799"
+}

@@ -10,13 +10,13 @@ export function serverActionDestinations(
   screen: ScreenViewModel,
   pathname: string,
 ): Readonly<Record<string, string>> {
-  const runtime = {
+  const runtime: ScreenRuntime = {
     state: "success",
     pathname,
     data: {},
     errors: [],
     forms: {},
-  } as unknown as ScreenRuntime;
+  };
   return Object.fromEntries(
     screen.actions.flatMap((action) => {
       const href = localActionHref(screen, runtime, action);

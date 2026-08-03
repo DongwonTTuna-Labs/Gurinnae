@@ -133,7 +133,7 @@ let verification = derived_token(
             )?;
             let verify_url = format!("{}/subscribe?token={}", state.public_base_url, verification);
             let manage_url = format!(
-                "{}/subscription/manage?token={}",
+                "{}/subscription/manage/exchange?token={}",
                 state.public_base_url, management
             );
             (
@@ -169,7 +169,7 @@ let token = derived_token(
                 &encrypted,
             )?;
             let url = format!(
-                "{}/correction-request/receipt?token={}",
+                "{}/correction-request/receipt/exchange?token={}",
                 state.public_base_url, token
             );
             (
@@ -330,5 +330,4 @@ async fn prepare_correction_resolved(
         format!("<p>정정 검토가 완료되었습니다.</p><p>정정 ID: {}</p>", event.aggregate_id),
     ))
 }
-
 

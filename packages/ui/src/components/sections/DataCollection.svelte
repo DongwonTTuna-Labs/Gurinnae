@@ -18,7 +18,7 @@ const stateCopy = $derived(
   projection?.state === "BLOCKED"
     ? "필수 확인이 끝나지 않아 목록을 표시하지 않습니다. 권한·승인 상태를 확인하세요."
     : projection?.state === "UNKNOWN"
-      ? "현재 범위의 권위 데이터를 확인할 수 없습니다. 담당자가 근거와 기준 시각을 보완해야 합니다."
+      ? "현재 범위의 데이터를 확인할 수 없습니다. 담당자가 근거와 기준 시각을 보완해야 합니다."
       : projection?.state === "ERROR"
         ? "목록을 불러오지 못했습니다. 연결을 확인한 뒤 다시 시도하세요."
         : projection?.state === "STALE"
@@ -33,13 +33,9 @@ const stateCopy = $derived(
   {#if blocking}
     {#if showStateCopy}<p class="inline-state conflict" role={projection?.state === "ERROR" || projection?.state === "BLOCKED" ? "alert" : "status"} aria-live="polite">{stateCopy}</p>{/if}
   {:else if projection}
-    <div class="collection-summary" role="status" aria-live="polite">
-      <strong>서버 권위 목록</strong>
-      <span>표시된 값은 현재 범위에서 확인된 필드이며 전체 결과 수를 의미하지 않습니다.</span>
-    </div>
     <OperationData {runtime} {projection} mode="table" emptyLabel="현재 범위에 확인 가능한 기록이 없습니다." />
   {:else}
-    <p class="inline-state conflict" role="status">서버 권위 투영값이 없어 목록을 표시할 수 없습니다.</p>
+    <p class="inline-state conflict" role="status">목록을 표시할 수 없습니다. 잠시 후 다시 시도하세요.</p>
   {/if}
 </section>
 
@@ -48,25 +44,6 @@ const stateCopy = $derived(
     display: grid;
     gap: 0.625rem;
     min-width: 0;
-  }
-
-  .collection-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.25rem 0.625rem;
-    align-items: baseline;
-    margin: 0;
-    padding: 0.375rem 0.625rem;
-    border-block: 1px solid var(--paper-200);
-    color: var(--ink-700);
-    font-size: 0.8125rem;
-    line-height: 1.4;
-  }
-
-  .collection-summary strong {
-    color: var(--ink-900);
-    font-size: 0.75rem;
-    font-weight: 650;
   }
 
   .inline-state {
@@ -117,7 +94,6 @@ const stateCopy = $derived(
   }
 
   @media (forced-colors: active) {
-    .collection-summary,
     .inline-state {
       border-color: CanvasText;
       background: Canvas;

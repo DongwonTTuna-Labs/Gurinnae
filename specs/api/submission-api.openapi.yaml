@@ -6065,6 +6065,7 @@ components:
           - CASE
           - AGENCY
           - SUPPLIER
+          - REGION
           - CORRECTIONS
         scopeRef:
           type: string
@@ -6483,6 +6484,7 @@ components:
           - CASE
           - AGENCY
           - SUPPLIER
+          - REGION
           - CORRECTIONS
         scopeRef:
           type: string

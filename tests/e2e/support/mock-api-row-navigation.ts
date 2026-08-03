@@ -1,40 +1,11 @@
+import { publicContractRows } from "./mock-api-public-ledger-fixtures";
+import { publicLedgerResponseBody } from "./mock-api-public-ledgers";
+
 type JsonObject = Record<string, unknown>;
 type BodyOverride = (body: JsonObject) => JsonObject;
 
 const FIXTURE_TIME = "2026-07-12T00:00:00Z";
 const FIXTURE_DIGEST = "d".repeat(64);
-
-const CASE_COUNTS = {
-  total: 0,
-  publication: {
-    neverPublished: 0,
-    publishedAnomaly: 0,
-    publishedExplained: 0,
-    officiallyConfirmed: 0,
-    corrected: 0,
-    retracted: 0,
-    temporarilyRestricted: 0,
-  },
-  investigation: {
-    signalDetected: 0,
-    triage: 0,
-    investigating: 0,
-    awaitingResponse: 0,
-    editorialReview: 0,
-    legalReview: 0,
-    readyToPublish: 0,
-    closed: 0,
-  },
-  resolution: {
-    none: 0,
-    dataError: 0,
-    duplicate: 0,
-    explained: 0,
-    insufficientEvidence: 0,
-    referredConfidential: 0,
-    archived: 0,
-  },
-};
 
 function fixtureUuid(namespace: string, ordinal: number) {
   return `${namespace}000000-0000-4000-8000-${String(ordinal).padStart(12, "0")}`;
@@ -46,40 +17,6 @@ function ordinalLabel(ordinal: number) {
 
 function eightRows<T>(build: (ordinal: number) => T) {
   return Array.from({ length: 8 }, (_, index) => build(index + 1));
-}
-
-function coverageModel(sourceId: string) {
-  return {
-    dateRange: { label: "Synthetic fixture" },
-    sourceIds: [sourceId],
-    recordCount: 0,
-    knownGaps: [],
-    freshness: { asOf: FIXTURE_TIME, status: "UNKNOWN" },
-  };
-}
-
-function agencyRef(ordinal: number) {
-  const label = ordinalLabel(ordinal);
-  const id = fixtureUuid("70", ordinal);
-  return {
-    id,
-    name: `Synthetic agency ${label}`,
-    entityType: "AGENCY",
-    href: `/agencies/${id}`,
-  };
-}
-
-function contractSummary(ordinal: number) {
-  const label = ordinalLabel(ordinal);
-  const id = fixtureUuid("72", ordinal);
-  return {
-    id,
-    contractNumber: `SYNTHETIC-CONTRACT-${label}`,
-    title: `Synthetic contract ${label}`,
-    agency: agencyRef(ordinal),
-    status: "UNKNOWN",
-    href: `/contracts/${id}`,
-  };
 }
 
 function taskSummary(namespace: string, ordinal: number, kind: string) {
@@ -96,53 +33,24 @@ function taskSummary(namespace: string, ordinal: number, kind: string) {
   };
 }
 
-const agencyRows = eightRows((ordinal) => {
-  const label = ordinalLabel(ordinal);
-  const id = fixtureUuid("70", ordinal);
-  return {
-    id,
-    name: `Synthetic agency ${label}`,
-    agencyType: "SYNTHETIC",
-    caseCounts: CASE_COUNTS,
-    coverage: coverageModel(`synthetic-agency-source-${label}`),
-    href: `/agencies/${id}`,
-  };
-});
+const sourceStatusNames = [
+  "가온시 열린계약",
+  "한빛도 재정공시",
+  "누리시 조달공개",
+  "마루군 계약현황",
+  "새봄구 재정정보",
+  "해솔시 입찰공고",
+  "다온군 지출공개",
+  "푸른구 계약대장",
+] as const;
 
-const supplierRows = eightRows((ordinal) => {
-  const label = ordinalLabel(ordinal);
-  const id = fixtureUuid("71", ordinal);
-  return {
-    id,
-    name: `Synthetic supplier ${label}`,
-    caseCounts: CASE_COUNTS,
-    coverage: coverageModel(`synthetic-supplier-source-${label}`),
-    identityWarnings: [],
-    href: `/suppliers/${id}`,
-  };
-});
-
-const sourceStatusRows = eightRows((ordinal) => {
-  const label = ordinalLabel(ordinal);
-  return {
-    sourceId: `synthetic-source-${label}`,
-    displayName: `Synthetic source ${label}`,
-    status: "UNKNOWN",
-  };
-});
-
-const correctionRows = eightRows((ordinal) => {
-  const label = ordinalLabel(ordinal);
-  const id = fixtureUuid("74", ordinal);
-  return {
-    id,
-    sourceRevision: ordinal,
-    summary: `Synthetic correction ${label}`,
-    reason: "Synthetic fixture",
-    publishedAt: FIXTURE_TIME,
-    href: `/corrections/${id}`,
-  };
-});
+const sourceStatusRows = sourceStatusNames.map((displayName, index) => ({
+  sourceId: `public-source-${ordinalLabel(index + 1)}`,
+  displayName,
+  status: "CURRENT",
+  lastSuccessAt: FIXTURE_TIME,
+  lagSeconds: 0,
+}));
 
 const notificationRows = eightRows((ordinal) => {
   const label = ordinalLabel(ordinal);
@@ -176,11 +84,8 @@ function itemsOverride(items: readonly unknown[]): BodyOverride {
 }
 
 const bodyOverrides: Readonly<Record<string, BodyOverride>> = {
-  listAgencies: itemsOverride(agencyRows),
-  listAgencyContracts: itemsOverride([contractSummary(1)]),
-  listSuppliers: itemsOverride(supplierRows),
-  listSupplierContracts: itemsOverride([contractSummary(1)]),
-  listContracts: itemsOverride(eightRows(contractSummary)),
+  listAgencyContracts: itemsOverride(publicContractRows.slice(0, 1)),
+  listSupplierContracts: itemsOverride(publicContractRows.slice(0, 1)),
   getContract: (body) => ({
     ...body,
     sourceDocuments: [
@@ -222,8 +127,12 @@ const bodyOverrides: Readonly<Record<string, BodyOverride>> = {
       },
     ],
   }),
-  listSourceStatus: itemsOverride(sourceStatusRows),
-  listCorrections: itemsOverride(correctionRows),
+  listSourceStatus: (body) => ({
+    ...body,
+    items: sourceStatusRows,
+    totalApproximate: sourceStatusRows.length,
+    asOf: FIXTURE_TIME,
+  }),
   getCorrection: (body) => {
     const data = jsonObject(body.data);
     return data
@@ -246,7 +155,10 @@ const bodyOverrides: Readonly<Record<string, BodyOverride>> = {
 export function rowNavigationResponseBody(
   operationId: string,
   body: unknown,
+  url?: URL,
 ): unknown {
+  const publicLedger = publicLedgerResponseBody(operationId, url);
+  if (publicLedger) return publicLedger;
   const object = jsonObject(body);
   const override = bodyOverrides[operationId];
   return object && override ? override(object) : body;

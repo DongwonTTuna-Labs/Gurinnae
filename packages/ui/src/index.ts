@@ -1,7 +1,30 @@
 export { default as ScreenPage } from "./components/ScreenPage.svelte";
 export * from "./decision-contract";
+export * from "./enum-presentation";
 export * from "./generated-screen-journeys";
 export * from "./local-actions";
+export * from "./projection-value";
+export * from "./public-action-placement";
+export * from "./public-case-presentation";
+export type {
+  CorrectionRequestFormContract,
+  DatasetExportFormat,
+  DatasetExportFormContract,
+  PublicDatasetCard,
+  PublicDatasetRecord,
+} from "./public-form-presentation";
+export {
+  correctionRequestFormContract,
+  DATASET_EXPORT_FORMATS,
+  datasetExportFormContract,
+  hiddenFieldValue,
+  namedFormAction as publicFormAction,
+  publicDatasetCards,
+  requestedChangesJson,
+  requestedChangesText,
+} from "./public-form-presentation";
+export * from "./public-ledger";
+export * from "./related-public-cases";
 export * from "./relay-model-catalog";
 export * from "./row-selection-navigation";
 export * from "./screen-archetype";
@@ -9,7 +32,9 @@ export * from "./screen-chrome";
 export * from "./screen-contract";
 export * from "./screen-projection";
 export * from "./server-destinations";
+export * from "./subscription-form";
 export * from "./tokens";
+export * from "./url-filter-contracts";
 export * from "./view-models/cas-010";
 export * from "./view-models/cas-011";
 export * from "./view-models/int-002";
@@ -72,6 +97,7 @@ export type AttachmentRemovalRuntime = {
 export type ScreenRuntime = {
   state:
     | "loading"
+    | "awaiting-query"
     | "initial-loading"
     | "success"
     | "empty"
@@ -165,6 +191,16 @@ export type ScreenRuntime = {
   navigationOptions?: import("./row-selection-navigation").RowSelectionNavigationOptions;
   /** Closed OPS-005 model/provider ledger; raw relay DTOs remain server-only. */
   relayModelCatalog?: import("./relay-model-catalog").RelayModelCatalogViewModel;
+  /** Closed public ledger rows prepared at the server boundary. */
+  publicLedger?: import("./public-ledger").PublicLedgerViewModel;
+  /** Closed public dataset cards prepared at the server boundary. */
+  publicDatasets?: readonly import("./public-form-presentation").PublicDatasetRecord[];
+  /** Closed PUB-004 lead. The operation DTO remains server-only. */
+  publicCaseLead?: import("./public-case-presentation").PublicCaseLeadViewModel;
+  /** Closed PUB-004 evidence metadata without protected evidence fields. */
+  publicEvidence?: readonly import("./public-case-presentation").PublicEvidenceViewModel[];
+  /** Same-origin PUB-004 metadata validated at the public server boundary. */
+  publicSeo?: import("./public-case-presentation").PublicSeoViewModel;
   /** Server-owned navigation destinations. Raw DTO traversal is forbidden. */
   destinations?: Readonly<Record<string, string>>;
   /** Server-prepared, action-scoped binary exports; raw DTOs never reach download code. */
@@ -180,11 +216,13 @@ export type ScreenRuntime = {
 };
 
 export type ScreenProjectionScalar = string | number | boolean;
+export type ScreenProjectionValue =
+  import("./projection-value").ProjectionValue;
 
 export type ScreenRuntimeProjectionField = {
   /** Contextual content heading supplied by a closed specialized mapper. */
   contextualLabel?: string;
-  value: ScreenProjectionScalar | null;
+  value: ScreenProjectionValue | null;
   known: boolean;
   source: string;
 };

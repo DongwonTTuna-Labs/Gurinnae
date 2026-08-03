@@ -967,10 +967,8 @@ search_and_provenance_contract:
     - The overlay never changes rank, score, or the encoded cursor tuple.
   screen_typed_slices:
     PUB-002:
-      query: [PublicRecordsSearchResultPage.appliedFilters.q]
-      types: [PublicRecordsSearchResultPage.appliedFilters.types, PublicRecordsSearchResultPage.appliedFilters.publicationState, PublicRecordsSearchResultPage.appliedFilters.dateFrom, PublicRecordsSearchResultPage.appliedFilters.dateTo]
-      results: ['PublicRecordsSearchResultPage.items[].resultType', 'PublicRecordsSearchResultPage.items[].id', 'PublicRecordsSearchResultPage.items[].title', 'PublicRecordsSearchResultPage.items[].status', 'PublicRecordsSearchResultPage.items[].objectRevision', 'PublicRecordsSearchResultPage.items[].freshness', 'PublicRecordsSearchResultPage.items[].match', 'PublicRecordsSearchResultPage.items[].stateOverlay', 'PublicRecordsSearchResultPage.items[].href']
-      coverage: [PublicRecordsSearchResultPage.asOf, PublicRecordsSearchResultPage.projectionGeneration, PublicRecordsSearchResultPage.projectionWatermark, PublicRecordsSearchResultPage.rankingPolicyVersion, PublicRecordsSearchResultPage.visibilityAsOf, PublicRecordsSearchResultPage.partialDueToVisibilityChange, PublicRecordsSearchResultPage.totalApproximate]
+      query: [PublicRecordsSearchResultPage.appliedFilters.q, PublicRecordsSearchResultPage.appliedFilters.types, PublicRecordsSearchResultPage.appliedFilters.publicationState, PublicRecordsSearchResultPage.appliedFilters.dateFrom, PublicRecordsSearchResultPage.appliedFilters.dateTo]
+      results: ['PublicRecordsSearchResultPage.items[].resultType', 'PublicRecordsSearchResultPage.items[].id', 'PublicRecordsSearchResultPage.items[].title', 'PublicRecordsSearchResultPage.items[].status', 'PublicRecordsSearchResultPage.items[].objectRevision', 'PublicRecordsSearchResultPage.items[].freshness', 'PublicRecordsSearchResultPage.items[].match', 'PublicRecordsSearchResultPage.items[].stateOverlay', 'PublicRecordsSearchResultPage.items[].href', PublicRecordsSearchResultPage.asOf, PublicRecordsSearchResultPage.projectionGeneration, PublicRecordsSearchResultPage.projectionWatermark, PublicRecordsSearchResultPage.rankingPolicyVersion, PublicRecordsSearchResultPage.visibilityAsOf, PublicRecordsSearchResultPage.partialDueToVisibilityChange, PublicRecordsSearchResultPage.totalApproximate]
     INT-003:
       query: [InternalRecordsSearchResultPage.appliedFilters.q]
       types: [InternalRecordsSearchResultPage.appliedFilters.types, InternalRecordsSearchResultPage.appliedFilters.status]
@@ -992,7 +990,7 @@ search_and_provenance_contract:
       list: ['CaseEvidencePage.items[].id', 'CaseEvidencePage.items[].title', 'CaseEvidencePage.items[].sourceLocator', 'CaseEvidencePage.items[].contentSha256', 'CaseEvidencePage.items[].provenance', 'CaseEvidencePage.items[].verificationStatus']
       gaps: ['CaseEvidencePage.items[].verificationStatus', CaseEvidencePage.totalApproximate, CaseEvidencePage.asOf]
   screen_ten_second_sections:
-    PUB-002: {location: query, state: coverage, matters_now: results, evidence: results, unknown_or_disputed: coverage, next_action: results}
+    PUB-002: {location: query, state: results, matters_now: results, evidence: results, unknown_or_disputed: results, next_action: results}
     INT-003: {location: query, state: results, matters_now: results, evidence: results, unknown_or_disputed: results, next_action: results}
     PUB-004: {location: status, state: status, matters_now: known, evidence: evidence, unknown_or_disputed: unknown, next_action: evidence}
     CAS-004: {location: matrix, state: list, matters_now: matrix, evidence: list, unknown_or_disputed: gaps, next_action: matrix}

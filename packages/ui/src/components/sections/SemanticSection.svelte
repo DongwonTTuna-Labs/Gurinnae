@@ -1,12 +1,17 @@
 <script lang="ts">
 import type { ScreenSectionProps } from "../../index";
 import { stateLabel, typedScreenViewModel } from "../../screen-contract";
+import ProjectionValue from "../ProjectionValue.svelte";
 import SectionHeading from "./SectionHeading.svelte";
 
 let { section, screen, runtime, projection }: ScreenSectionProps = $props();
 const contract = $derived(typedScreenViewModel(screen));
 const typedSection = $derived(
   contract.sections.find((item) => item.id === section.id),
+);
+const knownFields = $derived(
+  projection?.fields.filter((field) => field.known && field.value !== null) ??
+    [],
 );
 </script>
 
@@ -21,8 +26,8 @@ const typedSection = $derived(
   {:else if runtime.state === "conflict"}<p role="status">다른 변경이 먼저 저장되었습니다. 최신 버전을 다시 확인한 뒤 이어가세요.</p>
   {:else if runtime.state === "stale" || runtime.state === "superseded"}<p role="status">표시된 자료가 최신이 아닙니다. 기준 시각을 확인하고 읽기 전용으로 갱신하세요.</p>
   {:else if runtime.state === "maintenance"}<p role="status">서비스 점검 중입니다. 안전한 읽기 작업만 유지됩니다.</p>
-  {:else if projection && projection.fields.length > 0}<dl class="structured-fields">{#each projection.fields as field}<div><dt>{field.label}</dt><dd>{field.value ?? "확인 필요"}</dd></div>{/each}</dl>
-  {:else}<p role="status">이 영역에 표시할 권위 투영값이 없습니다.</p>{/if}
+  {:else if knownFields.length > 0}<dl class="structured-fields">{#each knownFields as field}<div><dt>{field.label}</dt><dd><ProjectionValue name={field.name} label={field.label} value={field.value} /></dd></div>{/each}</dl>
+  {:else}<p role="status">이 영역에 표시할 정보가 없습니다.</p>{/if}
 </div>
 
 <style>

@@ -8,7 +8,7 @@ async fn list_agencies(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
         "name_asc",
     )?;
     let rows = sqlx::query!(
-        "SELECT a.id,a.name,a.agency_type,a.jurisdiction,a.coverage,a.case_counts,a.updated_at FROM public.agencies a WHERE ($1='' OR a.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR a.agency_type=ANY($2)) AND ($3='' OR a.jurisdiction=$3) ORDER BY CASE WHEN $4='name_asc' THEN a.name END ASC,CASE WHEN $4='updated_desc' THEN a.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.agency_id=a.id) END DESC,a.id LIMIT $5 OFFSET $6",
+        "SELECT a.id,a.name,a.agency_type,a.jurisdiction,a.sido_code,a.sigungu_code,a.region_code_version,a.coverage,a.case_counts,a.updated_at FROM public.agencies a WHERE ($1='' OR a.name ILIKE '%'||$1||'%') AND (cardinality($2::text[])=0 OR a.agency_type=ANY($2)) AND ($3='' OR a.jurisdiction=$3) ORDER BY CASE WHEN $4='name_asc' THEN a.name END ASC,CASE WHEN $4='updated_desc' THEN a.updated_at END DESC,CASE WHEN $4='contract_count_desc' THEN (SELECT count(*) FROM public.contracts c WHERE c.agency_id=a.id) END DESC,a.id LIMIT $5 OFFSET $6",
         q,
         &types,
         jurisdiction,
@@ -27,6 +27,9 @@ async fn list_agencies(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
             "name": row.name,
             "agencyType": row.agency_type,
             "jurisdiction": row.jurisdiction,
+            "sidoCode": row.sido_code.map(|value| value.trim().to_owned()),
+            "sigunguCode": row.sigungu_code.map(|value| value.trim().to_owned()),
+            "regionCodeVersion": row.region_code_version,
             "caseCounts": row.case_counts,
             "coverage": row.coverage,
             "href": format!("/agencies/{id}"),
@@ -40,7 +43,7 @@ async fn list_agencies(pool: &PgPool, query: &Query) -> Result<Value, ServiceErr
 }
 
 async fn get_agency(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> {
-    let row = sqlx::query!("SELECT id,name,agency_type,jurisdiction,coverage,descriptive_metrics,case_counts,updated_at FROM public.agencies WHERE id=$1", id)
+    let row = sqlx::query!("SELECT id,name,agency_type,jurisdiction,sido_code,sigungu_code,region_code_version,coverage,descriptive_metrics,case_counts,updated_at FROM public.agencies WHERE id=$1", id)
         .fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
     let cases = recent_cases(pool, "agency", id).await?;
     let contracts = recent_contracts(pool, "agency", id).await?;
@@ -49,6 +52,9 @@ async fn get_agency(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> {
         "name": row.name,
         "agencyType": row.agency_type,
         "jurisdiction": row.jurisdiction,
+        "sidoCode": row.sido_code.map(|value| value.trim().to_owned()),
+        "sigunguCode": row.sigungu_code.map(|value| value.trim().to_owned()),
+        "regionCodeVersion": row.region_code_version,
         "identifiers": [],
         "coverage": row.coverage,
         "metrics": row.descriptive_metrics,
@@ -103,14 +109,12 @@ async fn list_suppliers(pool: &PgPool, query: &Query) -> Result<Value, ServiceEr
 async fn get_supplier(pool: &PgPool, id: Uuid) -> Result<Value, ServiceError> {
     let row=sqlx::query!("SELECT id,name,business_status,coverage,descriptive_metrics,case_counts,identity_warnings,updated_at FROM public.suppliers WHERE id=$1", id)
         .fetch_optional(pool).await.map_err(db)?.ok_or(ServiceError::NotFound)?;
-    Ok(
-        json!({"id":id,"name":row.name,
+    Ok(json!({"id":id,"name":row.name,
         "businessStatus":row.business_status,"identifiers":[],
         "coverage":row.coverage,"metrics":row.descriptive_metrics,
         "caseCountsByState":row.case_counts,"recentCases":recent_cases(pool,"supplier",id).await?,
         "recentContracts":recent_contracts(pool,"supplier",id).await?,"identityWarnings":row.identity_warnings,
-        "freshness":{"asOf":timestamp(row.updated_at)?,"status":"CURRENT"}}),
-    )
+        "freshness":{"asOf":timestamp(row.updated_at)?,"status":"CURRENT"}}))
 }
 
 async fn recent_cases(pool: &PgPool, relation: &str, id: Uuid) -> Result<Vec<Value>, ServiceError> {
@@ -119,7 +123,7 @@ async fn recent_cases(pool: &PgPool, relation: &str, id: Uuid) -> Result<Vec<Val
     } else {
         ("supplierId", "supplierIds")
     };
-    let rows=sqlx::query_as!(CaseCardRow, "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$3 OR COALESCE(r.payload->$2,'[]'::jsonb) ? $3 ORDER BY c.updated_at DESC LIMIT 5", scalar_key, array_key, id.to_string())
+    let rows=sqlx::query_as!(CaseCardRow, "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at,CASE WHEN jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]') THEN 'RECEIVED'::text END AS \"response_status?\",CASE WHEN EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id) THEN 'PUBLISHED'::text END AS \"correction_status?\" FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$3 OR COALESCE(r.payload->$2,'[]'::jsonb) ? $3 ORDER BY c.updated_at DESC LIMIT 5", scalar_key, array_key, id.to_string())
         .fetch_all(pool).await.map_err(db)?;
     rows.into_iter().map(case_card).collect()
 }
@@ -153,7 +157,7 @@ async fn list_related_cases(
     let sort = requested_sort(query, &["updated_desc", "created_asc"], "updated_desc")?;
     let rows = sqlx::query_as!(
         CaseCardRow,
-        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$3 OR COALESCE(r.payload->$2,'[]'::jsonb) ? $3 ORDER BY CASE WHEN $4='updated_desc' THEN c.updated_at END DESC,CASE WHEN $4='created_asc' THEN c.published_at END ASC,c.id LIMIT $5 OFFSET $6",
+        "SELECT c.slug,c.title,c.public_state,c.summary,c.latest_revision,c.updated_at,CASE WHEN jsonb_path_exists(r.payload,'$.responses[*]') OR jsonb_path_exists(r.payload,'$.partyResponses[*]') THEN 'RECEIVED'::text END AS \"response_status?\",CASE WHEN EXISTS(SELECT 1 FROM public.corrections x WHERE x.case_id=c.id) THEN 'PUBLISHED'::text END AS \"correction_status?\" FROM public.cases c JOIN public.case_revisions r ON r.case_id=c.id AND r.revision=c.latest_revision WHERE r.payload->>$1=$3 OR COALESCE(r.payload->$2,'[]'::jsonb) ? $3 ORDER BY CASE WHEN $4='updated_desc' THEN c.updated_at END DESC,CASE WHEN $4='created_asc' THEN c.published_at END ASC,c.id LIMIT $5 OFFSET $6",
         scalar_key,
         array_key,
         id.to_string(),

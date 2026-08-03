@@ -13,9 +13,9 @@ selection_contract:
   coexistence: Different typed signal families may coexist; states in one single-valued family are mutually exclusive.
   renderer_inference_forbidden: true
 counts:
-  profile_occurrences: 840
+  profile_occurrences: 841
   special_occurrences: 319
-  total_occurrences: 1159
+  total_occurrences: 1160
 implementation_requirements:
 - Generate a typed ScreenRuntimeSignalsV1 selector and one test fixture per occurrence_id; renderer-side state inference is
   forbidden.
@@ -393,10 +393,51 @@ profile_occurrences:
     summary: 홈의 ‘최신 정보 확인됨’ 상태입니다. 서비스의 역할을 이해하고 공개 기록 또는 검색으로 진입한다.
     preservation: 현재 권위 데이터 또는 영수증을 유지한다.
     next_step: 현재 화면의 명시된 주 행동을 이용한다.
+- occurrence_id: PUB-002::profile::awaiting-query
+  screen_id: PUB-002
+  kind: PROFILE
+  profile: public-search
+  state: awaiting-query
+  trigger:
+    all:
+    - path: signals.blocking_pending
+      op: eq
+      value: false
+    - path: signals.blocking_failure
+      op: eq
+      value: false
+    - path: signals.query_present
+      op: eq
+      value: false
+  precedence:
+    rank: 200
+    tie_behavior: FAIL_CLOSED_TO_STATE_CONFLICT
+    coexists_with_special_overlay: true
+  preserve:
+    policy: search-input-and-filters
+    copy: 입력한 검색어와 유효한 필터를 유지한다.
+  action:
+    policy: enter-or-choose-query
+    copy: 검색어를 입력하거나 예시 검색어·기관 대장을 선택한다.
+  focus:
+    behavior: MOVE
+    target_test_id: pub_002__state__awaiting_query__search_input
+  live:
+    mode: polite-once
+    region_test_id: pub_002__state_live
+    announce_once_per_transition: true
+  retry:
+    safety: STATE_SPECIFIC
+    same_idempotency_key_only_when_contract_allows: true
+  copy:
+    heading: 통합 검색 — 검색어 입력 대기
+    summary: 통합 검색의 ‘검색어 입력 대기’ 상태입니다. 공개 객체를 이름·계약번호·키워드로 찾아 정확한 상세 화면으로 이동한다.
+    preservation: 입력한 검색어와 유효한 필터를 유지한다.
+    next_step: 검색어를 입력하거나 예시 검색어·기관 대장을 선택한다.
 - occurrence_id: PUB-002::profile::initial-loading
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: initial-loading
   trigger:
     all:
@@ -434,7 +475,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::refreshing
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: refreshing
   trigger:
     all:
@@ -472,7 +513,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::empty
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: empty
   trigger:
     all:
@@ -519,7 +560,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::filtered-empty
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: filtered-empty
   trigger:
     all:
@@ -566,7 +607,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::partial
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: partial
   trigger:
     all:
@@ -607,7 +648,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::stale
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: stale
   trigger:
     all:
@@ -645,7 +686,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::error
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: error
   trigger:
     all:
@@ -683,7 +724,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::offline
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: offline
   trigger:
     all:
@@ -721,7 +762,7 @@ profile_occurrences:
 - occurrence_id: PUB-002::profile::success
   screen_id: PUB-002
   kind: PROFILE
-  profile: public-data
+  profile: public-search
   state: success
   trigger:
     all:
@@ -33820,6 +33861,7 @@ special_occurrences:
   primary_state_relation:
     disposition: REFINES_PRIMARY_STATE
     refines:
+    - awaiting-query
     - empty
     - filtered-empty
     rule: The special signal never selects or replaces the exactly-one primary state.

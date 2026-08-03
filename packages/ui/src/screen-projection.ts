@@ -10,6 +10,7 @@ import type {
   ScreenViewModel,
   SemanticRegion,
 } from "./index";
+import type { ProjectionPrimitive, ProjectionValue } from "./projection-value";
 import {
   normalizeRegion,
   restoreAction,
@@ -24,12 +25,12 @@ import {
 } from "./screen-projection-values";
 
 /** Values that are safe to put in browser text, links or accessible names. */
-export type SafeProjectionValue = string | number | boolean;
+export type SafeProjectionValue = ProjectionPrimitive;
 
 export type ProjectionField = {
   name: string;
   label: string;
-  value: SafeProjectionValue | null;
+  value: ProjectionValue | null;
   known: boolean;
   source: string;
 };
@@ -309,7 +310,7 @@ export function projectFetchedData(
         string,
         {
           contextualLabel?: string;
-          value: SafeProjectionValue | null;
+          value: ProjectionValue | null;
           known: boolean;
           source: string;
         }
@@ -320,7 +321,7 @@ export function projectFetchedData(
   for (const [_fieldName, binding] of Object.entries(bindings)) {
     const operationValue = data[binding.operationId];
     const raw = valueAtPath(operationValue, binding.path);
-    const value = safeProjectionValue(raw);
+    const value = safeProjectionValue(raw, binding.fieldName);
     const existing = sections[binding.sectionId] ?? {
       blocked: false,
       fields: {},
@@ -344,10 +345,14 @@ export function projectFetchedData(
       // projections. Merge every field they explicitly emit (including
       // response journeys and CAS visualizations) while never exposing the
       // underlying DTO to the browser.
+      const value = safeProjectionValue(
+        projectedField.value,
+        projectedField.name,
+      );
       existing.fields[projectedField.name] = {
         contextualLabel: projectedField.label,
-        value: projectedField.value,
-        known: projectedField.known,
+        value,
+        known: projectedField.known && value !== null,
         source: projectedField.source,
       };
     }

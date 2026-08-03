@@ -16,8 +16,8 @@ const showProvenance = $derived(
 );
 </script>
 
-<SectionHeading {section} kicker="권위 분석 결과" />
-<p class="analysis-projection-note"><strong>분석 범위</strong><span>서버 검증 모델 · 접근 가능한 표·근거 행</span></p>
+<SectionHeading {section} kicker="검증된 분석 결과" />
+<p class="analysis-projection-note"><strong>분석 범위</strong><span>검증된 모델 · 접근 가능한 표·근거 행</span></p>
 {#if projection}
   <OperationData {runtime} {projection} mode="cards" emptyLabel="현재 계약에서 확인 가능한 분석 항목이 없습니다." />
 {/if}
@@ -36,7 +36,7 @@ const showProvenance = $derived(
             <tbody>{#each metric.tableAlternative.rows as row}<tr>{#each row as cell, index}<td data-label={metric.tableAlternative.headers[index] ?? `값 ${index + 1}`}>{cell}</td>{/each}</tr>{/each}</tbody>
           </table>
         </div>
-        <p class="projection-provenance">표 무결성 지문: <code>{metric.tableAlternative.dataSha256}</code></p>
+        <p class="projection-provenance">표 무결성 확인값: <code>{metric.tableAlternative.dataSha256}</code></p>
       </article>
     {/each}
   </section>
@@ -48,7 +48,7 @@ const showProvenance = $derived(
     <div class="table-scroll" role="region" aria-label="근거 연결 표">
       <table data-testid={`${section.id}-provenance-table`}>
         <caption>실행에서 확인한 근거 연결</caption>
-        <thead><tr><th scope="col">순서</th><th scope="col">출발</th><th scope="col">관계</th><th scope="col">도착</th><th scope="col">근거 지문</th></tr></thead>
+        <thead><tr><th scope="col">순서</th><th scope="col">출발</th><th scope="col">관계</th><th scope="col">도착</th><th scope="col">근거 확인값</th></tr></thead>
         <tbody>
           {#each rows as row}
             <tr>
