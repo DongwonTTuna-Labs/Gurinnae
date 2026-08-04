@@ -138,14 +138,20 @@ Svelte 템플릿 symbol 사용은 Svelte compiler를 이해하는 `svelte-check`
 
 ## Archive 검증 규칙
 
-최종 제출물은 `source/` 단일 root의 `gurine-source-v13.0.0.tar.gz` 하나다. 생성 후 외부 verifier가 다음을 다시 확인한다.
+release source artifact는 `source/` 단일 root의 `gurine-source-v13.0.0.tar.gz`, SHA-256
+sidecar와 extraction receipt다. 생성 후 검증 프로세스가 다음을 다시 확인한다.
 
 ```bash
 make source-archive
 make clean-extraction-verify
 ```
 
-`clean-extraction-verify`는 sidecar SHA-256, 중복·traversal·link·special-file 금지, 단일 `source/` root, 내부 MANIFEST의 정확한 member set을 확인한 뒤 새 임시 디렉터리에 추출해 `make verify-final` 전체를 다시 실행한다.
+`clean-extraction-verify`는 sidecar SHA-256, 중복·traversal·link·special-file 금지, 단일
+`source/` root, 내부 MANIFEST의 정확한 member set과 source-tree digest를 확인한 뒤 새 임시
+디렉터리의 추출본에서 `make verify-prearchive`를 실행한다. authoritative acceptance와
+`make verify-final`은 이 target이 실행하지 않는다. release workflow는 이후 원 체크아웃에서
+명시적인 `ACCEPTANCE_*` 7개 입력으로 `make verify-acceptance`를 실행해 archive와 receipt
+digest를 acceptance evidence에 바인딩한다.
 
 ## Source-tree 판정
 

@@ -189,9 +189,12 @@ Svelte page는 view composition, server load/action은 BFF orchestration, packag
 - `make verify-final`: spec/codegen, source, SQLx, runtime, container, recovery, UI hard gate
 - `make verify-acceptance`: sealed acceptance 실행과 독립 evidence 검증
 
-Acceptance override가 없으면 Git이 무시하는 `artifacts/acceptance/`에 run-scoped
-evidence와 source bundle/extraction receipt를 생성한다. 루트 Manifest는 검증 입력이
-아니며, `make source-archive`가 만든 archive의 내부 무결성 metadata로만 생성한다.
+`make verify-acceptance`는 evidence root, run ID, source commit/tree digest, archive,
+extraction receipt와 receipt SHA-256의 `ACCEPTANCE_*` 7개 입력을 모두 명시적으로
+요구한다. Git이 무시하는 `artifacts/acceptance/` 기본 root와 source bundle/extraction
+receipt 자동 생성은 override 없이 `scripts/run_acceptance.py`를 직접 실행할 때만
+적용된다. 루트 Manifest는 검증 입력이 아니며, `make source-archive`가 만든 archive의
+내부 무결성 metadata로만 생성한다.
 
 ## 13. 보안·데이터 불변식
 

@@ -80,10 +80,12 @@ make verify-final
 결정성을 검증하고 `build-ui`는 UI build의 공통 경계다. `verify-final`은
 이 검증과 source, runtime, container, recovery, UI hard gate를 묶는다.
 
-Sealed acceptance는 별도 `make verify-acceptance`로 실행한다. override가 없으면
-Git이 무시하는 `artifacts/acceptance/`에 run-scoped evidence와 검증용 source bundle을
-만든다. 배포용 archive는 `make source-archive`가 `artifacts/`에 만들며,
-Manifest는 압축 내부에만 생성된다.
+Sealed acceptance의 `make verify-acceptance`는 evidence root, run ID, source commit/tree
+digest, archive, extraction receipt와 receipt SHA-256의 `ACCEPTANCE_*` 7개 입력을 모두
+명시적으로 요구하며 `make verify-final`도 이 target에 의존한다. 제공된 root에 run-scoped
+evidence를 만들고 제공된 archive/receipt에 바인딩한 뒤 독립 validator가 재검증한다.
+Git이 무시하는 `artifacts/acceptance/` 기본 root와 source bundle/receipt 자동 생성은
+override 없이 `scripts/run_acceptance.py`를 직접 실행할 때만 적용된다.
 
 최종 제출은 MVP, scaffold, fixture-only, 일부 화면 또는 계획이 아니라
 `FINAL_BUILD_CONTRACT.md`의 전체 범위와 모든 필수 gate를 통과한 source tree여야 한다.

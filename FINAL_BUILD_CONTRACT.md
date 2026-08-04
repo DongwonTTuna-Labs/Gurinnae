@@ -86,9 +86,12 @@ E2E/visual test가 공유하는 단일 UI build 경계다.
 - Docker network isolation, restart persistence, backup/restore
 - security header, session, CSRF, assertion, IDOR, prompt-injection test
 
-Sealed acceptance는 `make verify-acceptance`로 별도 실행하고 독립 evidence validation을
-통과해야 한다. override가 없으면 Git이 무시하는 `artifacts/acceptance/`에
-run-scoped evidence와 검증용 source bundle/extraction receipt를 생성한다.
+Sealed acceptance는 `make verify-acceptance`로 실행하고 독립 evidence validation을
+통과해야 한다. 이 target은 evidence root, run ID, source commit/tree digest, archive,
+extraction receipt와 receipt SHA-256의 `ACCEPTANCE_*` 7개 입력을 모두 명시적으로
+요구한다. 제공된 root에는 run-scoped evidence를 생성한다. Git이 무시하는
+`artifacts/acceptance/` 기본 root와 source bundle/extraction receipt 자동 생성은
+override 없이 `scripts/run_acceptance.py`를 직접 실행할 때만 적용된다.
 
 `make source-archive`는 배포 archive를 `artifacts/`에 만든다. Manifest는 archive 내부에서만
 생성·검증하며 루트 소스 트리의 권위 검증 근거로 사용하지 않는다.

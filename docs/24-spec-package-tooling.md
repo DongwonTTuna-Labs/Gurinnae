@@ -76,6 +76,13 @@ Manifest는 package-relative file hash를 기록하고 fresh extraction에서 �
 timestamp를 넣지 않는다. 루트 source tree에 Manifest를 유지하거나 frozen tag 비교를
 대체하는 용도로 사용하지 않는다.
 
+Archive-local SHA-256와 Manifest는 archive bytes/member set의 무결성을 검증하지만 producer
+identity를 인증하지 않는다. clean extraction은 추출본 안의 `scripts/git_authority.py`로
+추출본 manifest를 검증하므로 archive 제작자는 그 pin 상수와 manifest를 함께 바꿀 수 있다.
+따라서 fallback 위조를 거부할 수 있다는 보증은 archive 밖에서 별도로 보유한 정품
+`scripts/git_authority.py`와 그 pin으로 검증하는 경우에만 성립한다. 추출본만 신뢰하는
+검증자에게 producer authenticity나 암호학적 위조 불가능성을 보증하지 않는다.
+
 Git checkout에서 검증할 때는 `authority-v13-frozen` 태그가 반드시 존재해야 한다. CI checkout은
 `fetch-depth: 0`과 `fetch-tags: true`를 사용하며, origin에 태그가 없으면 감독자가
 `git push origin authority-v13-frozen`으로 먼저 게시해야 한다.

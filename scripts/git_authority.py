@@ -220,13 +220,17 @@ def _git_blob_oid(content: bytes) -> str:
     return hashlib.sha1(b"blob " + str(len(content)).encode("ascii") + b"\0" + content).hexdigest()
 
 
+def _verify_git_blob_bytes(relative: str, content: bytes, declared_oid: str) -> None:
+    actual_oid = _git_blob_oid(content)
+    if actual_oid != declared_oid:
+        raise GitAuthorityError(
+            f"Git blob bytes differ for {relative}: {actual_oid} != {declared_oid}"
+        )
+
+
 def _read_git_blob(root: Path, entry: AuthorityPath) -> bytes:
     content = _run_git(root, ["cat-file", "blob", entry.blob_oid])
-    actual_oid = _git_blob_oid(content)
-    if actual_oid != entry.blob_oid:
-        raise GitAuthorityError(
-            f"Git blob bytes differ for {entry.path}: {actual_oid} != {entry.blob_oid}"
-        )
+    _verify_git_blob_bytes(entry.path, content, entry.blob_oid)
     return content
 
 
@@ -575,9 +579,11 @@ def authority_file(relative: str, root: Path = ROOT) -> bytes:
             ) from error
     try:
         before = _resolve_git_authority(repository)
+        declared_oid = _resolve_oid(repository, f"{before.commit_oid}:{relative}")
         content = _run_git(repository, ["show", f"{before.commit_oid}:{relative}"])
         if _resolve_git_authority(repository) != before:
             raise GitAuthorityError("authority tag moved while a member was read")
+        _verify_git_blob_bytes(relative, content, declared_oid)
     except GitAuthorityError as error:
         raise _git_authority_failure(repository, error) from error
     return content

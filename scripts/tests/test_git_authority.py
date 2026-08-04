@@ -130,6 +130,48 @@ class GitAuthorityFallbackTests(unittest.TestCase):
             with self.assertRaisesRegex(GitAuthorityError, "Git blob OID differs"):
                 git_authority._parse_authority_manifest(raw)
 
+    def test_authority_file_rejects_bytes_that_differ_from_declared_oid(self) -> None:
+        declared_content = b"declared frozen bytes\n"
+        returned_content = b"different returned bytes\n"
+        declared_oid = git_authority._git_blob_oid(declared_content)
+        identity = git_authority.AuthorityIdentity(
+            git_authority.AUTHORITY_TAG,
+            AUTHORITY_COMMIT_OID,
+            AUTHORITY_TREE_OID,
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / ".git").mkdir()
+            with (
+                patch.object(
+                    git_authority,
+                    "_resolve_git_authority",
+                    return_value=identity,
+                ) as resolve,
+                patch.object(
+                    git_authority,
+                    "_resolve_oid",
+                    return_value=declared_oid,
+                ) as rev_parse,
+                patch.object(
+                    git_authority,
+                    "_run_git",
+                    return_value=returned_content,
+                ) as show,
+            ):
+                with self.assertRaisesRegex(
+                    GitAuthorityError, "Git blob bytes differ for AGENTS.md"
+                ):
+                    authority_file("AGENTS.md", root)
+
+            rev_parse.assert_called_once_with(
+                root.resolve(), f"{AUTHORITY_COMMIT_OID}:AGENTS.md"
+            )
+            show.assert_called_once_with(
+                root.resolve(), ["show", f"{AUTHORITY_COMMIT_OID}:AGENTS.md"]
+            )
+            self.assertEqual(resolve.call_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

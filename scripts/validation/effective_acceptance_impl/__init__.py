@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
+import shlex
 import stat
 import subprocess
 import sys
@@ -328,6 +329,245 @@ def _make_recipe_commands(recipes: Iterable[str]) -> tuple[str, ...]:
     return tuple(commands)
 
 
+@dataclass(frozen=True)
+class _DockerMount:
+    option: str
+    source: str | None
+    destination: str
+    read_only: bool
+    specification: str
+
+
+def _mount_destination(value: str) -> str:
+    path = PurePosixPath(value)
+    if (
+        re.fullmatch(r"/(?:[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)?", value)
+        is None
+        or any(part in {".", ".."} for part in path.parts)
+        or path.as_posix() != value
+    ):
+        raise ValueError(f"unsafe or non-canonical mount destination: {value!r}")
+    return value
+
+
+def _mount_source(value: str) -> str:
+    make_source = re.fullmatch(
+        r"\$\((?:CURDIR|ACCEPTANCE_EVIDENCE_ROOT)\)(?:/[A-Za-z0-9._-]+)*",
+        value,
+    )
+    if make_source is not None:
+        suffix = value[value.index(")") + 1 :]
+        if not any(part in {".", ".."} for part in PurePosixPath(suffix).parts):
+            return value
+    plain_path = PurePosixPath(value)
+    plain_source = re.fullmatch(
+        r"/(?:[A-Za-z0-9._-]+(?:/[A-Za-z0-9._-]+)*)?|[A-Za-z0-9][A-Za-z0-9_.-]*",
+        value,
+    )
+    if (
+        make_source is None
+        and plain_source is not None
+        and not any(part in {".", ".."} for part in plain_path.parts)
+        and plain_path.as_posix() == value
+    ):
+        return value
+    raise ValueError(f"invalid or unexpected mount source: {value!r}")
+
+
+def _parse_volume_mount(option: str, specification: str) -> _DockerMount:
+    fields = specification.split(":")
+    if len(fields) == 1:
+        source = None
+        destination = fields[0]
+        modes: tuple[str, ...] = ()
+    elif len(fields) in {2, 3}:
+        source = _mount_source(fields[0])
+        destination = fields[1]
+        modes = tuple(fields[2].split(",")) if len(fields) == 3 else ()
+    else:
+        raise ValueError(f"unknown {option} syntax: {specification!r}")
+    allowed_modes = {
+        "ro", "rw", "z", "Z", "private", "rprivate", "shared", "rshared",
+        "slave", "rslave", "consistent", "cached", "delegated",
+    }
+    if (
+        any(not mode or mode not in allowed_modes for mode in modes)
+        or len(set(modes)) != len(modes)
+        or {"ro", "rw"} <= set(modes)
+    ):
+        raise ValueError(f"unknown or conflicting {option} mode: {specification!r}")
+    return _DockerMount(
+        option, source, _mount_destination(destination), "ro" in modes, specification
+    )
+
+
+def _parse_mount_option(option: str, specification: str) -> _DockerMount:
+    aliases = {
+        "src": "source",
+        "source": "source",
+        "dst": "target",
+        "destination": "target",
+        "target": "target",
+        "ro": "readonly",
+        "readonly": "readonly",
+        "type": "type",
+    }
+    values: dict[str, str] = {}
+    for field in specification.split(","):
+        key, separator, value = field.partition("=")
+        canonical = aliases.get(key)
+        if canonical is None or canonical in values:
+            raise ValueError(f"unknown or duplicate {option} field: {field!r}")
+        if canonical == "readonly":
+            if separator:
+                raise ValueError(f"unknown {option} readonly syntax: {field!r}")
+            values[canonical] = "true"
+        elif not separator or not value:
+            raise ValueError(f"invalid {option} field: {field!r}")
+        else:
+            values[canonical] = value
+    mount_type = values.get("type")
+    source = values.get("source")
+    target = values.get("target")
+    if mount_type not in {"bind", "volume", "tmpfs"} or target is None:
+        raise ValueError(f"incomplete or unknown {option} syntax: {specification!r}")
+    if (mount_type == "bind" and source is None) or (
+        mount_type == "tmpfs" and source is not None
+    ):
+        raise ValueError(f"invalid {mount_type} {option} source: {specification!r}")
+    return _DockerMount(
+        option,
+        _mount_source(source) if source is not None else None,
+        _mount_destination(target),
+        values.get("readonly") == "true",
+        specification,
+    )
+
+
+def _parse_tmpfs_mount(option: str, specification: str) -> _DockerMount:
+    fields = specification.split(":")
+    if len(fields) > 2:
+        raise ValueError(f"unknown {option} syntax: {specification!r}")
+    modes = tuple(fields[1].split(",")) if len(fields) == 2 else ()
+    flags = {"ro", "rw", "exec", "noexec", "suid", "nosuid", "dev", "nodev"}
+    value_options = {"size", "mode", "uid", "gid", "nr_inodes", "nr_blocks", "mpol"}
+    for mode in modes:
+        key, separator, value = mode.partition("=")
+        if not mode or (separator and (key not in value_options or not value)) or (
+            not separator and key not in flags
+        ):
+            raise ValueError(f"unknown {option} mode: {mode!r}")
+    if len(set(modes)) != len(modes) or {"ro", "rw"} <= set(modes):
+        raise ValueError(f"duplicate or conflicting {option} mode: {specification!r}")
+    return _DockerMount(
+        option, None, _mount_destination(fields[0]), "ro" in modes, specification
+    )
+
+
+_EVIDENCE_DOCKER_OPTIONS = (
+    ("--rm", None),
+    ("--network", "none"),
+    ("--user", "$$(id -u):$$(id -g)"),
+    ("--env", "HOME=/tmp"),
+    ("--env", "PYTHONDONTWRITEBYTECODE=1"),
+    ("--env", "GURINNAE_SOURCE_COMMIT=$(ACCEPTANCE_SOURCE_COMMIT)"),
+    ("--env", "GURINNAE_SOURCE_TREE_SHA256=$(ACCEPTANCE_SOURCE_TREE_SHA256)"),
+    (
+        "--env",
+        "GURINNAE_ARCHIVE_SHA256=$$(sha256sum $(ACCEPTANCE_ARCHIVE) "
+        "| cut -d' ' -f1)",
+    ),
+    (
+        "--env",
+        "GURINNAE_EXTRACTION_RECEIPT_SHA256="
+        "$(ACCEPTANCE_EXTRACTION_RECEIPT_SHA256)",
+    ),
+    (
+        "--env",
+        "GURINNAE_EXTRACTION_RECEIPT=/acceptance-evidence/"
+        "$(ACCEPTANCE_RUN_ID)/common/extraction-receipt.json",
+    ),
+    ("--workdir", "/workspace"),
+)
+_EVIDENCE_CONTAINER_COMMAND = (
+    "python",
+    "-B",
+    "scripts/validation/effective_acceptance.py",
+    "--mode",
+    "evidence",
+    "--evidence-root",
+    "/acceptance-evidence",
+    "--run-index",
+    "$(ACCEPTANCE_RUN_ID)/run-index.json",
+)
+
+
+def _parse_evidence_docker_run(command: str, image: str) -> tuple[_DockerMount, ...]:
+    stripped = command.lstrip("@+")
+    try:
+        tokens = shlex.split(stripped, posix=True)
+    except ValueError as error:
+        raise ValueError(f"cannot tokenize evidence recipe: {error}") from error
+    if tokens[:2] != ["docker", "run"]:
+        raise ValueError("evidence recipe is not one docker run invocation")
+
+    flag_options = {"--rm"}
+    value_options = ("--network", "--user", "--env", "-e", "--workdir", "-w")
+    mount_parsers = {
+        "--volume": _parse_volume_mount,
+        "-v": _parse_volume_mount,
+        "--mount": _parse_mount_option,
+        "--tmpfs": _parse_tmpfs_mount,
+    }
+    mounts: list[_DockerMount] = []
+    observed_options: list[tuple[str, str | None]] = []
+    index = 2
+    while index < len(tokens) and tokens[index] != image:
+        token = tokens[index]
+        if token in flag_options:
+            observed_options.append((token, None))
+            index += 1
+            continue
+        option: str | None = None
+        value: str | None = None
+        if token in value_options or token in mount_parsers:
+            option = token
+            index += 1
+            if index < len(tokens):
+                value = tokens[index]
+        else:
+            for candidate in (*value_options, *mount_parsers):
+                prefix = f"{candidate}="
+                if token.startswith(prefix):
+                    option, value = candidate, token.removeprefix(prefix)
+                    break
+            if option is None and token.startswith(("-e", "-w", "-v")):
+                option, value = token[:2], token[2:].removeprefix("=")
+        if option is None or not value:
+            raise ValueError(f"unknown or valueless docker run option: {token!r}")
+        parser = mount_parsers.get(option)
+        if parser is not None:
+            mounts.append(parser(option, value))
+        else:
+            observed_options.append((option, value))
+        index += 1
+
+    if index >= len(tokens) or tokens[index] != image:
+        raise ValueError(f"evidence validator image is not the docker image: {image}")
+    if tuple(observed_options) != _EVIDENCE_DOCKER_OPTIONS:
+        raise ValueError("evidence validator docker options are not exact")
+    if tuple(tokens[index + 1 :]) != _EVIDENCE_CONTAINER_COMMAND:
+        raise ValueError("evidence validator container command is not exact")
+    return tuple(mounts)
+
+
+def _protected_mount_destination(destination: str) -> bool:
+    return any(
+        destination == root or destination.startswith(f"{root}/")
+        for root in ("/workspace", "/acceptance-evidence")
+    )
+
+
 def _validate_make_graph(root: Path, checks: Checks) -> None:
     path = root / "Makefile"
     try:
@@ -428,14 +668,34 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
         if "effective_acceptance.py --mode evidence" in command
     )
     validator_image = "gurine-authority-validator:13.0.0"
-    docker_validator_commands = tuple(
-        command
-        for command in validator_commands
-        if command.lstrip("@+").startswith("docker run ")
-        and validator_image in command
-        and command.partition(validator_image)[2]
-        .lstrip()
-        .startswith("python -B scripts/validation/effective_acceptance.py --mode evidence")
+    mount_error: str | None = None
+    mounts: tuple[_DockerMount, ...] = ()
+    if len(evidence_commands) == 1:
+        try:
+            mounts = _parse_evidence_docker_run(evidence_commands[0], validator_image)
+        except ValueError as error:
+            mount_error = str(error)
+    else:
+        mount_error = (
+            "verify-execution-evidence must contain exactly one logical recipe command: "
+            f"observed {len(evidence_commands)}"
+        )
+    docker_validator_commands = (
+        evidence_commands if len(evidence_commands) == 1 and mount_error is None else ()
+    )
+    checks.need(
+        len(docker_validator_commands) == 1,
+        "acceptance_make_single_evidence_docker_run",
+        "Makefile#verify-execution-evidence",
+        "exactly one authority-validator docker run invocation",
+        evidence_commands,
+    )
+    checks.need(
+        mount_error is None,
+        "acceptance_make_evidence_docker_syntax_fail_closed",
+        "Makefile#verify-execution-evidence",
+        "all docker mount syntax is recognized and structurally valid",
+        mount_error,
     )
     checks.need(
         bool(docker_validator_commands),
@@ -453,8 +713,9 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
     )
     checks.need(
         any(
-            '--volume "$(CURDIR):/workspace:ro"' in command
-            for command in docker_validator_commands
+            mount.option == "--volume"
+            and mount.specification == "$(CURDIR):/workspace:ro"
+            for mount in mounts
         ),
         "acceptance_make_workspace_read_only",
         "Makefile#verify-execution-evidence",
@@ -463,14 +724,27 @@ def _validate_make_graph(root: Path, checks: Checks) -> None:
     )
     checks.need(
         any(
-            '--volume "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"'
-            in command
-            for command in docker_validator_commands
+            mount.option == "--volume"
+            and mount.specification
+            == "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"
+            for mount in mounts
         ),
         "acceptance_make_evidence_read_only",
         "Makefile#verify-execution-evidence",
         '--volume "$(ACCEPTANCE_EVIDENCE_ROOT):/acceptance-evidence:ro"',
         evidence_recipes,
+    )
+    writable_protected = [
+        f"{mount.option} {mount.specification}"
+        for mount in mounts
+        if _protected_mount_destination(mount.destination) and not mount.read_only
+    ]
+    checks.need(
+        not writable_protected,
+        "acceptance_make_protected_mounts_read_only",
+        "Makefile#verify-execution-evidence",
+        [],
+        writable_protected,
     )
 
 

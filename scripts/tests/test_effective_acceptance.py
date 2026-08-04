@@ -28,6 +28,14 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class EffectiveAcceptanceContractTests(unittest.TestCase):
+    def make_graph_problem_codes(self, makefile: str) -> set[str]:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "Makefile").write_text(makefile, encoding="utf-8")
+            checks = Checks("mutation")
+            _validate_make_graph(root, checks)
+        return {problem.code for problem in checks.problems}
+
     def test_current_static_contract_is_generated_and_closed(self) -> None:
         checks, registry = validate_static(ROOT)
         self.assertEqual(checks.problems, [])
@@ -349,6 +357,92 @@ class EffectiveAcceptanceContractTests(unittest.TestCase):
                 checks = Checks("mutation")
                 _validate_make_graph(root, checks)
                 self.assertIn(expected_code, {problem.code for problem in checks.problems})
+
+    def test_make_graph_rejects_nested_writable_workspace_volume(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        insertion = '\t\t--workdir /workspace \\\n'
+        self.assertIn(insertion, makefile)
+        mutation = makefile.replace(
+            insertion,
+            '\t\t--volume "$(CURDIR)/scripts:/workspace/scripts" \\\n' + insertion,
+            1,
+        )
+        self.assertIn(
+            "acceptance_make_protected_mounts_read_only",
+            self.make_graph_problem_codes(mutation),
+        )
+
+    def test_make_graph_rejects_command_before_evidence_docker_run(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        target = "verify-execution-evidence: run-acceptance-439\n"
+        self.assertIn(target, makefile)
+        mutation = makefile.replace(
+            target,
+            target + "\t@printf 'tamper' > /tmp/acceptance-evidence-tamper\n",
+            1,
+        )
+        self.assertIn(
+            "acceptance_make_single_evidence_docker_run",
+            self.make_graph_problem_codes(mutation),
+        )
+
+    def test_make_graph_rejects_writable_workspace_required_mount(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        source = '"$(CURDIR):/workspace:ro"'
+        self.assertIn(source, makefile)
+        mutation = makefile.replace(source, '"$(CURDIR):/workspace"', 1)
+        codes = self.make_graph_problem_codes(mutation)
+        self.assertIn("acceptance_make_workspace_read_only", codes)
+        self.assertIn("acceptance_make_protected_mounts_read_only", codes)
+
+    def test_make_graph_rejects_unknown_mount_syntax_fail_closed(self) -> None:
+        makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+        insertion = '\t\t--workdir /workspace \\\n'
+        self.assertIn(insertion, makefile)
+        mutation = makefile.replace(
+            insertion,
+            "\t\t--mount "
+            "type=bind,src=/tmp,target=/workspace/cache,bind-recursive=readonly "
+            "\\\n"
+            + insertion,
+            1,
+        )
+        self.assertIn(
+            "acceptance_make_evidence_docker_syntax_fail_closed",
+            self.make_graph_problem_codes(mutation),
+        )
+
+    def test_make_graph_rejects_unexpected_shell_or_make_expansion(self) -> None:
+        additions = (
+            '\t\t--volume /tmp:/$$TARGET \\\n',
+            '\t\t--env X="$$(docker run attacker)" \\\n',
+        )
+        original = (ROOT / "Makefile").read_text(encoding="utf-8")
+        insertion = '\t\t--workdir /workspace \\\n'
+        self.assertIn(insertion, original)
+        for addition in additions:
+            with self.subTest(addition=addition):
+                mutation = original.replace(insertion, addition + insertion, 1)
+                self.assertIn(
+                    "acceptance_make_evidence_docker_syntax_fail_closed",
+                    self.make_graph_problem_codes(mutation),
+                )
+
+    def test_make_graph_rejects_writable_mount_and_tmpfs_overlays(self) -> None:
+        additions = (
+            "\t\t--mount type=bind,src=/tmp,target=/acceptance-evidence/cache \\\n",
+            "\t\t--tmpfs /workspace/cache \\\n",
+        )
+        original = (ROOT / "Makefile").read_text(encoding="utf-8")
+        insertion = '\t\t--workdir /workspace \\\n'
+        self.assertIn(insertion, original)
+        for addition in additions:
+            with self.subTest(addition=addition):
+                mutation = original.replace(insertion, addition + insertion, 1)
+                self.assertIn(
+                    "acceptance_make_protected_mounts_read_only",
+                    self.make_graph_problem_codes(mutation),
+                )
 
 
 if __name__ == "__main__":

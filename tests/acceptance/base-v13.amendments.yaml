@@ -1,3 +1,8 @@
+# This ledger guarantees that current base artifacts are either frozen bytes or an
+# explicitly listed amendment; an undeclared byte change cannot pass validation.
+# It does not cryptographically authorize a newly appended amendment: after the
+# pinned initial prefix, its amended_sha256 is author-controlled.  The authority
+# of a new row is its visibility in diff review, not a signature or digest chain.
 schema_version: 1
 policy: APPEND_ONLY
 amendments:
