@@ -7,8 +7,111 @@ from .loaders import load_json
 from .models import Validation
 
 
+def _length_prefixed(value: str) -> bytes:
+    encoded = value.encode("utf-8")
+    return len(encoded).to_bytes(8, "big") + encoded
+
+
+def _public_text_preimage(value: object) -> bytes:
+    if isinstance(value, str):
+        return b"T" + _length_prefixed(value)
+    if isinstance(value, list):
+        return (
+            b"A"
+            + len(value).to_bytes(8, "big")
+            + b"".join(_public_text_preimage(item) for item in value)
+        )
+    if isinstance(value, dict):
+        return b"O" + b"".join(
+            _length_prefixed(name) + _public_text_preimage(value[name])
+            for name in sorted(value)
+        )
+    raise ValueError("public-text payload contains an unsupported node")
+
+
+def _public_text_sha256(value: object) -> str:
+    return hashlib.sha256(_public_text_preimage(value)).hexdigest()
+
+
+def _required_text(value: dict, name: str) -> str:
+    candidate = value.get(name)
+    if not isinstance(candidate, str):
+        raise ValueError("public payload text field is invalid")
+    return candidate
+
+
+def _required_array(value: dict, name: str) -> list:
+    candidate = value.get(name)
+    if not isinstance(candidate, list):
+        raise ValueError("public payload array field is invalid")
+    return candidate
+
+
+def _optional_text(value: dict, name: str) -> str | None:
+    candidate = value.get(name)
+    if candidate is None:
+        return None
+    if not isinstance(candidate, str):
+        raise ValueError("public payload optional text field is invalid")
+    return candidate
+
+
+def _project_public_text_payload(value: object) -> dict:
+    if not isinstance(value, dict):
+        raise ValueError("public payload is invalid")
+    claims = []
+    for claim in _required_array(value, "claims"):
+        if not isinstance(claim, dict):
+            raise ValueError("public payload claim is invalid")
+        limitations = _required_array(claim, "limitations")
+        if not all(isinstance(limitation, str) for limitation in limitations):
+            raise ValueError("public payload claim limitation is invalid")
+        claims.append({
+            "text": _required_text(claim, "text"),
+            "limitations": limitations,
+        })
+    evidence = []
+    for item in _required_array(value, "evidence"):
+        if not isinstance(item, dict):
+            raise ValueError("public payload evidence is invalid")
+        projected = {
+            "title": _required_text(item, "title"),
+            "sourceUrl": _required_text(item, "sourceUrl"),
+        }
+        public_excerpt = _optional_text(item, "publicExcerpt")
+        if public_excerpt is not None:
+            projected["publicExcerpt"] = public_excerpt
+        evidence.append(projected)
+    responses = []
+    for response in _required_array(value, "responses"):
+        if not isinstance(response, dict):
+            raise ValueError("public payload response is invalid")
+        projected = {
+            "partyName": _required_text(response, "partyName")
+        }
+        excerpt = _optional_text(response, "excerpt")
+        if excerpt is not None:
+            projected["excerpt"] = excerpt
+        responses.append(projected)
+    return {
+        "slug": _required_text(value, "slug"),
+        "title": _required_text(value, "title"),
+        "summary": _required_text(value, "summary"),
+        "nonConclusion": _required_text(value, "nonConclusion"),
+        "claims": claims,
+        "evidence": evidence,
+        "responses": responses,
+    }
+
+
 def _named_person_guard_error(value: dict) -> str | None:
     assessment = value["assessment"]
+    try:
+        public_text_payload = _project_public_text_payload(value["publicPayload"])
+    except (KeyError, ValueError):
+        return "publicPayload cannot form the production public-text tree"
+    if _public_text_sha256(public_text_payload) != assessment["publicTextSha256"]:
+        return "assessment publicTextSha256 does not match publicPayload"
     findings = assessment["findings"]
     for finding in findings:
         if finding["endUtf16"] <= finding["startUtf16"]:

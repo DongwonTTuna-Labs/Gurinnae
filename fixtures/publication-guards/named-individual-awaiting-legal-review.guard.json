@@ -1,8 +1,29 @@
 {
+  "publicPayload": {
+    "publicationState": "PUBLISHED_ANOMALY",
+    "slug": "test-only-named-individual-guard",
+    "title": "가상 계약 점검",
+    "summary": "홍길동",
+    "nonConclusion": "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+    "claims": [
+      {
+        "text": "계약 자료 비교",
+        "limitations": ["초기 자료"]
+      }
+    ],
+    "evidence": [
+      {
+        "title": "계약서",
+        "sourceUrl": "https://official.example/contracts/test-only-named-individual-guard",
+        "publicExcerpt": "계약 범위 확인"
+      }
+    ],
+    "responses": []
+  },
   "assessment": {
     "rulesetVersion": "ko-named-individual-v1",
-    "rulesetSha256": "3b6449ab94c887b9b31ddb10481acfc132d4db29fcbadb394fa88c7305ec09c4",
-    "publicTextSha256": "4ce15b8c83ad0840c62722234e68fd6702a29e5c2e30fa03eb5e5525644f516c",
+    "rulesetSha256": "bc7b9b83c7402bfdd093cbebc6374bb5fe1a8862caeace05536016dab3ce71cf",
+    "publicTextSha256": "e1c4bb8652de654f15466de97c7272bc2cec9c2de916a793347a563b9fb6b2d1",
     "findings": [
       {
         "path": "/summary",

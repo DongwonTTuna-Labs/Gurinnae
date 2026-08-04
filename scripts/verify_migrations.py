@@ -36,6 +36,7 @@ EXPECTED_ADDITIVE_MIGRATIONS = (
     "0041_f9_natural_person_name_guard_closure.sql",
     "0042_f3_public_source_url_exposure_closure.sql",
     "0043_b1_public_slug_rename_authority.sql",
+    "0044_b2_natural_person_detection_digest_closure.sql",
 )
 EXPECTED_RUNTIME_MIGRATIONS = EXPECTED_BASE_MIGRATIONS + len(
     EXPECTED_ADDITIVE_MIGRATIONS

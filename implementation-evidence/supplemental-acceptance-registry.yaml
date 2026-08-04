@@ -87,8 +87,8 @@
     },
     {
       "path": "infra/docker/rust-service/Dockerfile",
-      "sha256": "aefe60cdbfa41dbce48d28a524285d81b4a93d1e2cad37ba31c4fb5a4591553a",
-      "size": 14134
+      "sha256": "5f6af55acd5a599b0c918069e8204bf06efba34166bb5421785135cdb18c970b",
+      "size": 14157
     },
     {
       "path": "infra/images.lock",
@@ -196,7 +196,7 @@
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "060fa23b85ed9353e17b9d3133111d81954366f18ce085be3cbfac4dbca5ea01",
+      "sha256": "8ec60b822a9964c197dabb8924d2649379649e53fac106a2e4a59f8802d2a52a",
       "size": 11218
     }
   ],

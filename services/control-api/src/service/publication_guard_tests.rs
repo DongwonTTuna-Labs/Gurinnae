@@ -7,6 +7,15 @@ use super::*;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
+const NAMED_PERSON_GUARD_FIXTURES: &[&str] = &[
+    include_str!(
+        "../../../../fixtures/publication-guards/named-individual-awaiting-legal-review.guard.json"
+    ),
+    include_str!(
+        "../../../../fixtures/publication-guards/named-individual-official-disposition.guard.json"
+    ),
+];
+
 fn payload() -> Value {
     // TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
     json!({
@@ -80,6 +89,57 @@ fn scanner_tree_covers_nested_public_text_without_scanning_internal_ids() -> Tes
         assessment.public_text_sha256,
         scan_public_text(&changed_source_url_tree, &[])?.public_text_sha256
     );
+    Ok(())
+}
+
+#[test]
+fn guard_fixture_digests_use_the_production_public_text_tree() -> TestResult {
+    for fixture_source in NAMED_PERSON_GUARD_FIXTURES {
+        let fixture: Value = serde_json::from_str(fixture_source)?;
+        let public_payload = &fixture["publicPayload"];
+        let tree = publication_text_tree(public_payload)?;
+        assert_eq!(
+            public_text_leaf(&tree, "/slug")?,
+            public_payload["slug"].as_str().unwrap_or_default()
+        );
+        assert_eq!(
+            public_text_leaf(&tree, "/evidence/0/sourceUrl")?,
+            public_payload["evidence"][0]["sourceUrl"]
+                .as_str()
+                .unwrap_or_default()
+        );
+
+        let registered = RegisteredPersonName::new("홍길동")?;
+        let assessment = scan_public_text(&tree, &[registered])?;
+        assert_eq!(
+            fixture
+                .pointer("/assessment/publicTextSha256")
+                .and_then(Value::as_str),
+            Some(assessment.public_text_sha256.as_str())
+        );
+        assert_eq!(assessment.findings.len(), 1);
+        assert_eq!(assessment.findings[0].path, "/summary");
+        assert_eq!(assessment.findings[0].start_utf16, 0);
+        assert_eq!(assessment.findings[0].end_utf16, 3);
+        assert_eq!(
+            assessment.findings[0].basis,
+            NaturalPersonFindingBasis::RegisteredPersonExact
+        );
+
+        let mut changed_slug = public_payload.clone();
+        changed_slug["slug"] = json!("test-only-named-individual-guard-changed");
+        assert_ne!(
+            assessment.public_text_sha256,
+            scan_public_text(&publication_text_tree(&changed_slug)?, &[])?.public_text_sha256
+        );
+        let mut changed_source_url = public_payload.clone();
+        changed_source_url["evidence"][0]["sourceUrl"] =
+            json!("https://official.example/contracts/test-only-named-individual-guard-changed");
+        assert_ne!(
+            assessment.public_text_sha256,
+            scan_public_text(&publication_text_tree(&changed_source_url)?, &[])?.public_text_sha256
+        );
+    }
     Ok(())
 }
 

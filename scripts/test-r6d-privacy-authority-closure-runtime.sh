@@ -20,8 +20,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 43 ]]; then
-  printf 'expected exactly 43 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 44 ]]; then
+  printf 'expected exactly 44 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -57,6 +57,12 @@ fi
 if [[ "$(basename "${migrations[42]}")" != \
   '0043_b1_public_slug_rename_authority.sql' ]]; then
   printf 'migration 0043 filename is not the B1 public slug rename authority\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[43]}")" != \
+  '0044_b2_natural_person_detection_digest_closure.sql' ]]; then
+  printf 'migration 0044 filename is not the B2 natural-person closure\n' >&2
   exit 1
 fi
 
@@ -97,6 +103,10 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[42]}" >/dev/null
 
+# Apply the B2 immutable scanner policy and SQL lower-bound closure last.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" <"${migrations[43]}" >/dev/null
+
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
@@ -107,4 +117,4 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql
 
-printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=43, final=0043)\n'
+printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=44, final=0044)\n'
