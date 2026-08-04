@@ -322,6 +322,12 @@ _R6D_INVENTORY_CONTRACTS = (
         '0042',
         0,
     ),
+    (
+        '0043_b1_public_slug_rename_authority.sql',
+        '0043-b1-public-slug-rename-authority.yaml',
+        '0043',
+        0,
+    ),
 )
 
 

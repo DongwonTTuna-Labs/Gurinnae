@@ -479,6 +479,9 @@ AS $$
       'revisionReceipts',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
         ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
         FROM editorial.publication_revision_owner_receipts_v2 AS row_value),
+      'slugRenameReceipts',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
+        ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
+        FROM editorial.public_slug_rename_receipts_v1 AS row_value),
       'tasks',(SELECT COALESCE(jsonb_agg(to_jsonb(row_value)
         ORDER BY ops.canonical_jsonb_v1(to_jsonb(row_value))),'[]'::jsonb)
         FROM ops.tasks AS row_value),
@@ -585,9 +588,173 @@ INSERT INTO editorial.cases(
   legal_review_required,version
 )
 VALUES(
-  'd6e00000-0000-4000-8000-000000000101','r6d-control-publication',
+  'd6e00000-0000-4000-8000-000000000101',NULL,
   'R6d control publication','READY_TO_PUBLISH','NEVER_PUBLISHED',true,1
 );
+
+DO $b1_slug_preflight$
+DECLARE
+  v_legacy_slug text;
+  v_violations text[];
+BEGIN
+  SELECT public_slug INTO STRICT v_legacy_slug
+  FROM editorial.cases
+  WHERE id='f9000000-0000-4000-8000-000000000001'
+    AND title='TEST_ONLY legacy invalid slug case';
+  IF editorial.r6d_public_slug_valid_v1(v_legacy_slug) IS TRUE THEN
+    RAISE EXCEPTION 'b1_test_only_legacy_slug_not_invalid';
+  END IF;
+  RAISE NOTICE 'B1_T3_STEP_1_PASS case_id=% legacy_slug=%',
+    'f9000000-0000-4000-8000-000000000001',v_legacy_slug;
+
+  SELECT violation_codes INTO STRICT v_violations
+  FROM editorial.list_r6d_invalid_public_slugs_v1()
+  WHERE case_id='f9000000-0000-4000-8000-000000000001';
+  IF NOT ('CHARACTER_SET_OR_SHAPE_INVALID'=ANY(v_violations)) THEN
+    RAISE EXCEPTION 'b1_test_only_legacy_slug_not_reported';
+  END IF;
+  RAISE NOTICE 'B1_T3_STEP_2_PASS case_id=% violation_codes=%',
+    'f9000000-0000-4000-8000-000000000001',v_violations;
+
+  BEGIN
+    UPDATE editorial.cases
+    SET public_slug='b1-direct-update-forbidden'
+    WHERE id='d6e00000-0000-4000-8000-000000000101';
+    RAISE EXCEPTION 'b1_direct_slug_update_accepted';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    RAISE NOTICE 'B1_T2_1_PASS sqlstate=42501 direct_update=blocked';
+  END;
+END
+$b1_slug_preflight$;
+
+SET LOCAL ROLE gurine_control_api;
+DO $b1_slug_owner_calls$
+BEGIN
+  PERFORM editorial.rename_public_slug_v1(
+    'd6e00000-0000-4000-8000-000000000101',1,
+    'b1-owner-authorized-rename',
+    'd6e00000-0000-4000-8000-000000000001',
+    'TEST_ONLY authorized slug rename'
+  );
+  BEGIN
+    PERFORM editorial.rename_public_slug_v1(
+      'd6e00000-0000-4000-8000-000000000101',2,
+      'INVALID-SLUG',
+      'd6e00000-0000-4000-8000-000000000001',
+      'TEST_ONLY invalid slug rejection'
+    );
+    RAISE EXCEPTION 'b1_invalid_new_slug_accepted';
+  EXCEPTION WHEN SQLSTATE '23514' THEN
+    RAISE NOTICE 'B1_T2_4_PASS sqlstate=23514 invalid_new_slug=blocked';
+  END;
+  PERFORM editorial.rename_public_slug_v1(
+    'f9000000-0000-4000-8000-000000000001',1,
+    'test-only-legacy-slug-repaired',
+    'd6e00000-0000-4000-8000-000000000001',
+    'TEST_ONLY repair of staged legacy invalid slug'
+  );
+END
+$b1_slug_owner_calls$;
+RESET ROLE;
+
+DO $b1_slug_postconditions$
+DECLARE
+  v_invalid_count bigint;
+  v_receipt_id uuid;
+  v_receipt_count bigint;
+  v_slug text;
+  v_version bigint;
+BEGIN
+  SELECT count(*),(array_agg(receipt_id))[1]
+  INTO v_receipt_count,v_receipt_id
+  FROM editorial.public_slug_rename_receipts_v1
+  WHERE case_id='d6e00000-0000-4000-8000-000000000101'
+    AND prior_case_version=1 AND case_version=2
+    AND old_slug IS NULL
+    AND new_slug='b1-owner-authorized-rename'
+    AND actor_id='d6e00000-0000-4000-8000-000000000001'
+    AND reason='TEST_ONLY authorized slug rename'
+    AND receipt_digest=encode(
+      extensions.digest(receipt_canonical,'sha256'),'hex'
+    );
+  SELECT public_slug,version INTO STRICT v_slug,v_version
+  FROM editorial.cases
+  WHERE id='d6e00000-0000-4000-8000-000000000101';
+  IF v_receipt_count<>1 OR v_slug<>'b1-owner-authorized-rename'
+     OR v_version<>2 THEN
+    RAISE EXCEPTION 'b1_owner_rename_or_receipt_invalid';
+  END IF;
+  RAISE NOTICE
+    'B1_T2_2_PASS receipt_id=% receipt_count=% slug=% version=%',
+    v_receipt_id,v_receipt_count,v_slug,v_version;
+
+  BEGIN
+    UPDATE editorial.cases
+    SET public_slug='b1-owner-bypass-forbidden',version=version+1
+    WHERE id='d6e00000-0000-4000-8000-000000000101';
+    RAISE EXCEPTION 'b1_receiptless_owner_bypass_accepted';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    RAISE NOTICE
+      'B1_T2_3_PASS sqlstate=42501 receiptless_owner_bypass=blocked';
+  END;
+
+  BEGIN
+    UPDATE editorial.cases
+    SET public_slug='b1-mixed-transition-forbidden',
+        publication_state='PUBLISHED_ANOMALY',
+        current_publication_revision=1,version=version+1
+    WHERE id='d6e00000-0000-4000-8000-000000000101';
+    RAISE EXCEPTION 'b1_mixed_slug_publication_transition_accepted';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    RAISE NOTICE
+      'B1_T2_5_PASS sqlstate=42501 mixed_slug_publication=blocked';
+  END;
+
+  BEGIN
+    UPDATE editorial.public_slug_rename_receipts_v1
+    SET reason=reason WHERE receipt_id=v_receipt_id;
+    RAISE EXCEPTION 'b1_slug_rename_receipt_mutation_accepted';
+  EXCEPTION WHEN SQLSTATE '55000' THEN
+    RAISE NOTICE 'B1_APPEND_ONLY_PASS sqlstate=55000 update=blocked';
+  END;
+
+  SELECT public_slug,version INTO STRICT v_slug,v_version
+  FROM editorial.cases
+  WHERE id='f9000000-0000-4000-8000-000000000001';
+  SELECT count(*) INTO v_receipt_count
+  FROM editorial.public_slug_rename_receipts_v1
+  WHERE case_id='f9000000-0000-4000-8000-000000000001'
+    AND prior_case_version=1 AND case_version=2
+    AND old_slug='테스트-가공인'
+    AND new_slug='test-only-legacy-slug-repaired';
+  IF v_slug<>'test-only-legacy-slug-repaired' OR v_version<>2
+     OR v_receipt_count<>1 THEN
+    RAISE EXCEPTION 'b1_test_only_legacy_slug_repair_invalid';
+  END IF;
+  RAISE NOTICE
+    'B1_T3_STEP_3_PASS slug=% version=% receipt_count=%',
+    v_slug,v_version,v_receipt_count;
+
+  SELECT count(*) INTO v_invalid_count
+  FROM editorial.list_r6d_invalid_public_slugs_v1();
+  IF v_invalid_count<>0 THEN
+    RAISE EXCEPTION 'b1_invalid_slug_inventory_not_empty:%',v_invalid_count;
+  END IF;
+  RAISE NOTICE 'B1_T3_STEP_4_PASS invalid_slug_count=%',v_invalid_count;
+
+  ALTER TABLE editorial.cases
+    VALIDATE CONSTRAINT cases_public_slug_f9_shape_ck;
+  IF NOT EXISTS(
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid='editorial.cases'::regclass
+      AND conname='cases_public_slug_f9_shape_ck' AND convalidated
+  ) THEN
+    RAISE EXCEPTION 'b1_public_slug_constraint_not_validated';
+  END IF;
+  RAISE NOTICE
+    'B1_T3_STEP_5_PASS constraint=cases_public_slug_f9_shape_ck validated=true';
+END
+$b1_slug_postconditions$;
 
 INSERT INTO editorial.review_snapshots(
   id,case_id,case_version,snapshot_sha256,snapshot_payload,
@@ -595,7 +762,7 @@ INSERT INTO editorial.review_snapshots(
 )
 VALUES(
   'd6e00000-0000-4000-8000-000000000102',
-  'd6e00000-0000-4000-8000-000000000101',1,repeat('a',64),
+  'f9000000-0000-4000-8000-000000000001',2,repeat('a',64),
   '{"fixture":"R6D_CONTROL_PUBLICATION"}',
   '{"namedPersonGate":"PENDING"}','[]',
   'd6e00000-0000-4000-8000-000000000001'
@@ -603,7 +770,7 @@ VALUES(
 
 UPDATE editorial.cases
 SET current_review_snapshot_id='d6e00000-0000-4000-8000-000000000102'
-WHERE id='d6e00000-0000-4000-8000-000000000101';
+WHERE id='f9000000-0000-4000-8000-000000000001';
 
 INSERT INTO editorial.review_assignments(
   id,case_id,review_snapshot_id,reviewer_id,status,assigned_by,
@@ -611,13 +778,13 @@ INSERT INTO editorial.review_assignments(
 )
 VALUES
   ('d6e00000-0000-4000-8000-000000000111',
-   'd6e00000-0000-4000-8000-000000000101',
+   'f9000000-0000-4000-8000-000000000001',
    'd6e00000-0000-4000-8000-000000000102',
    'd6e00000-0000-4000-8000-000000000002','IN_PROGRESS',
    'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
    clock_timestamp(),clock_timestamp()+interval '1 hour',1),
   ('d6e00000-0000-4000-8000-000000000112',
-   'd6e00000-0000-4000-8000-000000000101',
+   'f9000000-0000-4000-8000-000000000001',
    'd6e00000-0000-4000-8000-000000000102',
    'd6e00000-0000-4000-8000-000000000003','IN_PROGRESS',
    'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
@@ -644,15 +811,8 @@ VALUES
    transaction_timestamp()+interval '4 minutes',1,
    transaction_timestamp()-interval '1 second');
 
-DO $f9_slug_negative_assertions$
+DO $f9_slug_shape_assertions$
 BEGIN
-  IF NOT EXISTS(
-    SELECT 1 FROM editorial.list_r6d_invalid_public_slugs_v1()
-    WHERE case_id='f9000000-0000-4000-8000-000000000001'
-      AND 'CHARACTER_SET_OR_SHAPE_INVALID'=ANY(violation_codes)
-  ) THEN
-    RAISE EXCEPTION 'f9_legacy_invalid_slug_not_reported';
-  END IF;
   BEGIN
     INSERT INTO editorial.cases(
       id,public_slug,title,investigation_state,publication_state,priority,version
@@ -683,23 +843,9 @@ BEGIN
     RAISE EXCEPTION 'f9_overlength_slug_check_not_enforced';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
-  BEGIN
-    UPDATE editorial.cases SET public_slug='slug-only-update-must-be-owned'
-    WHERE id='d6e00000-0000-4000-8000-000000000101';
-    RAISE EXCEPTION 'f9_slug_only_update_guard_not_enforced';
-  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
-  END;
-  BEGIN
-    UPDATE editorial.cases
-    SET publication_state='PUBLISHED_ANOMALY',
-        current_publication_revision=1,version=version+1
-    WHERE id='f9000000-0000-4000-8000-000000000001';
-    RAISE EXCEPTION 'f9_legacy_invalid_slug_publication_not_blocked';
-  EXCEPTION WHEN check_violation THEN NULL;
-  END;
-  RAISE NOTICE 'F9_SLUG_NEGATIVE_ASSERTIONS_PASS';
+  RAISE NOTICE 'F9_SLUG_SHAPE_ASSERTIONS_PASS';
 END
-$f9_slug_negative_assertions$;
+$f9_slug_shape_assertions$;
 
 -- TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
 DO $f9_public_text_tree_parity$
@@ -782,10 +928,10 @@ $f9_public_text_tree_parity$;
 DO $r6d_publication_owner_flow$
 DECLARE
   v_payload jsonb:=jsonb_build_object(
-    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'caseId','f9000000-0000-4000-8000-000000000001',
     'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
     'publicationState','PUBLISHED_ANOMALY',
-    'slug','r6d-control-publication',
+    'slug','test-only-legacy-slug-repaired',
     'title','R6d 자연인 검토 표면',
     'summary','대표 가나다라는 자연인 실명 검토 표면',
     'nonConclusion','이 기록은 위법 또는 부패의 확정이 아닙니다.',
@@ -851,9 +997,9 @@ BEGIN
 
   v_preview_request:=jsonb_build_object(
     'previewId','d6e00000-0000-4000-8000-000000000103',
-    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'caseId','f9000000-0000-4000-8000-000000000001',
     'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
-    'expectedVersion',1,'publicationState','PUBLISHED_ANOMALY',
+    'expectedVersion',2,'publicationState','PUBLISHED_ANOMALY',
     'locale','ko-KR','publicPayload',v_payload,
     'publicPayloadSha256',encode(extensions.digest(
       ops.canonical_jsonb_v1(v_payload),'sha256'),'hex'),
@@ -917,7 +1063,7 @@ BEGIN
       editorial.r6d_public_text_sha256_v1(v_lower_payload)
     ))),'{findings}','[]'::jsonb);
   v_lower_request:=jsonb_build_object(
-    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'caseId','f9000000-0000-4000-8000-000000000001',
     'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
     'publicationState','PUBLISHED_ANOMALY','guardContext','PREVIEW',
     'publicPayload',v_lower_payload,
@@ -1171,9 +1317,9 @@ BEGIN
 
   v_publish_request:=jsonb_build_object(
     'mode','PUBLISH',
-    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'caseId','f9000000-0000-4000-8000-000000000001',
     'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
-    'expectedVersion',1,
+    'expectedVersion',2,
     'previewHash',v_preview_result->>'previewSha256',
     'reason','R6d guarded publication runtime assertion',
     'publicPayloadSha256',v_preview_result->>'previewSha256',
@@ -1199,8 +1345,8 @@ BEGIN
      OR jsonb_array_length(v_publish_result->'outboxEventIds')<>3
      OR NOT EXISTS(
        SELECT 1 FROM editorial.cases
-       WHERE id='d6e00000-0000-4000-8000-000000000101'
-         AND version=2 AND publication_state='PUBLISHED_ANOMALY'
+       WHERE id='f9000000-0000-4000-8000-000000000001'
+         AND version=3 AND publication_state='PUBLISHED_ANOMALY'
          AND current_publication_revision=1
      )
      OR NOT EXISTS(
@@ -1215,6 +1361,11 @@ BEGIN
      ) THEN
     RAISE EXCEPTION 'r6d_named_person_override_publish_invalid';
   END IF;
+  RAISE NOTICE
+    'B1_T3_STEP_6_PASS case_id=% publication_state=% version=% slug=%',
+    'f9000000-0000-4000-8000-000000000001',
+    v_publish_result->>'publicationState',
+    v_publish_result->>'caseVersion','test-only-legacy-slug-repaired';
   v_state_before:=pg_temp.r6d_control_publication_state_sha256();
   v_replay:=editorial.publish_guarded_revision_v2(v_publish_request);
   IF v_replay->>'replayed'<>'true'
@@ -1248,7 +1399,7 @@ INSERT INTO editorial.corrections(
 )
 VALUES(
   'd6e00000-0000-4000-8000-000000000401',
-  'd6e00000-0000-4000-8000-000000000101',1,
+  'f9000000-0000-4000-8000-000000000001',1,
   'R6d guarded correction','승인 전 정정',
   jsonb_build_array('d6e00000-0000-4000-8000-000000000201'),'REVIEW',
   'd6e00000-0000-4000-8000-000000000002',1,
@@ -1304,21 +1455,21 @@ INSERT INTO editorial.review_snapshots(
 )
 VALUES(
   'd6e00000-0000-4000-8000-000000000402',
-  'd6e00000-0000-4000-8000-000000000101',2,repeat('d',64),
+  'f9000000-0000-4000-8000-000000000001',3,repeat('d',64),
   '{"fixture":"R6D_CONTROL_CORRECTION"}',
   '{"namedPersonGate":"PENDING"}','[]',
   'd6e00000-0000-4000-8000-000000000001'
 );
 UPDATE editorial.cases
 SET current_review_snapshot_id='d6e00000-0000-4000-8000-000000000402'
-WHERE id='d6e00000-0000-4000-8000-000000000101' AND version=2;
+WHERE id='f9000000-0000-4000-8000-000000000001' AND version=3;
 INSERT INTO editorial.review_assignments(
   id,case_id,review_snapshot_id,reviewer_id,status,assigned_by,
   assigned_at,started_at,due_at,version
 )
 VALUES(
   'd6e00000-0000-4000-8000-000000000403',
-  'd6e00000-0000-4000-8000-000000000101',
+  'f9000000-0000-4000-8000-000000000001',
   'd6e00000-0000-4000-8000-000000000402',
   'd6e00000-0000-4000-8000-000000000002','IN_PROGRESS',
   'd6e00000-0000-4000-8000-000000000001',clock_timestamp(),
@@ -1412,7 +1563,7 @@ BEGIN
   SELECT assessment_id INTO STRICT v_publish_assessment
   FROM editorial.publication_revision_owner_receipts_v2
   WHERE mode='PUBLISH'
-    AND case_id='d6e00000-0000-4000-8000-000000000101';
+    AND case_id='f9000000-0000-4000-8000-000000000001';
   v_result:=editorial.publish_guarded_revision_v2(v_request);
   IF v_result->>'publicationState'<>'CORRECTED'
      OR jsonb_array_length(v_result->'outboxEventIds')<>4
@@ -1448,9 +1599,9 @@ BEGIN
      )
      OR NOT EXISTS(
        SELECT 1 FROM editorial.cases
-       WHERE id='d6e00000-0000-4000-8000-000000000101'
+       WHERE id='f9000000-0000-4000-8000-000000000001'
          AND publication_state='CORRECTED'
-         AND current_publication_revision=2 AND version=3
+         AND current_publication_revision=2 AND version=4
      ) THEN
     RAISE EXCEPTION 'r6d_correction_distinct_assessment_invalid';
   END IF;
@@ -1540,6 +1691,7 @@ BEGIN
     'editorial.named_person_review_stage_receipts_v1',
     'editorial.publication_preview_owner_receipts_v2',
     'editorial.publication_revision_owner_receipts_v2',
+    'editorial.public_slug_rename_receipts_v1',
     'editorial.publication_previews',
     'editorial.publication_revisions'
   ] LOOP
@@ -1569,6 +1721,11 @@ BEGIN
      OR NOT has_function_privilege(
        'gurine_control_api',
        'editorial.publish_guarded_revision_v2(jsonb)','EXECUTE'
+     )
+     OR NOT has_function_privilege(
+       'gurine_control_api',
+       'editorial.rename_public_slug_v1(uuid,bigint,text,uuid,text)',
+       'EXECUTE'
      ) THEN
     RAISE EXCEPTION 'r6d_publication_owner_execute_acl_missing';
   END IF;
@@ -1580,6 +1737,21 @@ BEGIN
      OR has_function_privilege(
        'gurine_control_api',
        'ops.apply_correction_publication_command_legacy_v1(text,jsonb,uuid,uuid,uuid,character,character)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'gurine_submission_api',
+       'editorial.rename_public_slug_v1(uuid,bigint,text,uuid,text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'gurine_workflow_worker',
+       'editorial.rename_public_slug_v1(uuid,bigint,text,uuid,text)',
+       'EXECUTE'
+     )
+     OR has_function_privilege(
+       'gurine_auditor',
+       'editorial.rename_public_slug_v1(uuid,bigint,text,uuid,text)',
        'EXECUTE'
      ) THEN
     RAISE EXCEPTION 'r6d_retired_publication_owner_execute_acl_open';
@@ -1602,11 +1774,20 @@ BEGIN
        ]::name[] THEN
     RAISE EXCEPTION 'r6d_publication_guard_trigger_inventory_drift';
   END IF;
+  IF NOT EXISTS(
+    SELECT 1 FROM pg_trigger AS trigger
+    WHERE trigger.tgrelid=
+      'editorial.public_slug_rename_receipts_v1'::regclass
+      AND trigger.tgname='public_slug_rename_receipts_v1_immutable_guard'
+      AND NOT trigger.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'b1_slug_rename_receipt_immutable_trigger_missing';
+  END IF;
 END
 $r6d_publication_acl$;
 
 -- Permission introspection above is backed by real API-role DML attempts on
--- the four immutable archive/receipt boundaries.
+-- the immutable archive/receipt boundaries.
 SET LOCAL ROLE gurine_control_api;
 DO $r6d_publication_direct_dml$
 DECLARE
@@ -1616,7 +1797,8 @@ BEGIN
     'editorial.named_person_legal_overrides',
     'editorial.named_person_review_stage_receipts_v1',
     'editorial.publication_preview_owner_receipts_v2',
-    'editorial.publication_revision_owner_receipts_v2'
+    'editorial.publication_revision_owner_receipts_v2',
+    'editorial.public_slug_rename_receipts_v1'
   ] LOOP
     BEGIN
       EXECUTE format('INSERT INTO %s DEFAULT VALUES',v_relation);

@@ -192,7 +192,7 @@
       "properties": {
         "kind": { "const": "POSTGRESQL_CATALOG" },
         "server_version_num": { "const": 180004 },
-        "migration_count": { "const": 42 },
+        "migration_count": { "const": 43 },
         "migration_set_sha256": { "$ref": "#/$defs/sha256" },
         "session_role": { "$ref": "#/$defs/safe_text" },
         "catalog_snapshot_sha256": { "$ref": "#/$defs/sha256" },

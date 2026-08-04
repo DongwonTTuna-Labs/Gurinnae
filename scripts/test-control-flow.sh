@@ -30,12 +30,14 @@ r6d_authority_closure_migration="db/migrations/0039_r6d_authority_closure.sql"
 r6d_privacy_authority_closure_migration="db/migrations/0040_r6d_privacy_authority_closure.sql"
 r6d_f9_name_guard_closure_migration="db/migrations/0041_f9_natural_person_name_guard_closure.sql"
 r6d_f3_source_url_closure_migration="db/migrations/0042_f3_public_source_url_exposure_closure.sql"
+r6d_b1_slug_rename_authority_migration="db/migrations/0043_b1_public_slug_rename_authority.sql"
 for migration in db/migrations/*.sql; do
   if [[ "$migration" == "$r6d_legacy_boundary_migration" \
     || "$migration" == "$r6d_authority_closure_migration" \
     || "$migration" == "$r6d_privacy_authority_closure_migration" \
     || "$migration" == "$r6d_f9_name_guard_closure_migration" \
-    || "$migration" == "$r6d_f3_source_url_closure_migration" ]]; then
+    || "$migration" == "$r6d_f3_source_url_closure_migration" \
+    || "$migration" == "$r6d_b1_slug_rename_authority_migration" ]]; then
     continue
   fi
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
@@ -64,6 +66,10 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
 # follow 0041 in this staged legacy-fixture migration path.
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   <"$r6d_f3_source_url_closure_migration" >/dev/null
+# 0043 must follow the defect-producing 0041 guard and the already ordered
+# 0042 closure. Append-only migrations repair earlier behavior only forward.
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  <"$r6d_b1_slug_rename_authority_migration" >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
   -d "$database" < db/test-fixtures/r6d-approved-policy-authority.sql \
   >/dev/null

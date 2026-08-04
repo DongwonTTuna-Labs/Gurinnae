@@ -3,11 +3,11 @@ specification_version: 13.1.0-owner-addendum
 status: REVIEW_REQUIRED
 counts:
   base_tables: 107
-  additive_tables: 195
-  final_active_tables: 302
-  migrations: 40
+  additive_tables: 196
+  final_active_tables: 303
+  migrations: 41
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0042, reviewed submission hardening is migration 0030, zero-relation runtime boundary changes are migrations 0031 and 0034, and the zero-relation F9/F3 publication-boundary closures are migrations 0041 and 0042.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0043, reviewed submission hardening is migration 0030, zero-relation runtime boundary changes are migrations 0031 and 0034, the zero-relation F9/F3 publication-boundary closures are migrations 0041 and 0042, and migration 0043 adds the public-slug rename receipt authority.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -229,6 +229,8 @@ migration_ownership:
   - ops.privacy_response_party_name_correction_completion_receipts_v1
   0041_f9_natural_person_name_guard_closure.sql: []
   0042_f3_public_source_url_exposure_closure.sql: []
+  0043_b1_public_slug_rename_authority.sql:
+  - editorial.public_slug_rename_receipts_v1
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
@@ -236,6 +238,7 @@ canonical_existing_relations:
 - Migration 0034 alters core.agencies, public.agencies, editorial.evidence, and intake.create_correction_session without adding a product relation; its contract is specs/database/addendum/0034-public-monitoring-extensions.yaml.
 - Migration 0041 alters editorial.cases and editorial.named_person_publication_policies, replaces named-person publication routines and the case publication trigger, and adds no product relation; its contract is specs/database/addendum/0041-f9-natural-person-name-guard-closure.yaml.
 - Migration 0042 replaces the public.source_official_urls security-barrier view and the archive public-text-tail routine without adding a product relation; its contract is specs/database/addendum/0042-f3-public-source-url-exposure-closure.yaml.
+- Migration 0043 adds the immutable public_slug_rename_receipts_v1 authority and replaces the case publication guard only forward; its contract is specs/database/addendum/0043-b1-public-slug-rename-authority.yaml.
 renames:
 - physical_from: ops.email_deliveries
   physical_to: ops.outbound_deliveries

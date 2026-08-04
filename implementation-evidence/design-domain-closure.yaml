@@ -443,6 +443,7 @@ bindings:
       - editorial.named_person_review_stage_receipts_v1
       - editorial.publication_preview_owner_receipts_v2
       - editorial.publication_revision_owner_receipts_v2
+      - editorial.public_slug_rename_receipts_v1
     identity: case_id+expected_case_version+decision_digest
     concurrency: serializable-case-lock+immutable-decision
     operations: [getPublishConfirmation, publishCase, getPublicationReceipt, submitActionDecision]
