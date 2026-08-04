@@ -20,8 +20,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 42 ]]; then
-  printf 'expected exactly 42 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 43 ]]; then
+  printf 'expected exactly 43 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -51,6 +51,12 @@ fi
 if [[ "$(basename "${migrations[41]}")" != \
   '0042_f3_public_source_url_exposure_closure.sql' ]]; then
   printf 'migration 0042 filename is not the F3 public source URL exposure closure\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[42]}")" != \
+  '0043_b1_public_slug_rename_authority.sql' ]]; then
+  printf 'migration 0043 filename is not the B1 public slug rename authority\n' >&2
   exit 1
 fi
 
@@ -86,6 +92,11 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[41]}" >/dev/null
 
+# Apply the forward-only B1 slug rename authority after the 0041 guard defect
+# and the globally ordered 0042 closure.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" <"${migrations[42]}" >/dev/null
+
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
@@ -96,4 +107,4 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql
 
-printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=42, final=0042)\n'
+printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=43, final=0043)\n'

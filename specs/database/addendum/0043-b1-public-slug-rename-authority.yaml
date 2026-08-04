@@ -1,0 +1,125 @@
+schema_version: 1
+proposal_version: 2026-08-04.0043-b1-public-slug-rename-authority.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0043_b1_public_slug_rename_authority.sql
+  migration_sha256: 521ad0e68c749a83d8158c2ad966c25c19aa424712a7cf060f5812536de10d60
+  migration_line_count: 229
+  pglast_statement_count: 18
+  exact_relations:
+  - editorial.public_slug_rename_receipts_v1
+  exact_new_relation_count: 1
+  relation_delta: 1
+  altered_relations: []
+  compatibility_views: []
+  purpose: B1 forward-only authority for version-fenced public slug renames, including staged legacy repair and strict
+    separation from publication transitions
+  relation_count_rule: 0043 creates exactly one relkind-r append-only receipt relation; routine replacement, ACL, trigger,
+    comments, and transaction statements add no further relkind-r relation
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0042 remain byte-preserved; the 0041 guard defect is repaired only by
+    the globally ordered forward migration 0043
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  seed_rule: 0043 inserts no case, slug, receipt, user, audit, outbox, event-registry, or policy row
+  rename_rule: only editorial.rename_public_slug_v1 can append the exact old/new slug and version receipt before advancing
+    editorial.cases by one version
+  legacy_rule: old_slug is nullable and is not shape-validated, while new_slug must satisfy r6d_public_slug_valid_v1; this
+    permits NULL assignment and invalid legacy repair without inventing a replacement value
+  publication_separation_rule: the case guard accepts a rename receipt only when publication state and revision and every
+    other protected case field are unchanged; a publication transition retains the prior publication receipt path and
+    requires public_slug unchanged
+  digest_binding_rule: every receipt payload is canonicalized with ops.canonical_jsonb_v1 and its stored SHA-256 is
+    recomputed by the table CHECK from receipt_canonical
+statement_inventory:
+  create_table_count: 1
+  create_view_count: 0
+  owner_routine_count: 2
+  trigger_count: 1
+  explicit_index_count: 0
+  event_registry_upsert_count: 0
+  pglast_statement_count: 18
+  object_inventory_sha256: 640ca23a306e576f7fb87bd6597ff2f76ac6b11b30203c771b9319933c580e2f
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views,
+    altered_relations, routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes
+    are inventoried separately
+existing_relation_changes: []
+compatibility_views: {}
+view_inventory: []
+tables:
+  editorial.public_slug_rename_receipts_v1:
+    owner_role: gurine_migrator
+    source_ddl: db/migrations/0043_b1_public_slug_rename_authority.sql#CREATE TABLE editorial.public_slug_rename_receipts_v1
+    create_statement_sha256: 0a72aee3c5b175c8247fa1e941d61167dc540af78bd51084475bb35d61c5203d
+    columns:
+      receipt_id: {type: uuid, nullable: false}
+      case_id: {type: uuid, nullable: false}
+      prior_case_version: {type: bigint, nullable: false}
+      case_version: {type: bigint, nullable: false}
+      old_slug: {type: text, nullable: true}
+      new_slug: {type: text, nullable: false}
+      actor_id: {type: uuid, nullable: false}
+      reason: {type: text, nullable: false}
+      receipt_payload: {type: jsonb, nullable: false}
+      receipt_canonical: {type: bytea, nullable: false}
+      receipt_digest: {type: char(64), nullable: false}
+      created_at: {type: timestamptz, nullable: false}
+    primary_key: {columns: [receipt_id]}
+    unique_constraints:
+    - [receipt_digest]
+    - [case_id, prior_case_version, case_version]
+    foreign_keys:
+    - {columns: [case_id], references: editorial.cases(id), on_delete: RESTRICT}
+    - {columns: [actor_id], references: ops.users(id), on_delete: RESTRICT}
+    grants:
+      authority: PUBLIC and runtime mutation privileges are revoked; gurine_control_api and gurine_auditor receive SELECT
+        only, while insertion is reachable only through the SECURITY DEFINER owner
+    rls:
+      enabled: false
+      forced: false
+      reason: internal immutable receipt relation closed by exact ACL and reject_mutation trigger
+    retention:
+      authority: case-bound authorization evidence is append-only; 0043 invents no operating retention schedule
+    repository_roundtrip:
+      authority: rename_public_slug_v1 writes the exact case/version/old/new/actor/reason tuple and canonical digest before
+        the guarded case update
+    alter_statement_sha256:
+    - 7149920814281a8d64f342db89c0e9e434faf9a3e8bf7874d0f9f842472d0caa
+owner_routines:
+- signature: editorial.rename_public_slug_v1(p_case_id uuid, p_expected_version bigint, p_new_slug text, p_actor_id uuid,
+    p_reason text) RETURNS uuid
+  canonical_ddl_sha256: 3e99a36ed34848d33bb1df2648e6b1c945115d7ce0b92acb1b5e6da35c61305c
+- signature: editorial.guard_r6d_case_publication_v2() RETURNS trigger
+  canonical_ddl_sha256: 455f530104c92b5a313a0bf951c0ecf5790440e053577e3fc6a1aed927ec3a46
+trigger_inventory:
+- statement: CREATE TRIGGER public_slug_rename_receipts_v1_immutable_guard BEFORE DELETE OR UPDATE ON
+    editorial.public_slug_rename_receipts_v1 FOR EACH ROW EXECUTE PROCEDURE ops.reject_mutation()
+  canonical_ddl_sha256: 76618994f46adb388214eace844017203c5af170f2176676d9008b7ddbcd3c5f
+index_inventory: []
+event_registry_contract:
+  statement: 0043 contains no ops.event_types upsert and no decision-marker registry block
+  exact_upsert_count: 0
+  events_in_order: []
+  forward_overrides: []
+  inherited_emit_dependencies: []
+privilege_contract:
+  owner_role: gurine_migrator owns the receipt relation and both routines
+  receipt_rule: PUBLIC and runtime roles receive no mutation privilege; only gurine_control_api and gurine_auditor receive
+    SELECT
+  owner_execute_rule: PUBLIC EXECUTE is revoked from rename_public_slug_v1 and only gurine_control_api receives EXECUTE
+  guard_rule: PUBLIC EXECUTE is revoked from the trigger routine and no runtime role receives a direct grant
+known_fail_closed_boundaries:
+  missing_receipt: direct slug UPDATE, including an owner-shaped version increment, fails with SQLSTATE 42501
+  invalid_new_slug: owner and trigger reject a new slug that does not satisfy r6d_public_slug_valid_v1
+  mixed_transition: a slug rename combined with publication state or revision mutation cannot consume either authority path
+  legacy_value: 0043 exposes no guessed production replacement and rewrites no case row during migration
+verification_obligations:
+- pglast parses exactly 18 statements with one BEGIN first and one terminal COMMIT last
+- exactly one table, two routine definitions, one immutable trigger, no explicit index, and no event-registry upsert reproduce
+  from the current migration bytes
+- migration SHA-256, table and routine canonical DDL hashes, trigger hash, owner ALTER hash, and object inventory SHA-256
+  reproduce from the current SQL
+- PostgreSQL 18.4 proves direct and owner-shaped receiptless UPDATE fail, owner rename appends exactly one self-verifying
+  receipt, invalid new slug fails, and a mixed rename/publication transition fails
+- PostgreSQL 18.4 repairs the staged TEST_ONLY legacy row, empties the invalid inventory, validates
+  cases_public_slug_f9_shape_ck, and publishes that repaired case through the existing guarded owner path
+OPEN_QUESTIONS: []
