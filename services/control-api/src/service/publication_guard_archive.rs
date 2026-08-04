@@ -81,6 +81,11 @@ fn push_archive_evidence<'a>(
             .get("source")
             .and_then(Value::as_object)
             .ok_or(ServiceError::Persistence)?;
+        let mut source_fields = Vec::new();
+        push_optional_text(&mut source_fields, source, "source_url")?;
+        if !source_fields.is_empty() {
+            item_fields.push(("source", PublicTextNode::object(source_fields)));
+        }
         let locator = source
             .get("locator")
             .and_then(Value::as_object)
@@ -250,7 +255,10 @@ mod tests {
                 {"type":"TABLE","text":null,"data":{"담당":"테스트인 전 장관"}}
             ]}],
             "claims":[{"text_ko":"계약 사실"}],
-            "evidence":[{"summary":"공식 문서","public_excerpt":"테스트인 서명", "source":{"locator":{"value":"3쪽"}}}],
+            "evidence":[{"summary":"공식 문서","public_excerpt":"테스트인 서명", "source":{
+                "source_url":"https://official.example/contracts/:대표이사-테스트인",
+                "locator":{"value":"3쪽"}
+            }}],
             "subjects":[{"display_name":"가상 기관"}],
             "methodology":{"limitations":["기간 한계"],"calculation":{"설명":"자료 비교"}},
             "responses":[{"party":"가상 기관","display_text":"추가 확인 중"}],
@@ -264,11 +272,14 @@ mod tests {
 
         assert_eq!(
             assessment.public_text_sha256,
-            "cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9"
+            "568451e18206560b96ad3bd078ea2eb80c9f653f1ee7eec23b3dd4562034e4df"
         );
-
         assert!(assessment.findings.iter().any(|finding| {
             finding.path == "/sections/0/blocks/0/data/담당"
+                && finding.basis == NaturalPersonFindingBasis::RegisteredPersonExact
+        }));
+        assert!(assessment.findings.iter().any(|finding| {
+            finding.path == "/evidence/0/source/source_url"
                 && finding.basis == NaturalPersonFindingBasis::RegisteredPersonExact
         }));
         assert!(
@@ -277,6 +288,65 @@ mod tests {
                 .iter()
                 .any(|finding| finding.path == "/evidence/0/public_excerpt")
         );
+
+        let mut changed_source_url_payload = payload.clone();
+        changed_source_url_payload["evidence"][0]["source"]["source_url"] =
+            json!("https://official.example/contracts/revised");
+        let changed_source_url_object = changed_source_url_payload
+            .as_object()
+            .expect("changed archive source URL object");
+        let changed_source_url_tree = archive_publication_text_tree(changed_source_url_object)
+            .expect("changed archive source URL text tree");
+        let changed_source_url_assessment = scan_public_text(&changed_source_url_tree, &[])
+            .expect("changed archive source URL scan");
+        assert_ne!(
+            assessment.public_text_sha256,
+            changed_source_url_assessment.public_text_sha256
+        );
+
+        let mut absent_source_url_payload = payload.clone();
+        absent_source_url_payload["evidence"][0]["source"]
+            .as_object_mut()
+            .expect("archive source object")
+            .remove("source_url");
+        let absent_source_url_tree = archive_publication_text_tree(
+            absent_source_url_payload
+                .as_object()
+                .expect("absent archive source URL object"),
+        )
+        .expect("absent archive source URL is omitted");
+        assert_eq!(
+            scan_public_text(&absent_source_url_tree, &[])
+                .expect("absent archive source URL scan")
+                .public_text_sha256,
+            "cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9"
+        );
+
+        let mut null_source_url_payload = payload.clone();
+        null_source_url_payload["evidence"][0]["source"]["source_url"] = Value::Null;
+        let null_source_url_tree = archive_publication_text_tree(
+            null_source_url_payload
+                .as_object()
+                .expect("null archive source URL object"),
+        )
+        .expect("null archive source URL is omitted");
+        assert_eq!(
+            scan_public_text(&null_source_url_tree, &[])
+                .expect("null archive source URL scan")
+                .public_text_sha256,
+            "cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9"
+        );
+
+        let mut invalid_source_url_payload = payload.clone();
+        invalid_source_url_payload["evidence"][0]["source"]["source_url"] = json!({});
+        assert!(matches!(
+            archive_publication_text_tree(
+                invalid_source_url_payload
+                    .as_object()
+                    .expect("invalid archive source URL object")
+            ),
+            Err(ServiceError::Persistence)
+        ));
 
         let mut changed_slug_payload = payload;
         changed_slug_payload["slug"] = json!("test-only-테스트인");

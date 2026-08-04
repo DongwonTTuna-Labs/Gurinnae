@@ -29,11 +29,13 @@ r6d_legacy_boundary_migration="db/migrations/0038_r6d_legal_hardening.sql"
 r6d_authority_closure_migration="db/migrations/0039_r6d_authority_closure.sql"
 r6d_privacy_authority_closure_migration="db/migrations/0040_r6d_privacy_authority_closure.sql"
 r6d_f9_name_guard_closure_migration="db/migrations/0041_f9_natural_person_name_guard_closure.sql"
+r6d_f3_source_url_closure_migration="db/migrations/0042_f3_public_source_url_exposure_closure.sql"
 for migration in db/migrations/*.sql; do
   if [[ "$migration" == "$r6d_legacy_boundary_migration" \
     || "$migration" == "$r6d_authority_closure_migration" \
     || "$migration" == "$r6d_privacy_authority_closure_migration" \
-    || "$migration" == "$r6d_f9_name_guard_closure_migration" ]]; then
+    || "$migration" == "$r6d_f9_name_guard_closure_migration" \
+    || "$migration" == "$r6d_f3_source_url_closure_migration" ]]; then
     continue
   fi
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
@@ -58,9 +60,17 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
 # closes the named-person scanner/DB lower-bound gap without rewriting it.
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   <"$r6d_f9_name_guard_closure_migration" >/dev/null
+# 0042 replaces the archive public-text tail installed by 0038, so it must
+# follow 0041 in this staged legacy-fixture migration path.
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  <"$r6d_f3_source_url_closure_migration" >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
   -d "$database" < db/test-fixtures/r6d-approved-policy-authority.sql \
   >/dev/null
+# Run the F3 PostgreSQL boundary proof before the known control-flow Python
+# failure point; the fixture wraps every TEST_ONLY write in one rollback.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 -U postgres \
+  -d "$database" <db/test-fixtures/f3-public-source-url-closure.sql
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-research-seed.sql >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-retry-seed.sql >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <db/test-fixtures/control-withdraw-decision-seed.sql >/dev/null

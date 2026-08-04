@@ -732,7 +732,10 @@ DECLARE
     )),'claims',jsonb_build_array(jsonb_build_object('text_ko','계약 사실')),
     'evidence',jsonb_build_array(jsonb_build_object(
       'summary','공식 문서','public_excerpt','테스트인 서명',
-      'source',jsonb_build_object('locator',jsonb_build_object('value','3쪽'))
+      'source',jsonb_build_object(
+        'source_url','https://official.example/contracts/:대표이사-테스트인',
+        'locator',jsonb_build_object('value','3쪽')
+      )
     )),'subjects',jsonb_build_array(jsonb_build_object('display_name','가상 기관')),
     'methodology',jsonb_build_object(
       'limitations',jsonb_build_array('기간 한계'),
@@ -751,12 +754,28 @@ BEGIN
        v_payload,'/evidence/0/sourceUrl'
      )<>'https://official.example/contracts/test-only-person'
      OR btrim(editorial.r6d_public_text_sha256_v1(v_archive_payload))<>
-       'cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9'
+       '568451e18206560b96ad3bd078ea2eb80c9f653f1ee7eec23b3dd4562034e4df'
      OR editorial.r6d_json_pointer_text_v1(v_archive_payload,'/slug')<>
-       'test-only-archive' THEN
+       'test-only-archive'
+     OR editorial.r6d_json_pointer_text_v1(
+       v_archive_payload,'/evidence/0/source/source_url'
+     )<>'https://official.example/contracts/:대표이사-테스트인'
+     OR btrim(editorial.r6d_public_text_sha256_v1(
+       v_archive_payload#-'{evidence,0,source,source_url}'
+     ))<>'cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9'
+     OR btrim(editorial.r6d_public_text_sha256_v1(jsonb_set(
+       v_archive_payload,'{evidence,0,source,source_url}',
+       to_jsonb('https://official.example/contracts/revised'::text)
+     )))=btrim(editorial.r6d_public_text_sha256_v1(v_archive_payload)) THEN
     RAISE EXCEPTION 'f9_public_text_tree_rust_db_parity_invalid';
   END IF;
   RAISE NOTICE 'F9_PUBLIC_TEXT_TREE_RUST_DB_PARITY_PASS';
+  RAISE NOTICE
+    'F3_ARCHIVE_SOURCE_URL_RUST_DB_PARITY_PASS present_digest=% absent_digest=%',
+    btrim(editorial.r6d_public_text_sha256_v1(v_archive_payload)),
+    btrim(editorial.r6d_public_text_sha256_v1(
+      v_archive_payload#-'{evidence,0,source,source_url}'
+    ));
 END
 $f9_public_text_tree_parity$;
 

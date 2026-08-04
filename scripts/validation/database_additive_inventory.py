@@ -316,6 +316,12 @@ _R6D_INVENTORY_CONTRACTS = (
         '0041',
         0,
     ),
+    (
+        '0042_f3_public_source_url_exposure_closure.sql',
+        '0042-f3-public-source-url-exposure-closure.yaml',
+        '0042',
+        0,
+    ),
 )
 
 
