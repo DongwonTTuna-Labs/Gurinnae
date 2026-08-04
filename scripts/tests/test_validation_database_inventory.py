@@ -499,20 +499,26 @@ class EventPayloadForwardOverrideTests(unittest.TestCase):
 
 
 class MigrationOrderingScriptTests(unittest.TestCase):
-    def test_control_fixture_crosses_0038_through_0041_boundaries(self) -> None:
+    def test_control_fixture_crosses_0038_through_0042_boundaries(self) -> None:
         script = (SCRIPTS / "test-control-flow.sh").read_text(encoding="utf-8")
         seed = script.index("<db/test-fixtures/control-runtime-seed.sql")
         apply_0038 = script.index('<"$r6d_legacy_boundary_migration"')
         apply_0039 = script.index('<"$r6d_authority_closure_migration"')
         apply_0040 = script.index('<"$r6d_privacy_authority_closure_migration"')
         apply_0041 = script.index('<"$r6d_f9_name_guard_closure_migration"')
+        apply_0042 = script.index('<"$r6d_f3_source_url_closure_migration"')
         policy_fixture = script.index("< db/test-fixtures/r6d-approved-policy-authority.sql")
+        f3_fixture = script.index("<db/test-fixtures/f3-public-source-url-closure.sql")
+        research_seed = script.index("<db/test-fixtures/control-research-seed.sql")
 
         self.assertLess(seed, apply_0038)
         self.assertLess(apply_0038, apply_0039)
         self.assertLess(apply_0039, apply_0040)
         self.assertLess(apply_0040, apply_0041)
-        self.assertLess(apply_0041, policy_fixture)
+        self.assertLess(apply_0041, apply_0042)
+        self.assertLess(apply_0042, policy_fixture)
+        self.assertLess(policy_fixture, f3_fixture)
+        self.assertLess(f3_fixture, research_seed)
         self.assertIn(
             '|| "$migration" == "$r6d_authority_closure_migration"',
             script,
@@ -523,6 +529,10 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         )
         self.assertIn(
             '|| "$migration" == "$r6d_f9_name_guard_closure_migration"',
+            script,
+        )
+        self.assertIn(
+            '|| "$migration" == "$r6d_f3_source_url_closure_migration"',
             script,
         )
 
@@ -537,11 +547,11 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         ]["const"]
         migrations = sorted((root / "db/migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
 
-        self.assertEqual(declared_count, 41)
+        self.assertEqual(declared_count, 42)
         self.assertEqual(declared_count, len(migrations))
         self.assertEqual(
             migrations[-1].name,
-            "0041_f9_natural_person_name_guard_closure.sql",
+            "0042_f3_public_source_url_exposure_closure.sql",
         )
 
 

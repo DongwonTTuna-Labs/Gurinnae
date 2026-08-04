@@ -1,0 +1,87 @@
+schema_version: 1
+proposal_version: 2026-08-04.0042-f3-public-source-url-exposure-closure.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0042_f3_public_source_url_exposure_closure.sql
+  migration_sha256: 5e03048a8b7ca8aaf03db79785cda7068221534fb61cda1281924f2aefe7c77f
+  migration_line_count: 248
+  pglast_statement_count: 9
+  exact_relations: []
+  exact_new_relation_count: 0
+  relation_delta: 0
+  altered_relations: []
+  compatibility_views:
+  - public.source_official_urls
+  purpose: F3 forward-only closure for the public official-source URL security boundary and archive evidence source URL
+    canonical public-text coverage
+  relation_count_rule: 0042 contains no CREATE TABLE statement; CREATE OR REPLACE VIEW, routine replacement, owner changes,
+    and ACL statements add zero relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0041 remain byte-preserved; all changes are forward-only in 0042
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  seed_rule: 0042 inserts no source, publication, assessment, finding, receipt, audit, outbox, or event-registry row
+  source_registry_rule: the public security-barrier view projects only rows whose actual ops.source_registry enabled column is
+    true and whose actual legal_status column equals APPROVED; the existing HTTP(S) URL projection remains unchanged
+  archive_public_text_rule: an archive evidence source_url string is represented at
+    /evidence/{index}/source/source_url in the canonical public-text tree; absent or null values are omitted and other JSON
+    types fail closed
+  digest_binding_rule: the existing public-text preimage and SHA-256 routines consume the replacement archive tail, so an
+    archive source_url change changes the derived publication digest
+statement_inventory:
+  create_table_count: 0
+  create_view_count: 1
+  owner_routine_count: 1
+  trigger_count: 0
+  explicit_index_count: 0
+  event_registry_upsert_count: 0
+  pglast_statement_count: 9
+  object_inventory_sha256: dbc7a4a0e63c4e02f6aefa4f070124fef7c5f17a7c1b2397c80868a135e9c513
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views,
+    altered_relations, routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes
+    are inventoried separately
+existing_relation_changes: []
+compatibility_views:
+  public.source_official_urls:
+    relation_kind: view
+    security_barrier: true
+    relation_count_delta: 0
+    columns: [source_id, official_url]
+    predicate: ops.source_registry.enabled AND ops.source_registry.legal_status = 'APPROVED'
+    access: SELECT only for gurine_public_api; direct ops.source_registry SELECT remains unavailable
+    source_ddl: db/migrations/0042_f3_public_source_url_exposure_closure.sql#CREATE OR REPLACE VIEW public.source_official_urls
+    alter_statement_sha256: [421bc54fe4b47f8dbb4fc963dfdc1bf6523814526a9e111fea301a159b6eabaf]
+view_inventory:
+- {relation: public.source_official_urls, relation_kind: view, relation_count_delta: 0}
+tables: {}
+owner_routines:
+- signature: editorial.r6d_archive_public_text_tail_v1(p_payload jsonb) RETURNS jsonb
+  canonical_ddl_sha256: 6cd5cd2364a8d792df42143cd8f3710e416032df96063ef20df8272815823c12
+trigger_inventory: []
+index_inventory: []
+event_registry_contract:
+  statement: 0042 contains no ops.event_types upsert and no decision-marker registry block
+  exact_upsert_count: 0
+  events_in_order: []
+  forward_overrides: []
+  inherited_emit_dependencies: []
+privilege_contract:
+  owner_role: gurine_migrator owns public.source_official_urls and editorial.r6d_archive_public_text_tail_v1(jsonb)
+  public_view_rule: PUBLIC receives no privilege; gurine_public_api receives SELECT on only the security-barrier view
+  private_source_rule: 0042 grants no privilege on ops.source_registry
+  routine_rule: PUBLIC EXECUTE is explicitly revoked and no runtime role receives direct EXECUTE on the archive-tail helper
+known_fail_closed_boundaries:
+  filtered_rows: inactive, BLOCKED, and REVIEW_REQUIRED source rows are intentionally absent from the public view; 0042 does
+    not invent replacement source data
+  archive_shape: a non-string, non-null archive source_url is rejected rather than omitted or coerced
+  registered_person_exact_completeness: the SQL lower bound remains TITLE_ADJACENT_KOREAN_NAME only; application-key-backed
+    REGISTERED_PERSON_EXACT completeness remains outside SQL
+verification_obligations:
+- pglast parses exactly 9 statements with one BEGIN first and one terminal COMMIT last
+- CREATE TABLE, explicit index, trigger, and event-registry upsert inventories are empty and relation_delta is zero
+- the one view name, one routine signature, view ALTER hash, migration SHA-256, routine canonical DDL hash, and object inventory
+  SHA-256 reproduce from the current SQL bytes
+- PostgreSQL 18.4 proves gurine_public_api sees an enabled APPROVED TEST_ONLY source and cannot see inactive or non-APPROVED
+  TEST_ONLY sources through public.source_official_urls
+- PostgreSQL 18.4 reproduces the Rust archive public-text digest and pointer and blocks an empty-finding assessment when the
+  archive source_url contains the TEST_ONLY title-adjacent synthetic name
+OPEN_QUESTIONS: []

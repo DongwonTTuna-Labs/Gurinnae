@@ -414,8 +414,8 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 15
-  final_migrations: 39
+  additive_migrations: 16
+  final_migrations: 40
   base_active_tables: 107
   additive_table_count: 195
   final_active_tables: 302
@@ -435,6 +435,7 @@ database_delta:
     - 0039_r6d_authority_closure.sql
     - 0040_r6d_privacy_authority_closure.sql
     - 0041_f9_natural_person_name_guard_closure.sql
+    - 0042_f3_public_source_url_exposure_closure.sql
   additive_tables:
     - ops.privacy_correction_snapshots_v1
     - ops.privacy_subscription_snapshots_v1

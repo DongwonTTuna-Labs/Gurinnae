@@ -20,8 +20,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 41 ]]; then
-  printf 'expected exactly 41 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 42 ]]; then
+  printf 'expected exactly 42 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -45,6 +45,12 @@ fi
 if [[ "$(basename "${migrations[40]}")" != \
   '0041_f9_natural_person_name_guard_closure.sql' ]]; then
   printf 'migration 0041 filename is not the F9 natural-person name guard closure\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[41]}")" != \
+  '0042_f3_public_source_url_exposure_closure.sql' ]]; then
+  printf 'migration 0042 filename is not the F3 public source URL exposure closure\n' >&2
   exit 1
 fi
 
@@ -75,6 +81,11 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[40]}" >/dev/null
 
+# Apply the F3 public source URL exposure closure after the archive scanner
+# functions and F9 lower-bound contract are present.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" <"${migrations[41]}" >/dev/null
+
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
@@ -85,4 +96,4 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql
 
-printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=41, final=0041)\n'
+printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=42, final=0042)\n'

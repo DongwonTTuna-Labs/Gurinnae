@@ -36,6 +36,7 @@ PHYSICAL_TABLE_PATHS = (
     "specs/database/addendum/0039-r6d-authority-closure.yaml",
     "specs/database/addendum/0040-r6d-privacy-authority-closure.yaml",
     "specs/database/addendum/0041-f9-natural-person-name-guard-closure.yaml",
+    "specs/database/addendum/0042-f3-public-source-url-exposure-closure.yaml",
 )
 
 R6C_FORWARD_CANDIDATE_KEY_PATH = (
