@@ -62,8 +62,8 @@
     },
     {
       "path": "Makefile",
-      "sha256": "ce77bab45e3fc7c8c3d520ec9f8bb2e1be34761270de1c718a69376440fbfbb5",
-      "size": 8692
+      "sha256": "1aa6978f15b29fe3075fa0e42055e3c3e7b3c9d717cb959b418c65f699be0be8",
+      "size": 10104
     },
     {
       "path": "crates/test-support/Cargo.toml",
@@ -97,8 +97,8 @@
     },
     {
       "path": "scripts/create_source_archive.py",
-      "sha256": "998ccb99e100baa9471dc943b4b599203389ebd09b01ce37ea287790a4d19316",
-      "size": 5091
+      "sha256": "ae7319958d2bc9c4d27be3f0ecc109154de546c69b3726e4e23a7f2fe264d03b",
+      "size": 5354
     },
     {
       "path": "scripts/design_bundle_digest.py",
@@ -147,8 +147,8 @@
     },
     {
       "path": "scripts/verify_source_archive.py",
-      "sha256": "1cc886a667560ba0fc3c7c4827b4843ba60a5da31d73a9007bb06ff49bd5a555",
-      "size": 7322
+      "sha256": "c31d623d5b9ed02f953fddd0d515dcda16c7561b98fcd9a2950d6cb9bd94206c",
+      "size": 12196
     }
   ],
   "registry_kind": "SUPPLEMENTAL_ACCEPTANCE_DESIGN_REGISTRY",

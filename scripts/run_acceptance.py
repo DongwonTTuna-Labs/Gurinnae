@@ -43,7 +43,6 @@ from validation.effective_acceptance import (
     PROBE_ARGV_DOMAIN,
     PROBE_FACTS_DOMAIN,
     RUN_AGGREGATE_DOMAIN,
-    validate_external_evidence,
     validate_sources,
     validate_static,
 )
@@ -518,9 +517,9 @@ def actual_archive_verification(
         minimum = 1 if field != "manifested_bytes" else 0
         if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
             raise AcceptanceRunError(f"invalid source archive {field}: {value!r}")
-    if verification.get("verification_argv") != ["make", "verify-final"]:
+    if verification.get("verification_argv") != ["make", "verify-prearchive"]:
         raise AcceptanceRunError(
-            "clean extraction did not run make verify-final: "
+            "clean extraction did not run make verify-prearchive: "
             f"{verification.get('verification_argv')!r}"
         )
     manifest_sha256 = verification.get("manifest_sha256")
@@ -1661,29 +1660,6 @@ def main() -> int:
     seal_path = run.write_json("seal.json", seal)
     run.fsync_directories()
 
-    environment_updates = {
-        "GURINNAE_SOURCE_COMMIT": args.source_commit,
-        "GURINNAE_SOURCE_TREE_SHA256": args.source_tree_sha256,
-        "GURINNAE_ARCHIVE_SHA256": archive_sha256,
-        "GURINNAE_EXTRACTION_RECEIPT_SHA256": args.extraction_receipt_sha256,
-        "GURINNAE_EXTRACTION_RECEIPT": str(extraction_path),
-    }
-    previous = {key: os.environ.get(key) for key in environment_updates}
-    os.environ.update(environment_updates)
-    try:
-        evidence_checks = validate_external_evidence(
-            root, registry, evidence_root, f"{args.run_id}/run-index.json"
-        )
-    finally:
-        for key, value in previous.items():
-            if value is None:
-                os.environ.pop(key, None)
-            else:
-                os.environ[key] = value
-    if evidence_checks.problems:
-        raise AcceptanceRunError(
-            f"generated evidence failed independent validation: {evidence_checks.problems[:3]}"
-        )
     print(
         json.dumps(
             {

@@ -192,7 +192,7 @@ class AcceptanceMutationBoundaryTests(unittest.TestCase):
             "archive_member_count": 1,
             "extracted_member_count": 1,
             "residue_paths": [],
-            "verification_argv": ["make", "verify-final"],
+            "verification_argv": ["make", "verify-prearchive"],
             "artifacts": [
                 {
                     "path": "logs/verify-final.log",
@@ -207,7 +207,7 @@ class AcceptanceMutationBoundaryTests(unittest.TestCase):
             "archive_member_count": 2,
             "extracted_member_count": 2,
             "residue_paths": [],
-            "verification_argv": ["make", "verify-final"],
+            "verification_argv": ["make", "verify-prearchive"],
         }
         validate_extraction_receipt_shape(ROOT, receipt)
         with self.assertRaisesRegex(

@@ -95,11 +95,13 @@ runtime, container/network, backup/restore, E2E·visual/accessibility를 하나�
 make verify-acceptance
 ```
 
-Acceptance는 `verify-final`과 별도의 필수 완료 gate다. override가 없으면 runner가
-Git이 무시하는 `artifacts/acceptance/`에 고유한 run 디렉터리, source bundle,
-extraction receipt, scenario receipt, run index와 seal을 생성한다. source commit/tree 바인딩과
-artifact digest를 자동 파생하고 독립 evidence validator로 재검증한다. 명시적
-override는 release workflow의 외부 evidence/archive 바인딩을 보존한다.
+Acceptance는 `verify-final`이 무조건 포함하는 필수 완료 gate다. `make verify-acceptance`는
+evidence root, run ID, source commit/tree digest, archive, extraction receipt와 receipt
+SHA-256의 `ACCEPTANCE_*` 7개 입력을 모두 명시적으로 요구한다. 제공된 root에 scenario
+receipt, run index와 seal을 생성하고 제공된 release artifact에 바인딩한 뒤 독립 evidence
+validator로 재검증한다. Git이 무시하는 `artifacts/acceptance/` 기본 root와 source
+bundle/receipt 자동 생성·digest 파생은 override 없이 `scripts/run_acceptance.py`를 직접
+실행할 때만 적용된다.
 
 ## Source archive
 

@@ -18,12 +18,15 @@ from validation.effective_acceptance import validate_static
 ROOT = Path(__file__).resolve().parents[1]
 ACCEPTANCE = ROOT / "tests/acceptance"
 LOCK = ACCEPTANCE / "base-v13.lock.yaml"
+AMENDMENTS = ACCEPTANCE / "base-v13.amendments.yaml"
 SUPPLEMENTAL_MAPPING = ACCEPTANCE / "supplemental-executable-mapping.yaml"
 
 EXPECTED_CATALOG_SHA256 = "13b4be1c9f22850d0220bb2be5e3a9ba8bc26252805c1b7b7eae987bb7e622c6"
 EXPECTED_MAPPING_SHA256 = "f85a72768d18c12d3111adcb2895661b64d6cbd2b32112467d2526a52319ae83"
 EXPECTED_FEATURE_MANIFEST_SHA256 = "197b105ffcfe13ec0f7671410a2963de87af32d74ebc59ff1ddd2b42442d817f"
 EXPECTED_SCENARIO_IDENTITY_SHA256 = "2436ef73893e37d94d7a22e90d4b4a2fdc7bd098b6ea141a3d5650595146156f"
+F1_AMENDMENT_PREFIX_COUNT = 3
+EXPECTED_F1_AMENDMENT_PREFIX_SHA256 = "5e25d9a0e029f19ca86e907c62d6a961115d57ea21e300e1e10fd8a1fb85e1c6"
 EXPECTED_FEATURE_COUNT = 35
 EXPECTED_SCENARIO_COUNT = 271
 EXPECTED_RULES = [
@@ -32,6 +35,7 @@ EXPECTED_RULES = [
     "Supplemental and UI registries cannot replace or double-count a base scenario.",
 ]
 SHA256_PATTERN = re.compile(r"[0-9a-f]{64}")
+AMENDMENT_KEYS = {"path", "frozen_sha256", "amended_sha256", "reason", "authority"}
 
 
 class UniqueLoader(yaml.SafeLoader):
@@ -66,10 +70,6 @@ def fail(message: str) -> None:
     raise SystemExit(message)
 
 
-def sha256(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
 def canonical_sha256(value: Any) -> str:
     payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(payload).hexdigest()
@@ -85,6 +85,125 @@ def load_mapping(path: Path, label: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         fail(f"{label} must be a YAML mapping: {path}")
     return value
+
+
+def amendment_path(value: Any) -> str:
+    if not isinstance(value, str) or not value:
+        fail(f"amendment path must be a non-empty string: {value!r}")
+    path = PurePosixPath(value)
+    if (
+        path.is_absolute()
+        or path.as_posix() != value
+        or path.parts[:2] != ("tests", "acceptance")
+        or len(path.parts) != 3
+        or "\\" in value
+    ):
+        fail(f"unsafe amendment path: {value!r}")
+    return value
+
+
+def locked_artifacts(
+    lock: dict[str, Any],
+    features: list[dict[str, Any]],
+) -> dict[str, tuple[str, int | None]]:
+    artifacts = {
+        f"tests/acceptance/{entry['path']}": (entry["sha256"], entry["size"])
+        for entry in features
+    }
+    for key in ("catalog", "executable_mapping"):
+        entry = lock[key]
+        artifacts[f"tests/acceptance/{entry['path']}"] = (entry["sha256"], None)
+    return artifacts
+
+
+def load_amendments(
+    artifacts: dict[str, tuple[str, int | None]],
+) -> dict[str, dict[str, str]]:
+    if AMENDMENTS.is_symlink():
+        fail(f"base acceptance amendments must not be a symlink: {AMENDMENTS}")
+    document = load_mapping(AMENDMENTS, "base acceptance amendments")
+    expected_keys = {"schema_version", "policy", "amendments"}
+    if set(document) != expected_keys:
+        fail(
+            "base acceptance amendment keys changed: "
+            f"missing={sorted(expected_keys - set(document))}, "
+            f"extra={sorted(set(document) - expected_keys)}"
+        )
+    if type(document["schema_version"]) is not int or document["schema_version"] != 1:
+        fail("base acceptance amendment schema_version must be integer 1")
+    if document["policy"] != "APPEND_ONLY":
+        fail("base acceptance amendment policy must be APPEND_ONLY")
+    entries = document["amendments"]
+    if not isinstance(entries, list):
+        fail("base acceptance amendments must be a list")
+    if len(entries) < F1_AMENDMENT_PREFIX_COUNT:
+        fail(f"base acceptance amendments deleted: {len(entries)} < {F1_AMENDMENT_PREFIX_COUNT}")
+
+    amendments: dict[str, dict[str, str]] = {}
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict) or set(entry) != AMENDMENT_KEYS:
+            fail(f"malformed base acceptance amendment at index {index}: {entry!r}")
+        relative = amendment_path(entry["path"])
+        if relative not in artifacts:
+            fail(f"unknown base acceptance amendment path: {relative!r}")
+        if relative in amendments:
+            fail(f"duplicate base acceptance amendment path: {relative!r}")
+        for key in ("frozen_sha256", "amended_sha256"):
+            digest = entry[key]
+            if not isinstance(digest, str) or SHA256_PATTERN.fullmatch(digest) is None:
+                fail(f"invalid amendment {key} at index {index}: {digest!r}")
+        for key in ("reason", "authority"):
+            text = entry[key]
+            if not isinstance(text, str) or not text.strip():
+                fail(f"amendment {key} must be a non-empty string at index {index}")
+        frozen_digest = artifacts[relative][0]
+        if entry["frozen_sha256"] != frozen_digest:
+            fail(
+                f"orphan amendment frozen digest for {relative}: "
+                f"{entry['frozen_sha256']} != {frozen_digest}"
+            )
+        if entry["amended_sha256"] == frozen_digest:
+            fail(f"orphan no-op amendment for {relative}")
+        amendments[relative] = entry
+    prefix_digest = canonical_sha256(entries[:F1_AMENDMENT_PREFIX_COUNT])
+    if prefix_digest != EXPECTED_F1_AMENDMENT_PREFIX_SHA256:
+        fail(f"trusted F1 amendment prefix changed: {prefix_digest}")
+    return amendments
+
+
+def verify_worktree_artifacts(
+    artifacts: dict[str, tuple[str, int | None]],
+    amendments: dict[str, dict[str, str]],
+) -> None:
+    for relative, (frozen_digest, frozen_size) in artifacts.items():
+        path = ROOT / relative
+        if path.is_symlink() or not path.is_file():
+            fail(f"missing or unsafe current base artifact: {relative}")
+        try:
+            content = path.read_bytes()
+        except OSError as error:
+            fail(f"cannot read current base artifact {relative}: {error}")
+        observed_digest = hashlib.sha256(content).hexdigest()
+        amendment = amendments.get(relative)
+        if observed_digest == frozen_digest:
+            if amendment is not None:
+                fail(f"orphan amendment for frozen worktree artifact: {relative}")
+            if frozen_size is not None and len(content) != frozen_size:
+                fail(
+                    f"current frozen base artifact size drifted: {relative}: "
+                    f"{len(content)} != {frozen_size}"
+                )
+            continue
+        if amendment is None:
+            fail(
+                f"current base artifact is neither frozen nor amended: {relative}: "
+                f"{observed_digest}"
+            )
+        if observed_digest != amendment["amended_sha256"]:
+            fail(
+                f"orphan amendment does not match current base artifact {relative}: "
+                f"{observed_digest} != {amendment['amended_sha256']}"
+            )
 
 
 def locked_feature_name(value: Any) -> str:
@@ -433,6 +552,9 @@ def main() -> None:
 
     lock = load_mapping(LOCK, "base acceptance lock")
     features = validate_lock(lock)
+    artifacts = locked_artifacts(lock, features)
+    amendments = load_amendments(artifacts)
+    verify_worktree_artifacts(artifacts, amendments)
     locked_paths = verify_tagged_base_feature_lock(features)
     verify_catalog(locked_paths)
     verify_mapping(locked_paths)

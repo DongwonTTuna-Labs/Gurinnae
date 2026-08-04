@@ -14,13 +14,40 @@ jobs:
     timeout-minutes: 240
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-      - name: Run atomic final gate
-        run: make verify-final
-      - name: Build and independently verify source archive
-        run: make source-archive clean-extraction-verify
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - name: Verify source tree before archiving
+        run: make verify-prearchive
+      - name: Build deterministic source archive
+        run: make source-archive
+      - name: Independently verify clean extraction
+        run: make clean-extraction-verify
+      - name: Run sealed acceptance and independent evidence validation
+        run: |
+          set -euo pipefail
+          evidence_root="$GITHUB_WORKSPACE/artifacts/acceptance"
+          run_id="release-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          source_commit="$(git rev-parse --verify 'HEAD^{commit}')"
+          archive="$GITHUB_WORKSPACE/artifacts/gurine-source-v13.0.0.tar.gz"
+          receipt="$GITHUB_WORKSPACE/artifacts/gurine-source-v13.0.0.extraction-receipt.json"
+          source_tree_sha256="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1], encoding="utf-8"))["source_tree_sha256"])' "$receipt")"
+          receipt_sha256="$(sha256sum "$receipt" | cut -d' ' -f1)"
+          install -d -m 0700 "$evidence_root"
+          make verify-acceptance \
+            ACCEPTANCE_EVIDENCE_ROOT="$evidence_root" \
+            ACCEPTANCE_RUN_ID="$run_id" \
+            ACCEPTANCE_SOURCE_COMMIT="$source_commit" \
+            ACCEPTANCE_SOURCE_TREE_SHA256="$source_tree_sha256" \
+            ACCEPTANCE_ARCHIVE="$archive" \
+            ACCEPTANCE_EXTRACTION_RECEIPT="$receipt" \
+            ACCEPTANCE_EXTRACTION_RECEIPT_SHA256="$receipt_sha256"
       - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: gurine-source-${{ github.ref_name }}
-          path: artifacts/gurine-source-*.tar.gz
+          path: |
+            artifacts/gurine-source-*.tar.gz
+            artifacts/gurine-source-*.tar.gz.sha256
+            artifacts/gurine-source-*.extraction-receipt.json
           if-no-files-found: error
           retention-days: 30

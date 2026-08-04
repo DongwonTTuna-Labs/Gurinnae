@@ -2003,6 +2003,17 @@ order:
    If any source changes, discard the candidate and all verdicts and restart at 1;
    otherwise the already-proven candidate is renamed final without byte change.
 
+Current release wiring does not yet implement this complete order. It runs step 1
+in the original checkout, creates one candidate archive (the second creation and
+byte-identity comparison in step 2 are not wired), and performs the step 3
+sidecar/member/manifest/source-digest checks plus `make verify-prearchive` in a new
+temporary extraction. It then runs `make verify-acceptance` from the original
+checkout with seven explicit archive/evidence inputs. It does not run
+`make verify-final` from that extraction into a fresh external evidence root, so
+step 4 is unimplemented and steps 5--7 do not complete the ordered extraction
+proof. This gap predates the current verification-authority fix; this section
+records it and does not claim or implement the missing wiring.
+
 No original receipt, cache, service state or test result satisfies extraction.
 Later source, test, mapping, migration, Compose, image or design change stales
 acceptance and affected verdicts. `ARTIFACT_READY` also requires a clean worktree.
