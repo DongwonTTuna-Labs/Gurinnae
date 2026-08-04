@@ -196,7 +196,7 @@
     },
     {
       "path": "specs/acceptance/runtime-layer-receipt-v1.schema.json",
-      "sha256": "fa7053c272f652b7f2eefa4e7a721b8df7d5b6aa491e7202c6b9a821c54777e0",
+      "sha256": "b6b06867990845586fc5d2081c3ea60474bf629d061e547d0e9b8fe2b6c50077",
       "size": 11218
     }
   ],

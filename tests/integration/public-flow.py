@@ -220,6 +220,27 @@ def get_json(path):
         return json.load(response)
 
 
+def assert_storage_failure(path):
+    request_id = "52345678-1234-4234-8234-123456789012"
+    request = urllib.request.Request(
+        BASE + path,
+        headers={"X-Request-ID": request_id},
+    )
+    try:
+        urllib.request.urlopen(request, timeout=10)
+        raise AssertionError(f"{path} should fail closed")
+    except urllib.error.HTTPError as error:
+        error_body = json.load(error)
+        assert error.code == 503, (path, error.code, error_body)
+        assert error.headers["X-Content-Type-Options"] == "nosniff"
+        assert error_body == {
+            "code": "STORAGE_FAILURE",
+            "requestId": request_id,
+            "status": 503,
+            "title": "STORAGE_FAILURE",
+        }
+
+
 for operation_id, path in ENDPOINTS.items():
     encoded_path = urllib.parse.quote(path, safe="/:?=&,%")
     request = urllib.request.Request(BASE + encoded_path, headers={"X-Request-ID": "12345678-1234-4234-8234-123456789012"})
@@ -307,6 +328,7 @@ case_filters = get_json(
 assert [item["slug"] for item in case_filters["items"]] == ["integration-case"]
 case_detail = get_json("/v1/cases/integration-case")
 case_revision = get_json("/v1/cases/integration-case/revisions/1")
+assert_storage_failure("/v1/cases/test-only-non-object-revision/revisions/1")
 for internal_key in ("agencyId", "supplierId", "ruleId", "agencyIds", "supplierIds", "ruleIds"):
     assert internal_key not in case_detail, (internal_key, case_detail)
     assert internal_key not in case_revision["content"], (internal_key, case_revision)

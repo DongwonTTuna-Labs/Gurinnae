@@ -644,12 +644,129 @@ VALUES
    transaction_timestamp()+interval '4 minutes',1,
    transaction_timestamp()-interval '1 second');
 
+DO $f9_slug_negative_assertions$
+BEGIN
+  IF NOT EXISTS(
+    SELECT 1 FROM editorial.list_r6d_invalid_public_slugs_v1()
+    WHERE case_id='f9000000-0000-4000-8000-000000000001'
+      AND 'CHARACTER_SET_OR_SHAPE_INVALID'=ANY(violation_codes)
+  ) THEN
+    RAISE EXCEPTION 'f9_legacy_invalid_slug_not_reported';
+  END IF;
+  BEGIN
+    INSERT INTO editorial.cases(
+      id,public_slug,title,investigation_state,publication_state,priority,version
+    ) VALUES(
+      'f9000000-0000-4000-8000-000000000011','테스트-가공인',
+      'TEST_ONLY Korean slug rejection','INVESTIGATING','NEVER_PUBLISHED','LOW',1
+    );
+    RAISE EXCEPTION 'f9_korean_slug_check_not_enforced';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO editorial.cases(
+      id,public_slug,title,investigation_state,publication_state,priority,version
+    ) VALUES(
+      'f9000000-0000-4000-8000-000000000012','TEST-ONLY-UPPERCASE',
+      'TEST_ONLY uppercase slug rejection','INVESTIGATING','NEVER_PUBLISHED','LOW',1
+    );
+    RAISE EXCEPTION 'f9_uppercase_slug_check_not_enforced';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  BEGIN
+    INSERT INTO editorial.cases(
+      id,public_slug,title,investigation_state,publication_state,priority,version
+    ) VALUES(
+      'f9000000-0000-4000-8000-000000000013',repeat('a',121),
+      'TEST_ONLY overlength slug rejection','INVESTIGATING','NEVER_PUBLISHED','LOW',1
+    );
+    RAISE EXCEPTION 'f9_overlength_slug_check_not_enforced';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  BEGIN
+    UPDATE editorial.cases SET public_slug='slug-only-update-must-be-owned'
+    WHERE id='d6e00000-0000-4000-8000-000000000101';
+    RAISE EXCEPTION 'f9_slug_only_update_guard_not_enforced';
+  EXCEPTION WHEN SQLSTATE '42501' THEN NULL;
+  END;
+  BEGIN
+    UPDATE editorial.cases
+    SET publication_state='PUBLISHED_ANOMALY',
+        current_publication_revision=1,version=version+1
+    WHERE id='f9000000-0000-4000-8000-000000000001';
+    RAISE EXCEPTION 'f9_legacy_invalid_slug_publication_not_blocked';
+  EXCEPTION WHEN check_violation THEN NULL;
+  END;
+  RAISE NOTICE 'F9_SLUG_NEGATIVE_ASSERTIONS_PASS';
+END
+$f9_slug_negative_assertions$;
+
+-- TEST_ONLY: `테스트인` is a deliberately synthetic natural-person name.
+DO $f9_public_text_tree_parity$
+DECLARE
+  v_payload jsonb:=jsonb_build_object(
+    'publicationState','PUBLISHED_ANOMALY','slug','test-only-case',
+    'title','가상 계약 점검','summary','계약 자료 비교',
+    'nonConclusion','현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.',
+    'agencyName','가상시청','contractName','정보화 사업',
+    'claims',jsonb_build_array(jsonb_build_object(
+      'text','테스트인 대표 관련 자료',
+      'limitations',jsonb_build_array('재직 기간 미확인')
+    )),'evidence',jsonb_build_array(jsonb_build_object(
+      'title','계약서','documentTitle','계약 원문','publisher','가상시청',
+      'sourceUrl','https://official.example/contracts/test-only-person',
+      'pageAnchor','3쪽',
+      'sourceLocator','https://official.example/contracts/1',
+      'publicExcerpt','테스트인 대표 서명'
+    )),'responses',jsonb_build_array(jsonb_build_object(
+      'partyName','가상 주식회사','excerpt','추가 확인 중'
+    ))
+  );
+  v_archive_payload jsonb:=jsonb_build_object(
+    'schema_version','1.0.0','slug','test-only-archive',
+    'title','계약 검토','summary','가상 자료','non_conclusion','확정 판단 아님',
+    'sections',jsonb_build_array(jsonb_build_object(
+      'heading','확인 내용','blocks',jsonb_build_array(jsonb_build_object(
+        'type','TABLE','text',NULL,'data',jsonb_build_object('담당','테스트인 전 장관')
+      ))
+    )),'claims',jsonb_build_array(jsonb_build_object('text_ko','계약 사실')),
+    'evidence',jsonb_build_array(jsonb_build_object(
+      'summary','공식 문서','public_excerpt','테스트인 서명',
+      'source',jsonb_build_object('locator',jsonb_build_object('value','3쪽'))
+    )),'subjects',jsonb_build_array(jsonb_build_object('display_name','가상 기관')),
+    'methodology',jsonb_build_object(
+      'limitations',jsonb_build_array('기간 한계'),
+      'calculation',jsonb_build_object('설명','자료 비교')
+    ),'responses',jsonb_build_array(jsonb_build_object(
+      'party','가상 기관','display_text','추가 확인 중'
+    )),'corrections',jsonb_build_array(jsonb_build_object('summary','금액 정정')),
+    'review_summary',jsonb_build_object('legal_reviewed',false)
+  );
+BEGIN
+  IF btrim(editorial.r6d_public_text_sha256_v1(v_payload))<>
+       'dc337255b4957ee87689575b67c32abc983cf2cbdd7891746abc248b1caf8eec'
+     OR editorial.r6d_json_pointer_text_v1(v_payload,'/slug')<>
+       'test-only-case'
+     OR editorial.r6d_json_pointer_text_v1(
+       v_payload,'/evidence/0/sourceUrl'
+     )<>'https://official.example/contracts/test-only-person'
+     OR btrim(editorial.r6d_public_text_sha256_v1(v_archive_payload))<>
+       'cc27a6ec726d867c3fff7b026cd821bcda6fe9aacd8a64e93af6f8d7e15e7ef9'
+     OR editorial.r6d_json_pointer_text_v1(v_archive_payload,'/slug')<>
+       'test-only-archive' THEN
+    RAISE EXCEPTION 'f9_public_text_tree_rust_db_parity_invalid';
+  END IF;
+  RAISE NOTICE 'F9_PUBLIC_TEXT_TREE_RUST_DB_PARITY_PASS';
+END
+$f9_public_text_tree_parity$;
+
 DO $r6d_publication_owner_flow$
 DECLARE
   v_payload jsonb:=jsonb_build_object(
     'caseId','d6e00000-0000-4000-8000-000000000101',
     'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
     'publicationState','PUBLISHED_ANOMALY',
+    'slug','r6d-control-publication',
     'title','R6d 자연인 검토 표면',
     'summary','대표 가나다라는 자연인 실명 검토 표면',
     'nonConclusion','이 기록은 위법 또는 부패의 확정이 아닙니다.',
@@ -662,10 +779,16 @@ DECLARE
     )),
     'evidence',jsonb_build_array(jsonb_build_object(
       'id','d6e00000-0000-4000-8000-000000000202',
-      'title','공식 계약서','publicExcerpt','계약 범위 확인'
+      'title','공식 계약서',
+      'sourceUrl','https://example.invalid/test-only-contract-source',
+      'publicExcerpt','계약 범위 확인'
     )),'responses','[]'::jsonb
   );
   v_scan jsonb;
+  v_lower_payload jsonb;
+  v_lower_scan jsonb;
+  v_lower_request jsonb;
+  v_lower_result jsonb;
   v_preview_request jsonb;
   v_preview_result jsonb;
   v_replay jsonb;
@@ -705,7 +828,7 @@ BEGIN
     ))
   ) INTO STRICT v_scan
   FROM editorial.named_person_publication_policies
-  WHERE policy_version='r6d-named-person-publication-v1' AND active;
+  WHERE policy_version='r6d-named-person-publication-v2' AND active;
 
   v_preview_request:=jsonb_build_object(
     'previewId','d6e00000-0000-4000-8000-000000000103',
@@ -766,6 +889,65 @@ BEGIN
   IF pg_temp.r6d_control_publication_state_sha256()<>v_state_before THEN
     RAISE EXCEPTION 'r6d_named_person_scan_tamper_not_zero_write';
   END IF;
+  v_lower_payload:=jsonb_set(
+    v_payload,'{summary}',
+    to_jsonb('😀 「대표이사」 "테스​트인"은 TEST_ONLY 가공 이름입니다.'::text)
+  );
+  v_lower_scan:=jsonb_set(jsonb_set(
+    v_scan,'{publicTextSha256}',to_jsonb(btrim(
+      editorial.r6d_public_text_sha256_v1(v_lower_payload)
+    ))),'{findings}','[]'::jsonb);
+  v_lower_request:=jsonb_build_object(
+    'caseId','d6e00000-0000-4000-8000-000000000101',
+    'reviewSnapshotId','d6e00000-0000-4000-8000-000000000102',
+    'publicationState','PUBLISHED_ANOMALY','guardContext','PREVIEW',
+    'publicPayload',v_lower_payload,
+    'publicPayloadSha256',encode(extensions.digest(
+      ops.canonical_jsonb_v1(v_lower_payload),'sha256'),'hex'),
+    'scan',v_lower_scan,'legalOverride',NULL,
+    '_actorId','d6e00000-0000-4000-8000-000000000001',
+    '_actorAssertionJti','f9000000-0000-4000-8000-000000000021',
+    '_actorAssuranceLevel','ACTIVE_SESSION',
+    '_actorEffectiveCapability','publication.preview',
+    '_actorActionDigest',
+      pg_temp.r6d_control_publication_sha256('f9-lower-bound-action'),
+    '_actorStepUpAuthorizationId',NULL,
+    '_actorIdempotencyKeySha256',
+      pg_temp.r6d_control_publication_sha256('f9-lower-bound-idempotency'),
+    '_actorRequestKeySha256',
+      pg_temp.r6d_control_publication_sha256('f9-lower-bound-idempotency'),
+    '_requestId','f9000000-0000-4000-8000-000000000022',
+    '_idempotencyKeySha256',
+      pg_temp.r6d_control_publication_sha256('f9-lower-bound-idempotency'),
+    '_requestSha256',repeat('0',64)
+  );
+  v_lower_request:=jsonb_set(v_lower_request,'{_requestSha256}',to_jsonb(
+    encode(extensions.digest(ops.canonical_jsonb_v1(
+      v_lower_request-'_requestSha256'
+    ),'sha256'),'hex')
+  ));
+  v_lower_result:=editorial.record_named_person_publication_assessment_v1(
+    v_lower_request
+  );
+  IF v_lower_scan->'findings'<>'[]'::jsonb
+     OR v_lower_result->>'assessmentOutcome'<>'BLOCKED'
+     OR v_lower_result->>'legalReviewRequired'<>'true'
+     OR NOT EXISTS(
+       SELECT 1 FROM editorial.named_person_publication_findings AS finding
+       WHERE finding.assessment_id=(v_lower_result->>'assessmentId')::uuid
+         AND finding.detector_kind='TITLE_ADJACENT_KOREAN_NAME'
+         AND finding.json_pointer='/summary'
+         AND finding.start_utf16=11 AND finding.end_utf16=16
+         AND finding.matched_text_sha256=encode(extensions.digest(convert_to(
+           editorial.r6d_utf16_slice_v1(
+             editorial.r6d_json_pointer_text_v1(v_lower_payload,'/summary'),
+             finding.start_utf16,finding.end_utf16
+           ),'UTF8'
+         ),'sha256'),'hex')
+     ) THEN
+    RAISE EXCEPTION 'f9_empty_findings_title_lower_bound_not_blocked';
+  END IF;
+  RAISE NOTICE 'F9_EMPTY_FINDINGS_TITLE_LOWER_BOUND_PASS';
   SELECT count(*) INTO v_outbox_before FROM ops.outbox;
   v_preview_result:=editorial.preview_publication_guarded_v2(
     v_preview_request
@@ -1187,7 +1369,7 @@ BEGIN
     'findings','[]'::jsonb
   ) INTO STRICT v_scan
   FROM editorial.named_person_publication_policies
-  WHERE policy_version='r6d-named-person-publication-v1' AND active;
+  WHERE policy_version='r6d-named-person-publication-v2' AND active;
   v_request:=jsonb_build_object(
     'mode','CORRECTION',
     'correctionId','d6e00000-0000-4000-8000-000000000401',

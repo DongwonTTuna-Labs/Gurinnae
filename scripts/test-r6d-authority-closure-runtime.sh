@@ -33,8 +33,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 40 ]]; then
-  printf 'expected exactly 40 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 41 ]]; then
+  printf 'expected exactly 41 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -52,6 +52,12 @@ done
 if [[ "$(basename "${migrations[39]}")" != \
   '0040_r6d_privacy_authority_closure.sql' ]]; then
   printf 'migration 0040 filename is not the R6d privacy authority closure\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[40]}")" != \
+  '0041_f9_natural_person_name_guard_closure.sql' ]]; then
+  printf 'migration 0041 filename is not the F9 natural-person name guard closure\n' >&2
   exit 1
 fi
 
@@ -340,4 +346,4 @@ fi
 printf 'R6d official-channel source PostgreSQL concurrency: PASS (%s)\n' \
   "$d2_attest_wait_state"
 
-printf 'R6d authority closure PostgreSQL runtime: PASS (migrations=40, final=0040)\n'
+printf 'R6d authority closure PostgreSQL runtime: PASS (migrations=41, final=0041)\n'

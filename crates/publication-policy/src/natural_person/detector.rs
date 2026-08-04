@@ -6,8 +6,8 @@ use super::scanner::{
     NATURAL_PERSON_RULESET_VERSION, NaturalPersonFinding, NaturalPersonFindingBasis,
 };
 
-pub(super) const NORMALIZATION_VERSION: &str = "nfkc-lower-name-separators-v1";
-pub(super) const TITLE_ADJACENCY_VERSION: &str = "horizontal-separator-token-v1";
+pub(super) const NORMALIZATION_VERSION: &str = "nfkc-lower-name-separators-ignorables-v2";
+pub(super) const TITLE_ADJACENCY_VERSION: &str = "horizontal-separator-token-quotes-v2";
 pub(super) const TITLE_LEXICON: &[&str] = &[
     "감사원장",
     "국회의원",
@@ -103,9 +103,16 @@ pub(super) fn find_registered_people(
         if !boundaries[start_index].2.is_alphanumeric() {
             continue;
         }
-        let final_index = boundaries.len().min(start_index + maximum_source_length);
-        for end_index in start_index..final_index {
+        let mut source_length = 0_usize;
+        for end_index in start_index..boundaries.len() {
             let (_, end, character) = boundaries[end_index];
+            if is_ignored_name_character(character) {
+                continue;
+            }
+            source_length = source_length.saturating_add(1);
+            if source_length > maximum_source_length {
+                break;
+            }
             if !character.is_alphanumeric() && !is_name_separator(character) {
                 break;
             }
@@ -200,7 +207,7 @@ fn are_adjacent_title_tokens(text: &str, left: TextToken, right: TextToken) -> b
 }
 
 fn is_title_token(value: &str) -> bool {
-    let normalized = value.nfkc().collect::<String>();
+    let normalized = normalize_title_text(value);
     TITLE_LEXICON.iter().any(|title| {
         normalized == *title
             || normalized
@@ -210,7 +217,7 @@ fn is_title_token(value: &str) -> bool {
 }
 
 fn person_token_span(token: TextToken, text: &str) -> Option<(usize, usize)> {
-    let value = token.text(text).nfkc().collect::<String>();
+    let value = normalize_title_text(token.text(text));
     let stripped = strip_korean_particle(&value);
     if !(2..=4).contains(&stripped.chars().count()) || !stripped.chars().all(is_hangul_syllable) {
         return None;
@@ -250,14 +257,42 @@ fn finding(
 }
 
 fn is_name_separator(character: char) -> bool {
-    character.is_whitespace() || matches!(character, '.' | '·' | 'ㆍ' | '-' | '‐' | '‑' | '–')
+    character.is_whitespace()
+        || is_ignored_name_character(character)
+        || matches!(character, '.' | '·' | 'ㆍ' | '-' | '‐' | '‑' | '–')
 }
 
 fn is_title_separator(character: char) -> bool {
     matches!(
         character,
-        ' ' | '\t' | ':' | ',' | '·' | 'ㆍ' | '-' | '‐' | '‑' | '–' | '(' | ')' | '[' | ']'
+        ' ' | '\t'
+            | ':'
+            | ','
+            | '·'
+            | 'ㆍ'
+            | '-'
+            | '‐'
+            | '‑'
+            | '–'
+            | '('
+            | ')'
+            | '['
+            | ']'
+            | '"'
+            | '「'
+            | '」'
     )
+}
+
+fn normalize_title_text(value: &str) -> String {
+    value
+        .nfkc()
+        .filter(|character| !is_ignored_name_character(*character))
+        .collect()
+}
+
+fn is_ignored_name_character(character: char) -> bool {
+    matches!(character, '\u{200b}' | '\u{feff}' | '\u{00ad}')
 }
 
 fn is_hangul_syllable(character: char) -> bool {

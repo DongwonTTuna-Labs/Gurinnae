@@ -406,6 +406,7 @@ fn publication_text_tree(payload: &Value) -> Result<PublicTextNode<'_>, ServiceE
         return archive_publication_text_tree(object);
     }
     let mut fields = Vec::new();
+    push_required_text(&mut fields, object, "slug")?;
     push_required_text(&mut fields, object, "title")?;
     push_required_text(&mut fields, object, "summary")?;
     push_required_text(&mut fields, object, "nonConclusion")?;
@@ -535,6 +536,7 @@ fn push_evidence<'a>(
         for key in [
             "documentTitle",
             "publisher",
+            "sourceUrl",
             "pageAnchor",
             "sourceLocator",
             "publicExcerpt",

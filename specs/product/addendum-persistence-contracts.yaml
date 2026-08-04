@@ -5,9 +5,9 @@ counts:
   base_tables: 107
   additive_tables: 195
   final_active_tables: 302
-  migrations: 38
+  migrations: 39
 rules:
-- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0040, reviewed submission hardening is migration 0030, and zero-relation runtime boundary changes are migrations 0031 and 0034.
+- Migrations 0001 through 0024 are byte-immutable; physical owner additions are in 0025 through 0029, 0032 through 0033, and 0035 through 0040, reviewed submission hardening is migration 0030, zero-relation runtime boundary changes are migrations 0031 and 0034, and zero-relation F9 publication-guard closure is migration 0041.
 - Runtime roles never own schema objects and receive only declared table/view/function grants.
 - Every command stores idempotency, mutation, audit, outbox and receipt atomically; any failure rolls back all five.
 - Repository methods return typed cardinality; zero and more-than-one are explicit errors and never synthetic success.
@@ -227,11 +227,13 @@ migration_ownership:
   - ops.privacy_response_party_name_correction_plan_bindings_v1
   - ops.privacy_response_party_name_correction_approval_bindings_v1
   - ops.privacy_response_party_name_correction_completion_receipts_v1
+  0041_f9_natural_person_name_guard_closure.sql: []
 canonical_existing_relations:
 - ops.cost_events remains the existing v13 relation and is reused without counting it as additive.
 - ops.communication_provider_configs is the sole additive provider-configuration relation; no duplicate provider-config table is permitted.
 - ops.incidents is the physical rename target of existing ops.source_incidents and is not counted as additive.
 - Migration 0034 alters core.agencies, public.agencies, editorial.evidence, and intake.create_correction_session without adding a product relation; its contract is specs/database/addendum/0034-public-monitoring-extensions.yaml.
+- Migration 0041 alters editorial.cases and editorial.named_person_publication_policies, replaces named-person publication routines and the case publication trigger, and adds no product relation; its contract is specs/database/addendum/0041-f9-natural-person-name-guard-closure.yaml.
 renames:
 - physical_from: ops.email_deliveries
   physical_to: ops.outbound_deliveries

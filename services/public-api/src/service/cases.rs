@@ -274,10 +274,9 @@ async fn get_revision(pool: &PgPool, slug: &str, revision: i32) -> Result<Value,
         .get("content")
         .cloned()
         .unwrap_or_else(|| payload.clone());
-    if let Some(object) = content.as_object_mut() {
-        normalize_public_case_with_authority(object, notice_state, authority)?;
-        retain_fields(object, PUBLIC_CASE_SNAPSHOT_FIELDS);
-    }
+    let object = content.as_object_mut().ok_or(ServiceError::Persistence)?;
+    normalize_public_case_with_authority(object, notice_state, authority)?;
+    retain_fields(object, PUBLIC_CASE_SNAPSHOT_FIELDS);
     let description = format!("사건 {slug} 개정본 {revision} · {notice}");
     Ok(json!({
         "slug":slug,
