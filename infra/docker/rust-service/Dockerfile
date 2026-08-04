@@ -9,6 +9,7 @@ COPY services services
 COPY xtask xtask
 COPY db db
 COPY specs specs
+COPY fixtures fixtures
 COPY verification verification
 COPY vendor vendor
 COPY tests tests

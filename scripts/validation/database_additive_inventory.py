@@ -328,6 +328,12 @@ _R6D_INVENTORY_CONTRACTS = (
         '0043',
         0,
     ),
+    (
+        '0044_b2_natural_person_detection_digest_closure.sql',
+        '0044-b2-natural-person-detection-digest-closure.yaml',
+        '0044',
+        0,
+    ),
 )
 
 

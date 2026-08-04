@@ -195,7 +195,7 @@ BEGIN
     'findings','[]'::jsonb
   ) INTO STRICT v_scan
   FROM editorial.named_person_publication_policies
-  WHERE policy_version='r6d-named-person-publication-v2' AND active;
+  WHERE policy_version='r6d-named-person-publication-v3' AND active;
   v_action_sha:=encode(extensions.digest(
     convert_to('f3-archive-source-url-action','UTF8'),'sha256'
   ),'hex');

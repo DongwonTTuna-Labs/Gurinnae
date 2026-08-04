@@ -1,8 +1,29 @@
 {
+  "publicPayload": {
+    "publicationState": "PUBLISHED_ANOMALY",
+    "slug": "test-only-named-individual-guard",
+    "title": "가상 계약 점검",
+    "summary": "홍길동",
+    "nonConclusion": "현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.",
+    "claims": [
+      {
+        "text": "계약 자료 비교",
+        "limitations": ["초기 자료"]
+      }
+    ],
+    "evidence": [
+      {
+        "title": "계약서",
+        "sourceUrl": "https://official.example/contracts/test-only-named-individual-guard",
+        "publicExcerpt": "계약 범위 확인"
+      }
+    ],
+    "responses": []
+  },
   "assessment": {
     "rulesetVersion": "ko-named-individual-v1",
-    "rulesetSha256": "3b6449ab94c887b9b31ddb10481acfc132d4db29fcbadb394fa88c7305ec09c4",
-    "publicTextSha256": "4ce15b8c83ad0840c62722234e68fd6702a29e5c2e30fa03eb5e5525644f516c",
+    "rulesetSha256": "bc7b9b83c7402bfdd093cbebc6374bb5fe1a8862caeace05536016dab3ce71cf",
+    "publicTextSha256": "e1c4bb8652de654f15466de97c7272bc2cec9c2de916a793347a563b9fb6b2d1",
     "findings": [
       {
         "path": "/summary",
@@ -15,14 +36,14 @@
   },
   "overrideReceipt": {
     "receiptVersion": "named-individual-legal-override-v1",
-    "publicTextSha256": "4ce15b8c83ad0840c62722234e68fd6702a29e5c2e30fa03eb5e5525644f516c",
+    "publicTextSha256": "e1c4bb8652de654f15466de97c7272bc2cec9c2de916a793347a563b9fb6b2d1",
     "rulesetVersion": "ko-named-individual-v1",
     "reasonCode": "OFFICIAL_DISPOSITION_QUOTE",
     "officialSourceLocator": "https://official.example/dispositions/1",
     "officialSourceSha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "editorialReviewDecisionId": "44444444-4444-4444-8444-444444444444",
     "legalReviewerId": "11111111-1111-4111-8111-111111111111",
-    "receiptSha256": "d097528d1f2807df3175b38154381666f3df417180471846cbdc7fd08e0be756"
+    "receiptSha256": "3f646b0bdb14117f3d7da22038bb15cb1054744459692ba4b00f6a2b1470e4ec"
   },
   "snapshotAuthorId": "22222222-2222-4222-8222-222222222222",
   "currentLegalActorId": "11111111-1111-4111-8111-111111111111",

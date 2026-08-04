@@ -925,6 +925,60 @@ BEGIN
 END
 $f9_public_text_tree_parity$;
 
+DO $b2_natural_person_character_coverage$
+DECLARE
+  v_payload jsonb:=jsonb_build_object(
+    'publicationState','PUBLISHED_ANOMALY','slug','test-only-b2-coverage',
+    'title','가상 계약 점검','summary','계약 자료 비교',
+    'nonConclusion','현재 자료만으로 위법성이나 부패 여부를 판단할 수 없습니다.',
+    'claims',jsonb_build_array(jsonb_build_object(
+      'text','계약 자료 비교','limitations',jsonb_build_array('초기 자료')
+    )),'evidence',jsonb_build_array(jsonb_build_object(
+      'title','계약서','sourceUrl','https://official.example/b2-coverage',
+      'publicExcerpt','계약 범위 확인'
+    )),'responses','[]'::jsonb
+  );
+  v_codepoint integer; v_findings jsonb; v_summary text;
+BEGIN
+  FOREACH v_codepoint IN ARRAY
+    editorial.r6d_ignored_name_codepoints_f9_v1()
+  LOOP
+    v_summary:='장관 테스트'||chr(v_codepoint)||'인';
+    v_findings:=editorial.r6d_title_lower_bound_findings_f9_v1(
+      jsonb_set(v_payload,'{summary}',to_jsonb(v_summary))
+    );
+    IF jsonb_array_length(v_findings)<>1
+       OR v_findings->0->>'detectorKind'<>'TITLE_ADJACENT_KOREAN_NAME'
+       OR v_findings->0->>'jsonPointer'<>'/summary'
+       OR (v_findings->0->>'startUtf16')::integer<>3
+       OR (v_findings->0->>'endUtf16')::integer<>8 THEN
+      RAISE EXCEPTION 'b2_ignored_name_character_not_detected U+%',
+        upper(lpad(to_hex(v_codepoint),4,'0'));
+    END IF;
+    RAISE NOTICE 'B2_DB_IGNORABLE U+% PASS lower_bound=1',
+      upper(lpad(to_hex(v_codepoint),4,'0'));
+  END LOOP;
+  FOREACH v_codepoint IN ARRAY
+    editorial.r6d_additional_title_space_codepoints_f9_v1()
+  LOOP
+    v_summary:='장관'||chr(v_codepoint)||'테스트인';
+    v_findings:=editorial.r6d_title_lower_bound_findings_f9_v1(
+      jsonb_set(v_payload,'{summary}',to_jsonb(v_summary))
+    );
+    IF jsonb_array_length(v_findings)<>1
+       OR v_findings->0->>'detectorKind'<>'TITLE_ADJACENT_KOREAN_NAME'
+       OR v_findings->0->>'jsonPointer'<>'/summary'
+       OR (v_findings->0->>'startUtf16')::integer<>3
+       OR (v_findings->0->>'endUtf16')::integer<>7 THEN
+      RAISE EXCEPTION 'b2_title_space_not_detected U+%',
+        upper(lpad(to_hex(v_codepoint),4,'0'));
+    END IF;
+    RAISE NOTICE 'B2_DB_TITLE_SPACE U+% PASS lower_bound=1',
+      upper(lpad(to_hex(v_codepoint),4,'0'));
+  END LOOP;
+END
+$b2_natural_person_character_coverage$;
+
 DO $r6d_publication_owner_flow$
 DECLARE
   v_payload jsonb:=jsonb_build_object(
@@ -993,7 +1047,7 @@ BEGIN
     ))
   ) INTO STRICT v_scan
   FROM editorial.named_person_publication_policies
-  WHERE policy_version='r6d-named-person-publication-v2' AND active;
+  WHERE policy_version='r6d-named-person-publication-v3' AND active;
 
   v_preview_request:=jsonb_build_object(
     'previewId','d6e00000-0000-4000-8000-000000000103',
@@ -1539,7 +1593,7 @@ BEGIN
     'findings','[]'::jsonb
   ) INTO STRICT v_scan
   FROM editorial.named_person_publication_policies
-  WHERE policy_version='r6d-named-person-publication-v2' AND active;
+  WHERE policy_version='r6d-named-person-publication-v3' AND active;
   v_request:=jsonb_build_object(
     'mode','CORRECTION',
     'correctionId','d6e00000-0000-4000-8000-000000000401',

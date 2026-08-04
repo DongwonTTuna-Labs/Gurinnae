@@ -21,6 +21,7 @@ authority:
   f9_natural_person_name_guard_closure_migration: 0041_f9_natural_person_name_guard_closure.sql
   f3_public_source_url_exposure_closure_migration: 0042_f3_public_source_url_exposure_closure.sql
   b1_public_slug_rename_authority_migration: 0043_b1_public_slug_rename_authority.sql
+  b2_natural_person_detection_digest_closure_migration: 0044_b2_natural_person_detection_digest_closure.sql
   authority_files:
     - specs/product/owner-addendum-2026-07-14.yaml
     - specs/product/addendum-persistence-contracts.yaml
@@ -63,14 +64,16 @@ authority:
     - specs/database/addendum/0042-f3-public-source-url-exposure-closure.yaml
     - db/migrations/0043_b1_public_slug_rename_authority.sql
     - specs/database/addendum/0043-b1-public-slug-rename-authority.yaml
+    - db/migrations/0044_b2_natural_person_detection_digest_closure.sql
+    - specs/database/addendum/0044-b2-natural-person-detection-digest-closure.yaml
 
 inventory_lock:
   base_migrations: 24
-  additive_migrations: 19
-  additive_migration_definition: post-base migrations 0025 through 0043 comprise seventeen owner-declared product migrations plus the zero-relation 0031 public security-boundary view and 0034 public-monitoring hardening; the additive relation count is derived from the stable physical-fragment union and is never a generator input
+  additive_migrations: 20
+  additive_migration_definition: post-base migrations 0025 through 0044 comprise eighteen owner-declared product migrations plus the zero-relation 0031 public security-boundary view and 0034 public-monitoring hardening; the additive relation count is derived from the stable physical-fragment union and is never a generator input
   hardening_migrations: 2
-  post_base_migrations: 19
-  final_migrations: 43
+  post_base_migrations: 20
+  final_migrations: 44
   base_active_tables: 107
   additive_tables: 196
   final_active_tables: 303
@@ -94,6 +97,7 @@ inventory_lock:
     0041_f9_natural_person_name_guard_closure.sql: 0
     0042_f3_public_source_url_exposure_closure.sql: 0
     0043_b1_public_slug_rename_authority.sql: 1
+    0044_b2_natural_person_detection_digest_closure.sql: 0
   migration_sequence:
     - 0001_extensions_schemas_types.sql
     - 0002_raw_and_core.sql
@@ -138,11 +142,12 @@ inventory_lock:
     - 0041_f9_natural_person_name_guard_closure.sql
     - 0042_f3_public_source_url_exposure_closure.sql
     - 0043_b1_public_slug_rename_authority.sql
+    - 0044_b2_natural_person_detection_digest_closure.sql
   counting_rule: pg_class.relkind = 'r'; compatibility views and renamed base tables add zero
   required_set_equalities:
-    - len(migration_sequence) == len(unique(migration_sequence)) == final_migrations == 43
-    - migration_sequence[0:24] == byte-pinned base migration filename sequence and migration_sequence[24:43] == relation_inventory migration key order
-    - sum(relation_delta_by_migration.values) == additive_tables and relation_delta_by_migration.0030_v13_submission_session_hardening.sql == 0 and relation_delta_by_migration.0031_public_source_registry_view.sql == 0 and relation_delta_by_migration.0034_public_monitoring_extensions.sql == 0 and relation_delta_by_migration.0035_r6b_agent_runtime_activation.sql == 2 and relation_delta_by_migration.0036_r6b_pipeline_activation.sql == 1 and relation_delta_by_migration.0037_r6c_conflict_investigation.sql == 13 and relation_delta_by_migration.0038_r6d_legal_hardening.sql == 32 and relation_delta_by_migration.0039_r6d_authority_closure.sql == 9 and relation_delta_by_migration.0040_r6d_privacy_authority_closure.sql == 5 and relation_delta_by_migration.0041_f9_natural_person_name_guard_closure.sql == 0 and relation_delta_by_migration.0042_f3_public_source_url_exposure_closure.sql == 0 and relation_delta_by_migration.0043_b1_public_slug_rename_authority.sql == 1
+    - len(migration_sequence) == len(unique(migration_sequence)) == final_migrations == 44
+    - migration_sequence[0:24] == byte-pinned base migration filename sequence and migration_sequence[24:44] == relation_inventory migration key order
+    - sum(relation_delta_by_migration.values) == additive_tables and relation_delta_by_migration.0030_v13_submission_session_hardening.sql == 0 and relation_delta_by_migration.0031_public_source_registry_view.sql == 0 and relation_delta_by_migration.0034_public_monitoring_extensions.sql == 0 and relation_delta_by_migration.0035_r6b_agent_runtime_activation.sql == 2 and relation_delta_by_migration.0036_r6b_pipeline_activation.sql == 1 and relation_delta_by_migration.0037_r6c_conflict_investigation.sql == 13 and relation_delta_by_migration.0038_r6d_legal_hardening.sql == 32 and relation_delta_by_migration.0039_r6d_authority_closure.sql == 9 and relation_delta_by_migration.0040_r6d_privacy_authority_closure.sql == 5 and relation_delta_by_migration.0041_f9_natural_person_name_guard_closure.sql == 0 and relation_delta_by_migration.0042_f3_public_source_url_exposure_closure.sql == 0 and relation_delta_by_migration.0043_b1_public_slug_rename_authority.sql == 1 and relation_delta_by_migration.0044_b2_natural_person_detection_digest_closure.sql == 0
     - set(owner_addendum.database_delta.additive_tables) == set(persistence.migration_ownership.flatten) == set(relation_inventory.flatten) == set(physical table_contracts.relation)
     - len(relation_inventory.flatten) == len(unique(relation_inventory.flatten)) == additive_tables
     - relation_delta_by_migration[key] == len(relation_inventory.by_migration[key]) for every post-base migration key
@@ -223,6 +228,7 @@ relation_inventory:
     0041_f9_natural_person_name_guard_closure.sql: explicit empty relation set and zero relkind-r delta; changed-base contract is specs/database/addendum/0041-f9-natural-person-name-guard-closure.yaml
     0042_f3_public_source_url_exposure_closure.sql: explicit empty relation set and zero relkind-r delta; replaced-view and archive-tail contract is specs/database/addendum/0042-f3-public-source-url-exposure-closure.yaml
     0043_b1_public_slug_rename_authority.sql: specs/database/addendum/0043-b1-public-slug-rename-authority.yaml#scope.exact_relations in declaration order
+    0044_b2_natural_person_detection_digest_closure.sql: explicit empty relation set and zero relkind-r delta; changed-policy and routine-replacement contract is specs/database/addendum/0044-b2-natural-person-detection-digest-closure.yaml
   derivation_rule: validators load every source after a stable hash window and derive sets and orders without a numeric fallback; they fail on missing, duplicate, extra, differently owned, differently migrated, noncontiguous or order-divergent relations
   control_relations_excluded_from_product_count: [public._sqlx_migrations]
   by_migration:
@@ -441,6 +447,7 @@ relation_inventory:
     0042_f3_public_source_url_exposure_closure.sql: []
     0043_b1_public_slug_rename_authority.sql:
       - editorial.public_slug_rename_receipts_v1
+    0044_b2_natural_person_detection_digest_closure.sql: []
 
 physical_conventions:
   schema_owner: gurine_schema_owner
@@ -979,6 +986,9 @@ migration_plan:
   0043_b1_public_slug_rename_authority.sql:
     relation_delta: 1
     phases: [preflight exact 0001-through-0042 ledger, create the immutable digest-self-verifying public-slug rename receipt, install the version-fenced SECURITY DEFINER rename owner with control-api-only execution, replace the case publication guard with mutually exclusive rename and publication receipt paths, preserve invalid-new-slug and mixed-transition fail-closed behavior, commit the single forward-only transaction]
+  0044_b2_natural_person_detection_digest_closure.sql:
+    relation_delta: 0
+    phases: [preflight exact 0001-through-0043 ledger, install explicit Rust-parity character catalogs and replace title and name normalization routines, insert immutable v3 named-person policy with the Rust-derived ruleset digest while preserving v1 and v2, replace assessment and publication guards with exact v3 bindings, preserve original-text UTF-16 span derivation and the application-key boundary, commit the single forward-only transaction]
 
 foreign_key_closure:
   construction_rule: create parent before child inside each migration; cross-migration references only point backward

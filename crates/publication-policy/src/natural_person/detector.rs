@@ -6,8 +6,30 @@ use super::scanner::{
     NATURAL_PERSON_RULESET_VERSION, NaturalPersonFinding, NaturalPersonFindingBasis,
 };
 
-pub(super) const NORMALIZATION_VERSION: &str = "nfkc-lower-name-separators-ignorables-v2";
-pub(super) const TITLE_ADJACENCY_VERSION: &str = "horizontal-separator-token-quotes-v2";
+pub(super) const NORMALIZATION_VERSION: &str = "nfkc-lower-explicit-name-separators-ignorables-v3";
+pub(super) const TITLE_ADJACENCY_VERSION: &str = "explicit-horizontal-separator-token-quotes-v3";
+pub(super) const IGNORED_NAME_CHARACTERS: &[char] = &[
+    '\u{00ad}', '\u{034f}', '\u{180e}', '\u{200b}', '\u{200c}', '\u{200d}', '\u{2060}', '\u{fe00}',
+    '\u{fe01}', '\u{fe02}', '\u{fe03}', '\u{fe04}', '\u{fe05}', '\u{fe06}', '\u{fe07}', '\u{fe08}',
+    '\u{fe09}', '\u{fe0a}', '\u{fe0b}', '\u{fe0c}', '\u{fe0d}', '\u{fe0e}', '\u{fe0f}', '\u{feff}',
+];
+pub(super) const NAME_WHITESPACE_CHARACTERS: &[char] = &[
+    '\u{0009}', '\u{000a}', '\u{000b}', '\u{000c}', '\u{000d}', '\u{0020}', '\u{0085}', '\u{00a0}',
+    '\u{1680}', '\u{2000}', '\u{2001}', '\u{2002}', '\u{2003}', '\u{2004}', '\u{2005}', '\u{2006}',
+    '\u{2007}', '\u{2008}', '\u{2009}', '\u{200a}', '\u{2028}', '\u{2029}', '\u{202f}', '\u{205f}',
+    '\u{3000}',
+];
+pub(super) const NAME_PUNCTUATION_SEPARATOR_CHARACTERS: &[char] = &[
+    '.', '\u{00b7}', '\u{318d}', '-', '\u{2010}', '\u{2011}', '\u{2013}',
+];
+pub(super) const LEGACY_TITLE_SEPARATOR_CHARACTERS: &[char] = &[
+    '\u{0020}', '\u{0009}', ':', ',', '\u{00b7}', '\u{318d}', '-', '\u{2010}', '\u{2011}',
+    '\u{2013}', '(', ')', '[', ']', '"', '\u{300c}', '\u{300d}',
+];
+pub(super) const ADDITIONAL_TITLE_SPACE_CHARACTERS: &[char] = &[
+    '\u{00a0}', '\u{1680}', '\u{2000}', '\u{2001}', '\u{2002}', '\u{2003}', '\u{2004}', '\u{2005}',
+    '\u{2006}', '\u{2007}', '\u{2008}', '\u{2009}', '\u{200a}', '\u{202f}', '\u{205f}', '\u{3000}',
+];
 pub(super) const TITLE_LEXICON: &[&str] = &[
     "감사원장",
     "국회의원",
@@ -257,31 +279,14 @@ fn finding(
 }
 
 fn is_name_separator(character: char) -> bool {
-    character.is_whitespace()
-        || is_ignored_name_character(character)
-        || matches!(character, '.' | '·' | 'ㆍ' | '-' | '‐' | '‑' | '–')
+    NAME_WHITESPACE_CHARACTERS.contains(&character)
+        || IGNORED_NAME_CHARACTERS.contains(&character)
+        || NAME_PUNCTUATION_SEPARATOR_CHARACTERS.contains(&character)
 }
 
 fn is_title_separator(character: char) -> bool {
-    matches!(
-        character,
-        ' ' | '\t'
-            | ':'
-            | ','
-            | '·'
-            | 'ㆍ'
-            | '-'
-            | '‐'
-            | '‑'
-            | '–'
-            | '('
-            | ')'
-            | '['
-            | ']'
-            | '"'
-            | '「'
-            | '」'
-    )
+    LEGACY_TITLE_SEPARATOR_CHARACTERS.contains(&character)
+        || ADDITIONAL_TITLE_SPACE_CHARACTERS.contains(&character)
 }
 
 fn normalize_title_text(value: &str) -> String {
@@ -292,7 +297,7 @@ fn normalize_title_text(value: &str) -> String {
 }
 
 fn is_ignored_name_character(character: char) -> bool {
-    matches!(character, '\u{200b}' | '\u{feff}' | '\u{00ad}')
+    IGNORED_NAME_CHARACTERS.contains(&character)
 }
 
 fn is_hangul_syllable(character: char) -> bool {

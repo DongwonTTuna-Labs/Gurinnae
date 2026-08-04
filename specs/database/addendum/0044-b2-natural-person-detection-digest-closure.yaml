@@ -1,0 +1,121 @@
+schema_version: 1
+proposal_version: 2026-08-04.0044-b2-natural-person-detection-digest-closure.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0044_b2_natural_person_detection_digest_closure.sql
+  migration_sha256: dfcc5dcd42c313e789bddd369d09cbbaafe344c6923d4343cf88b831e4a676f3
+  migration_line_count: 566
+  pglast_statement_count: 43
+  exact_relations: []
+  exact_new_relation_count: 0
+  relation_delta: 0
+  altered_relations:
+  - editorial.named_person_publication_policies
+  compatibility_views: []
+  purpose: B2 forward-only closure for explicit natural-person character coverage, Rust and SQL catalog parity, immutable
+    ruleset-policy advancement, and payload-derived fixture digests
+  relation_count_rule: 0044 creates no table or view; routine replacement, policy constraint replacement, one immutable
+    policy insert, ACL statements, and transaction statements add zero relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0043 remain byte-preserved; all B2 behavior changes are forward-only in
+    0044
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  policy_rule: immutable v1 and v2 policy rows remain unchanged; 0044 inserts exactly one active v3 row whose scanner digest
+    equals the Rust natural_person_ruleset_sha256 derivation
+  reassessment_rule: assessment and publication owners select exact v3 authority, so an older v2 assessment cannot be reused
+    after deployment and must be re-evaluated fail-closed
+  character_catalog_rule: ignored-name, name-whitespace, name-punctuation, legacy-title-separator, and additional-title-space
+    code points are explicit integer catalogs with no Unicode property or database-category lookup
+  tokenization_rule: title tokenization remains over original text; only explicit separator and ignored-character membership
+    changes, preserving original-text UTF-16 finding offsets
+  lower_bound_rule: SQL continues to enforce TITLE_ADJACENT_KOREAN_NAME only and now covers every D2 ignored character and D3
+    title space without claiming registered-name completeness
+statement_inventory:
+  create_table_count: 0
+  create_view_count: 0
+  owner_routine_count: 12
+  trigger_count: 0
+  explicit_index_count: 0
+  event_registry_upsert_count: 0
+  pglast_statement_count: 43
+  object_inventory_sha256: b6851e44c2eca2872241e67e6308b60b0e223f17b38524d88e5424fe18f86897
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views,
+    altered_relations, routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes
+    are inventoried separately
+existing_relation_changes:
+- relation: editorial.named_person_publication_policies
+  authority: exact v1-or-v2-or-v3 policy shape-constraint replacement plus one immutable active v3 policy insertion; no prior
+    policy row is updated or deleted
+  alter_statement_sha256:
+  - 5c89bf389f1431eb551979819247c142d3cbae33a34a3bd6152411c88946fea4
+  - 5e92a0997982624b9fb35ee518a353b0f2411ce459d16dfdf27577b3fe9da26a
+compatibility_views: {}
+view_inventory: []
+tables: {}
+owner_routines:
+- signature: editorial.r6d_ignored_name_codepoints_f9_v1() RETURNS integer[]
+  canonical_ddl_sha256: dd406cc7072b6dc1ffb9d8aaa1825e1e254657981518b74700d7848d4a0bd168
+- signature: editorial.r6d_name_whitespace_codepoints_f9_v1() RETURNS integer[]
+  canonical_ddl_sha256: c6cd00ed13db33fb285be2023f63cdc77bf7042a14cd079cbee87e0d278f4740
+- signature: editorial.r6d_name_punctuation_codepoints_f9_v1() RETURNS integer[]
+  canonical_ddl_sha256: e6d489e6c9340d446e62ad153ff7d63b39ed090827755ba85ca8d4640d762f24
+- signature: editorial.r6d_legacy_title_separator_codepoints_f9_v1() RETURNS integer[]
+  canonical_ddl_sha256: eeb46c671dbe7687c446cfc74f3d837f118c713fa97bedf2989a73633002f2f2
+- signature: editorial.r6d_additional_title_space_codepoints_f9_v1() RETURNS integer[]
+  canonical_ddl_sha256: b07dc17d021f7338887d03ab8c9b00ce6305beb0c793be816218a950d1c7dd0a
+- signature: editorial.r6d_normalize_title_text_f9_v1(p_value text) RETURNS text
+  canonical_ddl_sha256: bb9b46015e157392c5fb4752d4388dd80fe4179b3ffe1a1e10887940c0d76c9d
+- signature: editorial.r6d_normalize_name_f9_v1(p_value text) RETURNS text
+  canonical_ddl_sha256: 11be17bc2f2daeff833062e5e2ef69a18a69e28c113f15e45a5ee944765297e7
+- signature: editorial.r6d_title_separator_f9_v1(p_character text) RETURNS boolean
+  canonical_ddl_sha256: 4a8e05ae961b8d9d8117ae1b3086d84702e6066f1cd9f2af42d05b91b7d0e4a7
+- signature: editorial.r6d_title_token_f9_v1(p_value text) RETURNS boolean
+  canonical_ddl_sha256: 3112e4eb75ca78cf1f1e3045ac01f6239e6db43af0b564845545fef86958b3e7
+- signature: editorial.r6d_name_prefix_characters_f9_v1(p_value text) RETURNS integer
+  canonical_ddl_sha256: 650eb5e2741445021471d395ed56313487cd29937ef3d97b636b53746e03eb23
+- signature: editorial.record_named_person_publication_assessment_v1(p_request jsonb) RETURNS jsonb
+  canonical_ddl_sha256: 927d88fbc824515e61f97b392137b3ee4650ba2d4b3a146b618abc8f174d0a46
+- signature: editorial.assert_r6d_publication_guard_v2(p_case_id uuid, p_review_snapshot_id uuid, p_publication_state
+    editorial.publication_state, p_public_payload jsonb, p_public_payload_sha256 char(64), p_guard_context text) RETURNS uuid
+  canonical_ddl_sha256: 08c7330a313bd8b797cd08db46bbce4dc8d0679c31cf5805e7387a07d5e33de7
+trigger_inventory: []
+index_inventory: []
+event_registry_contract:
+  statement: 0044 contains no ops.event_types upsert and no decision-marker registry block
+  exact_upsert_count: 0
+  events_in_order: []
+  forward_overrides: []
+  inherited_emit_dependencies: []
+privilege_contract:
+  owner_role: gurine_migrator owns all twelve listed routines
+  public_execute_rule: PUBLIC EXECUTE is explicitly revoked from every listed routine
+  explicit_execute_grants:
+    editorial.record_named_person_publication_assessment_v1(jsonb): [gurine_control_api]
+    editorial.assert_r6d_publication_guard_v2(uuid,uuid,editorial.publication_state,jsonb,char(64),text): [gurine_control_api]
+  internal_routine_rule: the ten character-catalog and normalization routines are reached only through owner-controlled
+    routine composition and receive no runtime-role EXECUTE grant
+natural_person_guard_authority:
+  policy_version: r6d-named-person-publication-v3
+  ruleset_version: ko-named-individual-v1
+  ruleset_sha256: bc7b9b83c7402bfdd093cbebc6374bb5fe1a8862caeace05536016dab3ce71cf
+  normalization_version: nfkc-lower-explicit-name-separators-ignorables-v3
+  title_adjacency_version: explicit-horizontal-separator-token-quotes-v3
+  sql_lower_bound: TITLE_ADJACENT_KOREAN_NAME_ONLY
+  registered_exact_completeness: APPLICATION_KEY_REQUIRED_OUTSIDE_SQL_LOWER_BOUND
+  identity_merge_rule: identity-merge use remains FORBIDDEN
+known_fail_closed_boundaries:
+  registered_person_exact_completeness: NOT_CLAIMED; application-held key authority remains required
+  historical_assessments: v1 and v2 rows and receipts remain immutable historical evidence but are not current v3 publication
+    authority
+  excluded_detection_scope: romanized names, surname-only strings, and titles outside the closed lexicon remain unresolved and
+    are not expanded by 0044
+verification_obligations:
+- pglast parses exactly 43 statements with one BEGIN first and one terminal COMMIT last
+- CREATE TABLE, CREATE VIEW, trigger, explicit index, and event-registry upsert inventories are empty and relation_delta is zero
+- all twelve routine signatures, the one altered-relation target, migration SHA-256, routine hashes, ALTER hashes, and object
+  inventory SHA-256 reproduce from current SQL bytes
+- Rust tests prove all five explicit character catalogs are byte-for-byte codepoint-equal to the SQL arrays
+- Rust and PostgreSQL 18.4 each prove every D2 ignored character and every D3 title space produces a blocking finding
+- schema and both guard fixtures equal the Rust-derived ruleset digest, and every fixture publicTextSha256 is recomputed from
+  its production-shaped publicPayload through the current public-text projection
+OPEN_QUESTIONS: []

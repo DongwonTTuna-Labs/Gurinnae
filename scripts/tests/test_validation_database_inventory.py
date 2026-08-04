@@ -541,6 +541,10 @@ class MigrationOrderingScriptTests(unittest.TestCase):
             '|| "$migration" == "$r6d_b1_slug_rename_authority_migration"',
             script,
         )
+        self.assertIn(
+            '|| "$migration" == "$r6d_b2_natural_person_closure_migration"',
+            script,
+        )
 
     def test_runtime_receipt_migration_count_matches_exact_runtime_set(self) -> None:
         root = SCRIPTS.parent
@@ -553,11 +557,11 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         ]["const"]
         migrations = sorted((root / "db/migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
 
-        self.assertEqual(declared_count, 43)
+        self.assertEqual(declared_count, 44)
         self.assertEqual(declared_count, len(migrations))
         self.assertEqual(
             migrations[-1].name,
-            "0043_b1_public_slug_rename_authority.sql",
+            "0044_b2_natural_person_detection_digest_closure.sql",
         )
 
 
