@@ -32,6 +32,7 @@ r6d_f9_name_guard_closure_migration="db/migrations/0041_f9_natural_person_name_g
 r6d_f3_source_url_closure_migration="db/migrations/0042_f3_public_source_url_exposure_closure.sql"
 r6d_b1_slug_rename_authority_migration="db/migrations/0043_b1_public_slug_rename_authority.sql"
 r6d_b2_natural_person_closure_migration="db/migrations/0044_b2_natural_person_detection_digest_closure.sql"
+f5_provider_lineage_binding_migration="db/migrations/0045_f5_provider_model_input_lineage_binding.sql"
 for migration in db/migrations/*.sql; do
   if [[ "$migration" == "$r6d_legacy_boundary_migration" \
     || "$migration" == "$r6d_authority_closure_migration" \
@@ -39,7 +40,8 @@ for migration in db/migrations/*.sql; do
     || "$migration" == "$r6d_f9_name_guard_closure_migration" \
     || "$migration" == "$r6d_f3_source_url_closure_migration" \
     || "$migration" == "$r6d_b1_slug_rename_authority_migration" \
-    || "$migration" == "$r6d_b2_natural_person_closure_migration" ]]; then
+    || "$migration" == "$r6d_b2_natural_person_closure_migration" \
+    || "$migration" == "$f5_provider_lineage_binding_migration" ]]; then
     continue
   fi
   docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" <"$migration" >/dev/null
@@ -76,6 +78,10 @@ docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
 # it must observe the complete v2 policy and B1 publication guard replacement.
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
   <"$r6d_b2_natural_person_closure_migration" >/dev/null
+# 0045 replaces the source-use receipt guard only after the complete provider
+# turn and MODEL_INPUT authority from the preceding migration sequence exists.
+docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres -d "$database" \
+  <"$f5_provider_lineage_binding_migration" >/dev/null
 docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U postgres \
   -d "$database" < db/test-fixtures/r6d-approved-policy-authority.sql \
   >/dev/null

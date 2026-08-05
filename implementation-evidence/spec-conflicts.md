@@ -1008,3 +1008,34 @@ Exact tuple resolution:
   prove deterministic replay.
 - Status: `RESOLVED_R6D_RUNTIME`; the event-consumer smoke owns the exact route,
   completion, stored-result replay, and owner-graph zero-mutation oracle.
+
+## SPEC-CONFLICT-033 — Global actions.review authority exceeds the executable seed
+
+- Authority statement: the additive authorization catalog in
+  `specs/product/owner-addendum-2026-07-14.yaml` assigns `actions.review` to
+  `SECURITY_ADMIN`.
+- Runtime seed and enforcement: `db/migrations/0005_roles_grants_and_seed.sql`
+  grants `kill_switch.execute` to `OPERATIONS`, `SECURITY_ADMIN`, and
+  `EXECUTIVE_APPROVER`, but the final additive seed in
+  `db/migrations/0030_v13_submission_session_hardening.sql` grants
+  `actions.review` only to `LEGAL_REVIEWER`, `OPERATIONS`, and
+  `EXECUTIVE_APPROVER`. Provider-control reviewer selection requires both
+  `actions.review` and the operation's required capability, and the claim and
+  decision paths recheck `actions.review` against the selected role.
+- F5 provider-control resolution: do not expand authorization.
+  `specs/product/addendum-approval-policy.yaml` and the executable lifecycle
+  validator now declare the actual capability intersection: `OPERATIONS` and
+  `EXECUTIVE_APPROVER` for the three `kill_switch.execute` operations, and
+  `OPERATIONS` for `testProviderConnection` (`jobs.operate`). Provider-control
+  declaration and enforcement are therefore aligned.
+- Rejected alternative: grant `actions.review` to `SECURITY_ADMIN` merely to
+  make the broader global authority declaration reachable.
+- Scope boundary and required follow-up: removing `SECURITY_ADMIN` from the
+  global `actions.review` authority also affects non-provider ROLE_GRANT,
+  KILL_SWITCH, CAPABILITY_ACTIVATION, and COMMERCIAL_CONTROL reviewer policies.
+  Their complete runtime policy must be reconciled in an owner-approved
+  authority revision rather than silently changed in F5. Until then, the
+  PostgreSQL capability seed remains fail-closed.
+- Status: `RESOLVED_F5_PROVIDER_CONTROL_OPEN_GLOBAL_AUTHORITY`; the provider
+  contract is aligned without a capability grant, while the broader additive
+  authorization conflict remains explicit.

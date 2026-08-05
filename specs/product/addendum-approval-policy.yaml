@@ -307,7 +307,7 @@ quorum_policies:
         disableProviderRouting:
           proposer_capability: kill_switch.execute
           assurance: STEP_UP
-          slots: [{slot_id: provider_control_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+          slots: [{slot_id: provider_control_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER]}]
         testProviderConnection:
           proposer_capability: jobs.operate
           assurance: ACTIVE_SESSION
@@ -315,11 +315,11 @@ quorum_policies:
         upgradeProviderModel:
           proposer_capability: kill_switch.execute
           assurance: STEP_UP
-          slots: [{slot_id: provider_model_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+          slots: [{slot_id: provider_model_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER]}]
         setModelAutoUpgrade:
           proposer_capability: kill_switch.execute
           assurance: STEP_UP
-          slots: [{slot_id: provider_auto_upgrade_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, SECURITY_ADMIN, EXECUTIVE_APPROVER]}]
+          slots: [{slot_id: provider_auto_upgrade_reviewer, capability: kill_switch.execute, allowed_roles: [OPERATIONS, EXECUTIVE_APPROVER]}]
 
 executor_catalog:
   HYPOTHESIS: {executor_id: createHypothesis, transport: BASE_APPLICATION_COMMAND, capability: cases.investigate, assurance: ACTIVE_SESSION, transaction: optimistic_command, repository: hypotheses}

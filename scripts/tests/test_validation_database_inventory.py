@@ -499,7 +499,7 @@ class EventPayloadForwardOverrideTests(unittest.TestCase):
 
 
 class MigrationOrderingScriptTests(unittest.TestCase):
-    def test_control_fixture_crosses_0038_through_0043_boundaries(self) -> None:
+    def test_control_fixture_crosses_0038_through_0045_boundaries(self) -> None:
         script = (SCRIPTS / "test-control-flow.sh").read_text(encoding="utf-8")
         seed = script.index("<db/test-fixtures/control-runtime-seed.sql")
         apply_0038 = script.index('<"$r6d_legacy_boundary_migration"')
@@ -508,6 +508,8 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         apply_0041 = script.index('<"$r6d_f9_name_guard_closure_migration"')
         apply_0042 = script.index('<"$r6d_f3_source_url_closure_migration"')
         apply_0043 = script.index('<"$r6d_b1_slug_rename_authority_migration"')
+        apply_0044 = script.index('<"$r6d_b2_natural_person_closure_migration"')
+        apply_0045 = script.index('<"$f5_provider_lineage_binding_migration"')
         policy_fixture = script.index("< db/test-fixtures/r6d-approved-policy-authority.sql")
         f3_fixture = script.index("<db/test-fixtures/f3-public-source-url-closure.sql")
         research_seed = script.index("<db/test-fixtures/control-research-seed.sql")
@@ -518,7 +520,9 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         self.assertLess(apply_0040, apply_0041)
         self.assertLess(apply_0041, apply_0042)
         self.assertLess(apply_0042, apply_0043)
-        self.assertLess(apply_0043, policy_fixture)
+        self.assertLess(apply_0043, apply_0044)
+        self.assertLess(apply_0044, apply_0045)
+        self.assertLess(apply_0045, policy_fixture)
         self.assertLess(policy_fixture, f3_fixture)
         self.assertLess(f3_fixture, research_seed)
         self.assertIn(
@@ -545,6 +549,10 @@ class MigrationOrderingScriptTests(unittest.TestCase):
             '|| "$migration" == "$r6d_b2_natural_person_closure_migration"',
             script,
         )
+        self.assertIn(
+            '|| "$migration" == "$f5_provider_lineage_binding_migration"',
+            script,
+        )
 
     def test_runtime_receipt_migration_count_matches_exact_runtime_set(self) -> None:
         root = SCRIPTS.parent
@@ -557,11 +565,11 @@ class MigrationOrderingScriptTests(unittest.TestCase):
         ]["const"]
         migrations = sorted((root / "db/migrations").glob("[0-9][0-9][0-9][0-9]_*.sql"))
 
-        self.assertEqual(declared_count, 44)
+        self.assertEqual(declared_count, 45)
         self.assertEqual(declared_count, len(migrations))
         self.assertEqual(
             migrations[-1].name,
-            "0044_b2_natural_person_detection_digest_closure.sql",
+            "0045_f5_provider_model_input_lineage_binding.sql",
         )
 
 

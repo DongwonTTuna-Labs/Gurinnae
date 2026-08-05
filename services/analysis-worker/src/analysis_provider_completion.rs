@@ -149,7 +149,7 @@ async fn complete_provider_turn_tool_call(
         None,
     )
     .await?;
-    insert_model_input_source_uses(&mut tx, turn, receipt_id, &receipt_sha256).await?;
+    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(&receipt_sha256)).await?;
     tx.commit().await.map_err(database)
 }
 
@@ -183,7 +183,7 @@ async fn persist_completed_provider_turn(
         &sha256(provider_turn_canonical), Some(turn_transcript_sha256),
         input_units, output_units, Some(provider_request_hash), Some(actual_cost), None, None,
     ).await?;
-    insert_model_input_source_uses(&mut tx, turn, receipt_id, receipt_sha256).await?;
+    insert_model_input_source_uses(&mut tx, turn, Some(receipt_id), Some(receipt_sha256)).await?;
     insert_model_output_derivation_source_uses(
         &mut tx,
         turn,
@@ -256,6 +256,116 @@ async fn insert_output_validation_failure(
         &validation_sha256,
     )
     .execute(&state.pool)
+    .await
+    .map_err(database)?;
+    Ok(())
+}
+
+async fn insert_model_output_derivation_source_uses(
+    executor: &mut sqlx::PgConnection,
+    turn: &ProviderTurnIdentity,
+    _receipt_id: Uuid,
+    _receipt_sha256: &str,
+    output: &Value,
+) -> Result<(), Failure> {
+    // Bind the derivation to the receipt values committed on the provider
+    // turn itself. The completion owner is the source of truth; reusing a
+    // separately parsed value could trip the database receipt guard.
+    let receipt = sqlx::query!(
+        r#"SELECT provider_receipt_id, btrim(provider_receipt_sha256::text)
+             FROM ops.agent_provider_turns
+            WHERE agent_run_id=$1 AND provider_turn_id=$2
+              AND provider_receipt_id IS NOT NULL
+              AND provider_receipt_sha256 IS NOT NULL"#,
+        turn.run_id,
+        turn.turn_id,
+    )
+    .fetch_optional(&mut *executor)
+    .await
+    .map_err(database)?
+    .ok_or_else(|| {
+        Failure::Terminal(
+            "PROVIDER_RECEIPT_INVALID",
+            "completed turn receipt missing".into(),
+        )
+    })?;
+    let bound_receipt_id = required(receipt.provider_receipt_id).map_err(database)?;
+    let bound_receipt_sha256 = required(receipt.btrim).map_err(database)?;
+    let output_sha256 = sha256(&canonical_bytes(output)?);
+    // SQLx 0.9 cannot infer `$3` when jsonb_build_object consumes it first.
+    sqlx::query(
+        r#"
+        WITH parents AS (
+          SELECT * FROM ops.agent_source_uses
+           WHERE agent_run_id=$1 AND provider_turn_id=$2 AND use_kind='MODEL_INPUT'
+        ), pending AS (
+          SELECT p.* FROM parents p
+           WHERE NOT EXISTS (
+             SELECT 1 FROM ops.agent_source_uses existing
+              WHERE existing.agent_run_id=p.agent_run_id
+                AND existing.provider_turn_id=$2
+                AND existing.use_kind='CITATION'
+                AND existing.parent_source_use_id=p.source_use_id
+                AND existing.parent_source_use_sha256=p.source_use_sha256
+           )
+        ), identities AS (
+          SELECT p.*, gen_random_uuid() AS new_source_use_id,
+                 clock_timestamp() AS new_occurred_at FROM pending p
+        ), unsigned AS (
+          SELECT i.*, jsonb_build_object(
+            'schemaVersion','source-use.v2','sourceUseId',i.new_source_use_id,
+            'agentRunId',i.agent_run_id,'providerTurnId',i.provider_turn_id,
+            'parentSourceUseId',i.source_use_id,'parentSourceUseSha256',btrim(i.source_use_sha256::text),
+            'useKind','MODEL_OUTPUT_DERIVATION','sourceKind',i.source_kind,
+            'providerReceiptId',$3,'providerReceiptSha256',$4,'outputSha256',$5,
+            'selectedContentSha256',btrim(i.selected_content_sha256::text),
+            'locator',jsonb_build_object('kind',i.locator_kind,'value',i.locator_value,'locatorSha256',btrim(i.locator_sha256::text)),
+            'classification',i.classification,'occurredAt',i.new_occurred_at
+          ) AS payload FROM identities i
+        ), payloads AS (
+          SELECT u.*, encode(extensions.digest(ops.canonical_jsonb_v1(u.payload),'sha256'),'hex') AS digest
+            FROM unsigned u
+        )
+        INSERT INTO ops.agent_source_uses(
+          source_use_id,source_use_contract_version,agent_run_id,provider_turn_id,
+          parent_source_use_id,parent_source_use_sha256,use_kind,source_kind,
+          dataset_snapshot_id,snapshot_member_id,snapshot_member_digest,snapshot_member_source_id,
+          snapshot_member_source_digest,member_source_kind,object_type,object_id,object_version,
+          object_content_sha256,evidence_segment_id,source_document_id,source_asset_id,
+          source_asset_revision,source_content_sha256,response_id,response_version,response_content_sha256,
+          response_publication_consent_sha256,research_artifact_id,research_asset_id,research_asset_revision,
+          research_artifact_sha256,research_content_sha256,research_source_fetch_id,locator_kind,locator_value,
+          locator_sha256,selected_content_sha256,classification,rights_binding_kind,rights_asset_id,
+          rights_asset_revision,rights_asset_sha256,asset_rights_decision_id,asset_rights_decision_version,
+          asset_rights_decision_sha256,rights_effective_at,rights_expires_at,access_right,private_storage_right,
+          model_egress_right,model_use_right,derivative_creation_right,excerpt_right,redistribution_right,
+          commercial_use_right,public_display_right,rights_policy_version,rights_policy_sha256,
+          provider_receipt_id,provider_receipt_sha256,occurred_at,source_use_canonical,source_use_sha256)
+        SELECT p.new_source_use_id,2,p.agent_run_id,p.provider_turn_id,
+          p.source_use_id,p.source_use_sha256,'MODEL_OUTPUT_DERIVATION',p.source_kind,
+          p.dataset_snapshot_id,p.snapshot_member_id,p.snapshot_member_digest,p.snapshot_member_source_id,
+          p.snapshot_member_source_digest,p.member_source_kind,p.object_type,p.object_id,p.object_version,
+          p.object_content_sha256,p.evidence_segment_id,p.source_document_id,p.source_asset_id,
+          p.source_asset_revision,p.source_content_sha256,p.response_id,p.response_version,p.response_content_sha256,
+          p.response_publication_consent_sha256,p.research_artifact_id,p.research_asset_id,p.research_asset_revision,
+          p.research_artifact_sha256,p.research_content_sha256,p.research_source_fetch_id,p.locator_kind,p.locator_value,
+          p.locator_sha256,p.selected_content_sha256,p.classification,p.rights_binding_kind,p.rights_asset_id,
+          p.rights_asset_revision,p.rights_asset_sha256,p.asset_rights_decision_id,p.asset_rights_decision_version,
+          p.asset_rights_decision_sha256,p.rights_effective_at,p.rights_expires_at,p.access_right,p.private_storage_right,
+          p.model_egress_right,p.model_use_right,p.derivative_creation_right,p.excerpt_right,p.redistribution_right,
+          p.commercial_use_right,p.public_display_right,p.rights_policy_version,p.rights_policy_sha256,
+          $3,$4,p.new_occurred_at,
+          ops.canonical_jsonb_v1(p.payload || jsonb_build_object('sourceUseSha256',p.digest)),p.digest
+        FROM payloads p
+        ON CONFLICT (agent_run_id,source_use_sha256) DO NOTHING
+        "#,
+    )
+    .bind(turn.run_id)
+    .bind(turn.turn_id)
+    .bind(bound_receipt_id)
+    .bind(&bound_receipt_sha256)
+    .bind(output_sha256)
+    .execute(&mut *executor)
     .await
     .map_err(database)?;
     Ok(())

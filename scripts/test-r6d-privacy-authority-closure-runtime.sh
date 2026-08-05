@@ -20,8 +20,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 44 ]]; then
-  printf 'expected exactly 44 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 45 ]]; then
+  printf 'expected exactly 45 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -66,6 +66,12 @@ if [[ "$(basename "${migrations[43]}")" != \
   exit 1
 fi
 
+if [[ "$(basename "${migrations[44]}")" != \
+  '0045_f5_provider_model_input_lineage_binding.sql' ]]; then
+  printf 'migration 0045 filename is not the F5 provider lineage binding\n' >&2
+  exit 1
+fi
+
 docker run --rm --detach --name "$container" \
   --env POSTGRES_DB="$database" \
   --env POSTGRES_USER=postgres \
@@ -103,9 +109,14 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[42]}" >/dev/null
 
-# Apply the B2 immutable scanner policy and SQL lower-bound closure last.
+# Apply the B2 immutable scanner policy and SQL lower-bound closure after B1.
 docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" <"${migrations[43]}" >/dev/null
+
+# Apply the F5 provider MODEL_INPUT lineage binding after the complete source
+# use and provider-turn authority is present.
+docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
+  -U postgres -d "$database" <"${migrations[44]}" >/dev/null
 
 # Legal-hold receipts are retention-governance records.  Reuse the repository's
 # existing disposable TEST_ONLY authority graph; no operating policy is seeded.
@@ -117,4 +128,4 @@ docker exec -i "$container" psql -X -v ON_ERROR_STOP=1 \
   -U postgres -d "$database" \
   <db/test-fixtures/r6d-privacy-authority-closure-runtime.sql
 
-printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=44, final=0044)\n'
+printf 'R6d privacy authority closure PostgreSQL runtime: PASS (migrations=45, final=0045)\n'

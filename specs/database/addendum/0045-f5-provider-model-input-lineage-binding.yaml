@@ -1,0 +1,116 @@
+schema_version: 1
+proposal_version: 2026-08-05.0045-f5-provider-model-input-lineage-binding.v1
+status: REVIEW_REQUIRED
+scope:
+  migration: 0045_f5_provider_model_input_lineage_binding.sql
+  migration_sha256: 401e55c5935cf9d1aa6dc87beca3a07fd1f60ccb1c1e8b4295bdc21707181d6d
+  migration_line_count: 353
+  pglast_statement_count: 15
+  exact_relations: []
+  exact_new_relation_count: 0
+  relation_delta: 0
+  altered_relations:
+  - ops.agent_source_uses
+  - ops.agent_provider_turns
+  compatibility_views: []
+  purpose: F5 forward-only restoration of pre-dispatch MODEL_INPUT evidence lineage with an input-snapshot-bound sentinel
+    and same-row promotion to an authenticated terminal provider receipt
+  relation_count_rule: 0045 creates no table or view; routine replacement, one trigger replacement, one trigger
+    installation, ownership, ACL, and transaction statements add zero relkind-r relations
+authority_and_compatibility:
+  historical_migration_rule: migrations 0001 through 0044 remain byte-preserved; the MODEL_INPUT binding repair is
+    forward-only in 0045
+  transaction_rule: one outer BEGIN is the first pglast statement and terminal COMMIT is the last statement
+  pre_dispatch_rule: a MODEL_INPUT row is accepted only for the exact DISPATCHED provider turn and carries that turn ID plus
+    its persisted input_snapshot_sha256 as the temporary receipt tuple
+  promotion_rule: the existing provider-turn completion owner update invokes an AFTER trigger that promotes every sentinel
+    MODEL_INPUT row to the exact authenticated terminal receipt in the same transaction
+  immutable_row_rule: promotion changes only provider_receipt_id, provider_receipt_sha256, source_use_canonical, and
+    source_use_sha256; source identity, evidence, rights, locator, selected-content, parent, and occurrence fields remain
+    immutable
+  idempotency_rule: one MODEL_INPUT row per qualified parent is required; duplicate, mixed sentinel-and-receipt, partial, or
+    missing lineage states fail closed, while an already exact receipt state is a no-op
+  downstream_reference_rule: a sentinel row already referenced by a child source use, citation, or research-artifact
+    promotion cannot have its digest changed
+statement_inventory:
+  create_table_count: 0
+  create_view_count: 0
+  owner_routine_count: 3
+  trigger_count: 2
+  explicit_index_count: 0
+  event_registry_upsert_count: 0
+  pglast_statement_count: 15
+  object_inventory_sha256: bea804f20f449cdef5d9062438a8c255c1a381fdd0af712d6b3de0133dd42462
+  object_inventory_preimage: SHA-256 of compact sorted-key UTF-8 JSON over migration_sha256, ordered relations, views,
+    altered_relations, routine signatures, trigger statements, and event_types; canonical per-statement hashes and indexes
+    are inventoried separately
+existing_relation_changes:
+- relation: ops.agent_source_uses
+  authority: replace the provider-receipt insert guard and immutable-mutation trigger so a pre-dispatch MODEL_INPUT sentinel
+    can be promoted only through the migrator-owned provider-turn terminal transition
+  alter_statement_sha256: []
+- relation: ops.agent_provider_turns
+  authority: install the terminal status-change AFTER trigger that promotes all exact MODEL_INPUT sentinels atomically with
+    the existing receipt-bearing provider-turn update
+  alter_statement_sha256: []
+compatibility_views: {}
+view_inventory: []
+tables: {}
+owner_routines:
+- signature: ops.enforce_agent_source_use_provider_receipt_v1() RETURNS trigger
+  canonical_ddl_sha256: 1bb841a6dda3ef752e52908e682e59fbf7e1d5e6ab29334bcf9e70c5e177164f
+- signature: ops.enforce_agent_model_input_receipt_promotion_v1() RETURNS trigger
+  canonical_ddl_sha256: 4171812bb18b6cd0154446b1f8cba8cc30a39981504c80a47d5306b2fec439f5
+- signature: ops.promote_agent_model_input_receipt_on_turn_v1() RETURNS trigger
+  canonical_ddl_sha256: b82aa5c40808892fb4fda3e90161980591f557447df2ed384af22c4f8518355f
+trigger_inventory:
+- statement: CREATE TRIGGER ops_agent_source_uses_immutable_mutation_guard BEFORE DELETE OR UPDATE ON
+    ops.agent_source_uses FOR EACH ROW EXECUTE PROCEDURE ops.enforce_agent_model_input_receipt_promotion_v1()
+  canonical_ddl_sha256: febca547ec60dfaf01493836b5e296cc8ac6afdaffc97a306f83c935b13f71d6
+- statement: CREATE TRIGGER agent_provider_turn_model_input_receipt_promotion AFTER UPDATE OF status, provider_receipt_id,
+    provider_receipt_sha256 ON ops.agent_provider_turns FOR EACH ROW WHEN (old.status IS DISTINCT FROM new.status) EXECUTE
+    PROCEDURE ops.promote_agent_model_input_receipt_on_turn_v1()
+  canonical_ddl_sha256: 25c9c04794b7eb06887b131fe51df941e8098f4ad5b1926233510cef8a25d79d
+index_inventory: []
+event_registry_contract:
+  statement: 0045 contains no ops.event_types upsert and no decision-marker registry block
+  exact_upsert_count: 0
+  events_in_order: []
+  forward_overrides: []
+  inherited_emit_dependencies: []
+privilege_contract:
+  owner_role: gurine_migrator owns all three listed routines
+  public_execute_rule: PUBLIC EXECUTE is explicitly revoked from every listed routine
+  explicit_execute_grants: {}
+  runtime_entry_rule: 0045 contains no GRANT statement; receipt promotion is reached only from the existing
+    gurine_migrator-owned provider-turn completion boundary through the installed AFTER trigger
+  relation_acl_rule: 0045 grants no direct relation DML and changes no existing role capability or membership
+model_input_lineage_authority:
+  sentinel_identity: provider_receipt_id equals provider_turn_id and provider_receipt_sha256 equals the persisted
+    input_snapshot_sha256 for that DISPATCHED turn
+  terminal_statuses: [COMPLETED, PROVIDER_FAILED, RATE_LIMITED, TIMED_OUT, CANCELLED, OUTCOME_UNKNOWN]
+  canonical_rule: sentinel and promoted rows each carry canonical JSON whose embedded IDs, receipt tuple, occurredAt, and
+    sourceUseSha256 reproduce the stored columns and SHA-256 digest
+  qualified_root_rule: MODEL_INPUT cardinality must equal the distinct qualified TOOL_QUERY source roots bound through the
+    dataset member, evidence segment, member source, and exact asset-rights decision
+  failure_visibility_rule: when transport fails without a receipt, the turn remains DISPATCHED and the sentinel MODEL_INPUT
+    rows remain queryable with their complete evidence, rights, locator, and selected-content bindings
+known_fail_closed_boundaries:
+  missing_or_duplicate_lineage: terminal turn completion rolls back when MODEL_INPUT rows are absent, duplicated by parent,
+    or do not cover the exact qualified root set
+  receipt_state: a foreign receipt, mixed sentinel and actual receipt state, partial promotion, or sentinel-shaped terminal
+    receipt is rejected
+  downstream_digest_references: promotion is rejected rather than rewriting any existing child, citation, or artifact
+    promotion reference
+  privilege_expansion: no new runtime-role GRANT, capability, membership, or relation privilege is introduced
+verification_obligations:
+- pglast parses exactly 15 statements with one BEGIN first and one terminal COMMIT last
+- CREATE TABLE, CREATE VIEW, explicit index, and event-registry upsert inventories are empty and relation_delta is zero
+- all three routine signatures, both trigger statements, both altered-relation targets, migration SHA-256, canonical DDL
+  hashes, and object inventory SHA-256 reproduce from the current SQL bytes
+- PostgreSQL 18.4 proves pre-dispatch MODEL_INPUT rows exist before provider egress and survive a receipt-less transport
+  failure with their evidence bindings queryable
+- PostgreSQL 18.4 proves terminal receipt promotion preserves source-use identity, creates no second lineage branch, and an
+  exact retry creates no duplicate row
+- catalog ACL verification proves 0045 adds no GRANT and PUBLIC cannot execute any listed routine
+OPEN_QUESTIONS: []
