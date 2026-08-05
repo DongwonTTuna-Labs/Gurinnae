@@ -295,44 +295,42 @@ _R6D_INVENTORY_CONTRACTS = (
     (
         '0038_r6d_legal_hardening.sql',
         '0038-r6d-legal-hardening.yaml',
-        '0038',
-        1,
+        '0038', 1,
     ),
     (
         '0039_r6d_authority_closure.sql',
         '0039-r6d-authority-closure.yaml',
-        '0039',
-        0,
+        '0039', 0,
     ),
     (
         '0040_r6d_privacy_authority_closure.sql',
         '0040-r6d-privacy-authority-closure.yaml',
-        '0040',
-        0,
+        '0040', 0,
     ),
     (
         '0041_f9_natural_person_name_guard_closure.sql',
         '0041-f9-natural-person-name-guard-closure.yaml',
-        '0041',
-        0,
+        '0041', 0,
     ),
     (
         '0042_f3_public_source_url_exposure_closure.sql',
         '0042-f3-public-source-url-exposure-closure.yaml',
-        '0042',
-        0,
+        '0042', 0,
     ),
     (
         '0043_b1_public_slug_rename_authority.sql',
         '0043-b1-public-slug-rename-authority.yaml',
-        '0043',
-        0,
+        '0043', 0,
     ),
     (
         '0044_b2_natural_person_detection_digest_closure.sql',
         '0044-b2-natural-person-detection-digest-closure.yaml',
-        '0044',
-        0,
+        '0044', 0,
+    ),
+    (
+        '0045_f5_provider_model_input_lineage_binding.sql',
+        '0045-f5-provider-model-input-lineage-binding.yaml',
+        '0045', 0,
     ),
 )
 

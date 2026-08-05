@@ -414,8 +414,8 @@ decision_variants:
 
 database_delta:
   base_migrations: 24
-  additive_migrations: 18
-  final_migrations: 42
+  additive_migrations: 19
+  final_migrations: 43
   base_active_tables: 107
   additive_table_count: 196
   final_active_tables: 303
@@ -438,6 +438,7 @@ database_delta:
     - 0042_f3_public_source_url_exposure_closure.sql
     - 0043_b1_public_slug_rename_authority.sql
     - 0044_b2_natural_person_detection_digest_closure.sql
+    - 0045_f5_provider_model_input_lineage_binding.sql
   additive_tables:
     - ops.privacy_correction_snapshots_v1
     - ops.privacy_subscription_snapshots_v1

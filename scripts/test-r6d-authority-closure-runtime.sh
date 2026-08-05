@@ -33,8 +33,8 @@ trap cleanup EXIT
 cd "$root"
 
 mapfile -t migrations < <(printf '%s\n' db/migrations/*.sql | LC_ALL=C sort)
-if [[ "${#migrations[@]}" -ne 44 ]]; then
-  printf 'expected exactly 44 migrations, found %s\n' "${#migrations[@]}" >&2
+if [[ "${#migrations[@]}" -ne 45 ]]; then
+  printf 'expected exactly 45 migrations, found %s\n' "${#migrations[@]}" >&2
   exit 1
 fi
 
@@ -76,6 +76,12 @@ fi
 if [[ "$(basename "${migrations[43]}")" != \
   '0044_b2_natural_person_detection_digest_closure.sql' ]]; then
   printf 'migration 0044 filename is not the B2 natural-person closure\n' >&2
+  exit 1
+fi
+
+if [[ "$(basename "${migrations[44]}")" != \
+  '0045_f5_provider_model_input_lineage_binding.sql' ]]; then
+  printf 'migration 0045 filename is not the F5 provider lineage binding\n' >&2
   exit 1
 fi
 
@@ -364,4 +370,4 @@ fi
 printf 'R6d official-channel source PostgreSQL concurrency: PASS (%s)\n' \
   "$d2_attest_wait_state"
 
-printf 'R6d authority closure PostgreSQL runtime: PASS (migrations=44, final=0044)\n'
+printf 'R6d authority closure PostgreSQL runtime: PASS (migrations=45, final=0045)\n'

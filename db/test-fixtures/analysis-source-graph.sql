@@ -1,12 +1,89 @@
 -- Immutable ingest-side graph used by the analysis runtime acceptance scripts.
 -- Callers provide document_id, evidence_id and actor_id as psql variables.
-INSERT INTO core.normalization_runs(
-  id,source_document_id,parser_run_id,parsed_record_id,parser_version,input_payload_sha256,
-  normalization_id,normalization_version,normalization_contract_sha256,implementation_sha256,
-  producer_generation,state,job_id,job_fencing_token)
-VALUES('46000000-0000-4000-8000-000000000001',:'document_id',
-  '46000000-0000-4000-8000-000000000002','46000000-0000-4000-8000-000000000003','runtime-v1',repeat('a',64),
-  'runtime-normalize','1',repeat('b',64),repeat('c',64),1,'RUNNING','46000000-0000-4000-8000-000000000004',1);
+INSERT INTO core.parser_versions(
+  parser_name,version,supported_media_types,implementation_digest,sandbox_profile,status)
+VALUES(
+  'json','runtime-v1','["application/json"]'::jsonb,
+  encode(extensions.digest(convert_to(
+    'analysis-source-graph-parser-implementation-v1','UTF8'),'sha256'),'hex'),
+  'test-fixture-only-no-network-v1','ACTIVE')
+ON CONFLICT (parser_name,version) DO NOTHING;
+INSERT INTO ops.jobs(
+  id,job_type,queue,status,payload,fencing_token,attempt_count,max_attempts,
+  completed_at)
+VALUES(
+  '46000000-0000-4000-8000-000000000008','DATASET_SNAPSHOT_BUILD',
+  'analysis-worker','SUCCEEDED',jsonb_build_object(
+    'fixtureAuthority','TEST_FIXTURE_ONLY',
+    'datasetSnapshotId','46000000-0000-4000-8000-000000000007'),
+  1,1,1,'2026-07-12T00:00:02Z')
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO ops.audit_events(
+  id,occurred_at,actor_type,actor_id,action,object_type,object_id,outcome,
+  request_id,details,event_hash)
+SELECT event.id,event.occurred_at,'SYSTEM','analysis-source-graph-fixture',
+  event.action,'DATASET_SNAPSHOT','46000000-0000-4000-8000-000000000007',
+  'SUCCESS',event.request_id,event.details,
+  encode(extensions.digest(ops.canonical_jsonb_v1(jsonb_build_object(
+    'id',event.id,'occurredAt',event.occurred_at,'actorType','SYSTEM',
+    'actorId','analysis-source-graph-fixture','action',event.action,
+    'objectType','DATASET_SNAPSHOT',
+    'objectId','46000000-0000-4000-8000-000000000007',
+    'outcome','SUCCESS','requestId',event.request_id,
+    'details',event.details)),'sha256'),'hex')
+FROM (VALUES
+  ('46000000-0000-4000-8000-000000000009'::uuid,
+   '2026-07-12T00:00:00Z'::timestamptz,
+   'DATASET_SNAPSHOT_BUILD_STARTED',
+   '46000000-0000-4000-8000-000000000012'::uuid,
+   jsonb_build_object(
+     'fixtureAuthority','TEST_FIXTURE_ONLY',
+     'producerJobId','46000000-0000-4000-8000-000000000008')),
+  ('46000000-0000-4000-8000-00000000000a'::uuid,
+   '2026-07-12T00:00:02Z'::timestamptz,
+   'DATASET_SNAPSHOT_READY',
+   '46000000-0000-4000-8000-000000000013'::uuid,
+   jsonb_build_object(
+     'fixtureAuthority','TEST_FIXTURE_ONLY',
+     'producerJobId','46000000-0000-4000-8000-000000000008'))
+) AS event(id,occurred_at,action,request_id,details)
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO core.parser_runs(
+  id,source_document_id,parser_name,parser_version,status,output_record_count,
+  output_digest,input_content_sha256,extraction_schema_version,
+  implementation_sha256,extraction_receipt_sha256,started_at,completed_at)
+SELECT
+  '46000000-0000-4000-8000-000000000002',document.id,'json','runtime-v1',
+  'SUCCEEDED',1,
+  encode(extensions.digest(ops.canonical_jsonb_v1(jsonb_build_object(
+    'fixtureAuthority','TEST_FIXTURE_ONLY','recordType','CONTRACT',
+    'sourceDocumentId',document.id)),'sha256'),'hex'),
+  document.content_sha256,'analysis-source-graph-extraction.v1',
+  encode(extensions.digest(convert_to(
+    'analysis-source-graph-parser-implementation-v1','UTF8'),'sha256'),'hex'),
+  encode(extensions.digest(ops.canonical_jsonb_v1(jsonb_build_object(
+    'fixtureAuthority','TEST_FIXTURE_ONLY',
+    'parserRunId','46000000-0000-4000-8000-000000000002',
+    'sourceDocumentId',document.id,
+    'outputDigest',encode(extensions.digest(ops.canonical_jsonb_v1(
+      jsonb_build_object(
+        'fixtureAuthority','TEST_FIXTURE_ONLY','recordType','CONTRACT',
+        'sourceDocumentId',document.id)),'sha256'),'hex'))),'sha256'),'hex'),
+  '2026-07-12T00:00:00Z','2026-07-12T00:00:01Z'
+FROM raw.source_documents document WHERE document.id=:'document_id'
+ON CONFLICT (id) DO NOTHING;
+INSERT INTO raw.parsed_records(
+  id,source_document_id,record_type,record_index,parser_version,payload,
+  payload_sha256,parser_run_id)
+SELECT
+  '46000000-0000-4000-8000-000000000003',:'document_id','CONTRACT',0,
+  'runtime-v1',payload.value,
+  encode(extensions.digest(ops.canonical_jsonb_v1(payload.value),'sha256'),'hex'),
+  '46000000-0000-4000-8000-000000000002'
+FROM (SELECT jsonb_build_object(
+  'fixtureAuthority','TEST_FIXTURE_ONLY','recordType','CONTRACT',
+  'sourceDocumentId',:'document_id') AS value) payload
+ON CONFLICT (id) DO NOTHING;
 INSERT INTO raw.evidence_segments(
   id,source_document_id,source_asset_id,source_asset_revision,source_content_sha256,parser_run_id,
   parser_name,parser_version,segment_ordinal,locator_kind,locator_value,locator_digest,raw_value_sha256,
@@ -42,11 +119,10 @@ VALUES('46000000-0000-4000-8000-000000000007','AGENT_CASE','snapshot-producer','
 INSERT INTO core.dataset_snapshot_members(
   id,dataset_snapshot_id,snapshot_kind,producer_generation,snapshot_contract_version,member_ordinal,object_type,
   object_id,object_version,object_schema_version,object_content_sha256,canonical_payload,canonical_payload_bytes,
-  payload_sha256,normalization_run_id,normalization_version,normalization_sha256,source_count,source_set_sha256,
-  member_binding_canonical,member_digest)
+  payload_sha256,source_count,source_set_sha256,member_binding_canonical,member_digest)
 VALUES('46000000-0000-4000-8000-00000000000b','46000000-0000-4000-8000-000000000007','AGENT_CASE',1,1,0,'CONTRACT',
   '46000000-0000-4000-8000-00000000000c',1,'contract-v1',repeat('7',64),'{"objectType":"CONTRACT"}',
-  convert_to('{"objectType":"CONTRACT"}','UTF8'),repeat('8',64),'46000000-0000-4000-8000-000000000001','1',repeat('9',64),1,
+  convert_to('{"objectType":"CONTRACT"}','UTF8'),repeat('8',64),1,
   repeat('a',64),convert_to('{"memberOrdinal":0}','UTF8'),repeat('b',64));
 INSERT INTO core.dataset_snapshot_members(
   id,dataset_snapshot_id,snapshot_kind,producer_generation,snapshot_contract_version,member_ordinal,object_type,

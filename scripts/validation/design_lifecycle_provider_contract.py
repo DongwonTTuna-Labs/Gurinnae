@@ -15,7 +15,7 @@ def validate_provider_control_contracts(
         "disableProviderRouting": {
             "capability": "kill_switch.execute",
             "assurance": "STEP_UP",
-            "roles": {"OPERATIONS", "SECURITY_ADMIN", "EXECUTIVE_APPROVER"},
+            "roles": {"OPERATIONS", "EXECUTIVE_APPROVER"},
         },
         "testProviderConnection": {
             "capability": "jobs.operate",
@@ -25,12 +25,12 @@ def validate_provider_control_contracts(
         "upgradeProviderModel": {
             "capability": "kill_switch.execute",
             "assurance": "STEP_UP",
-            "roles": {"OPERATIONS", "SECURITY_ADMIN", "EXECUTIVE_APPROVER"},
+            "roles": {"OPERATIONS", "EXECUTIVE_APPROVER"},
         },
         "setModelAutoUpgrade": {
             "capability": "kill_switch.execute",
             "assurance": "STEP_UP",
-            "roles": {"OPERATIONS", "SECURITY_ADMIN", "EXECUTIVE_APPROVER"},
+            "roles": {"OPERATIONS", "EXECUTIVE_APPROVER"},
         },
     }
     provider_operation_ids = set(provider_operation_policies)

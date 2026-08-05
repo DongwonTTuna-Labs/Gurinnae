@@ -155,6 +155,15 @@ async fn request_provider(
             prior_tool_result.as_ref(),
         )
         .await?;
+        // Bind the selected evidence to this provider turn before any bytes
+        // leave the process. A deterministic pre-dispatch receipt identity
+        // keeps failed dispatches auditable, and completion promotes the same
+        // MODEL_INPUT row, so there is never an unbound input row.
+        {
+            let mut lineage_tx = context.state.pool.begin().await.map_err(database)?;
+            insert_model_input_source_uses(&mut lineage_tx, &turn, None, None).await?;
+            lineage_tx.commit().await.map_err(database)?;
+        }
         let response = send_provider_request(context, &turn, prior_tool_result.as_ref()).await?;
         let (output, cost, next_transcript, tool_result) = finalize_provider_response(
             context,
